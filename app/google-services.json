@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "483555042386",
+    "project_id": "terapia-d8d61",
+    "storage_bucket": "terapia-d8d61.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:483555042386:android:198512184ce3f99bf76b8b",
+        "android_client_info": {
+          "package_name": "com.pe.terapia"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "483555042386-cgdn9r80ebpeukp7phvq8p2j9vkp09rs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pe.terapia",
+            "certificate_hash": "fee96ad155e836dfd25e346031d3670bc8827d73"
+          }
+        },
+        {
+          "client_id": "483555042386-jdeusa4c09k02udu9ggi3oghlcu4jmlq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5AjtZDu2NU4I-RLNjyR3cOhV1cQAZYYQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "483555042386-jdeusa4c09k02udu9ggi3oghlcu4jmlq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
