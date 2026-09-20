@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "483555042386-geh2s8n4bc5prgc20h8fv2mkc0n1rhhh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pe.terapia",
+            "certificate_hash": "806ace760de4a820658037e2ebcd8437f7ccb2ff"
+          }
+        },
+        {
           "client_id": "483555042386-jdeusa4c09k02udu9ggi3oghlcu4jmlq.apps.googleusercontent.com",
           "client_type": 3
         }

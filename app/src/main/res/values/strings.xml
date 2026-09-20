@@ -1,3 +1,28 @@
 <resources>
     <string name="app_name">TerapIA</string>
+
+    <!-- Login -->
+    <string name="login_titulo">TerapIA</string>
+    <string name="login_subtitulo">Tu espacio de bienestar</string>
+    <string name="login_email">Correo electrónico</string>
+    <string name="login_password">Contraseña</string>
+    <string name="login_olvide_password">¿Olvidaste tu contraseña?</string>
+    <string name="login_boton_ingresar">Iniciar sesión</string>
+    <string name="login_sin_cuenta">¿No tienes cuenta? </string>
+    <string name="login_ir_registro">Regístrate</string>
+    <string name="login_google_continuar">Continuar con Google</string>
+
+    <!-- Registro -->
+    <string name="registro_titulo">Crear cuenta</string>
+    <string name="registro_aviso_rol">Todas las cuentas nuevas se crean como paciente</string>
+    <string name="registro_nombre">Nombre completo</string>
+    <string name="registro_confirmar_password">Confirmar contraseña</string>
+    <string name="registro_boton_crear">Crear cuenta</string>
+    <string name="registro_ya_tengo_cuenta">¿Ya tienes cuenta? </string>
+    <string name="registro_ir_login">Inicia sesión</string>
+    <string name="registro_error_passwords_no_coinciden">Las contraseñas no coinciden.</string>
+
+    <!-- Errores genéricos de autenticación -->
+    <string name="auth_error_generico_login">Ocurrió un error al iniciar sesión.</string>
+    <string name="auth_error_generico_registro">Ocurrió un error al registrarte.</string>
 </resources>
