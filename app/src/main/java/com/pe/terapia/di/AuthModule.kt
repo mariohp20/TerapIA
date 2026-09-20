@@ -4,6 +4,8 @@ import com.pe.terapia.data.remote.firebase.AuthDataSource
 import com.pe.terapia.data.repository.AuthRepositoryImpl
 import com.pe.terapia.domain.repository.AuthRepository
 import com.pe.terapia.domain.usecase.auth.*
+import com.pe.terapia.presentation.auth.AuthViewModel
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 val authModule = module {
@@ -13,5 +15,5 @@ val authModule = module {
     factory { RegistroUseCase(get()) }
     factory { RecuperarPasswordUseCase(get()) }
     factory { VerificarSesionUseCase(get()) }
-    // Cada uno agrega aquí su propio: viewModel { XxxViewModel(get()) }
+    viewModel { AuthViewModel(get(), get()) }
 }
