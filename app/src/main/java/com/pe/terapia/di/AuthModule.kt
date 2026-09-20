@@ -12,8 +12,9 @@ val authModule = module {
     single { AuthDataSource() }
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     factory { LoginUseCase(get()) }
+    factory { LoginConGoogleUseCase(get()) }
     factory { RegistroUseCase(get()) }
     factory { RecuperarPasswordUseCase(get()) }
     factory { VerificarSesionUseCase(get()) }
-    viewModel { AuthViewModel(get(), get()) }
+    viewModel { AuthViewModel(get(), get(),get()) }
 }

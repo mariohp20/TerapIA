@@ -1,6 +1,7 @@
 package com.pe.terapia
 
 import android.app.Application
+import com.pe.terapia.di.authModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -12,7 +13,7 @@ class TerapiaApp : Application(){
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@TerapiaApp)
-            modules(emptyList())  //Aqui luego agregaremos los modulos (AuthModule, etc.)
+            modules(listOf(authModule))
         }
     }
 }

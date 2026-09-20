@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +21,8 @@ import com.pe.terapia.presentation.auth.AuthViewModel
 import com.pe.terapia.ui.theme.TerapiaTheme
 import com.pe.terapia.R
 import org.koin.androidx.compose.koinViewModel
+import com.pe.terapia.presentation.auth.utils.GoogleAuthClient
+import kotlinx.coroutines.launch
 
 // SCREEN
 @Composable
@@ -31,6 +34,11 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // Herramientas necesarias para lanzar la interfaz de Google
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val googleAuthClient = remember { GoogleAuthClient(context) }
+
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) onLoginExitoso()
     }
@@ -38,6 +46,14 @@ fun LoginScreen(
     LoginContent(
         uiState = uiState,
         onLoginClick = { email, password -> viewModel.login(email, password) },
+        onGoogleLoginClick = {
+            coroutineScope.launch {
+                val idToken = googleAuthClient.obtenerIdToken()
+                if (idToken != null) {
+                    viewModel.loginConGoogle(idToken)
+                }
+            }
+        },
         onIrARegistro = onIrARegistro,
         onIrARecuperar = onIrARecuperar
     )
@@ -48,6 +64,7 @@ fun LoginScreen(
 fun LoginContent(
     uiState: AuthUiState,
     onLoginClick: (email: String, password: String) -> Unit,
+    onGoogleLoginClick: () -> Unit,
     onIrARegistro: () -> Unit,
     onIrARecuperar: () -> Unit
 ) {
@@ -109,8 +126,8 @@ fun LoginContent(
         Spacer(Modifier.height(12.dp))
         // Boton de Google
         OutlinedButton(
-            // La Persona 2 cambiará este onClick vacío por su callback de Google
-            onClick = { /* TODO Persona 2: Lanzar flujo de Google */ },
+            onClick = onGoogleLoginClick,
+            enabled = uiState !is AuthUiState.Loading, // Buena práctica: bloquear botón de Google si ya está cargando el otro
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
             Icon(
@@ -142,7 +159,7 @@ fun LoginContent(
 @Composable
 private fun LoginPreviewIdle() {
     TerapiaTheme {
-        LoginContent(AuthUiState.Idle, onLoginClick = { _, _ -> }, onIrARegistro = {}, onIrARecuperar = {})
+        LoginContent(AuthUiState.Idle, onLoginClick = { _, _ -> }, onGoogleLoginClick = {}, onIrARegistro = {}, onIrARecuperar = {})
     }
 }
 
@@ -150,7 +167,7 @@ private fun LoginPreviewIdle() {
 @Composable
 private fun LoginPreviewLoading() {
     TerapiaTheme {
-        LoginContent(AuthUiState.Loading, onLoginClick = { _, _ -> }, onIrARegistro = {}, onIrARecuperar = {})
+        LoginContent(AuthUiState.Loading, onLoginClick = { _, _ -> }, onGoogleLoginClick = {}, onIrARegistro = {}, onIrARecuperar = {})
     }
 }
 
@@ -160,7 +177,7 @@ private fun LoginPreviewError() {
     TerapiaTheme {
         LoginContent(
             AuthUiState.Error("Correo o contraseña incorrectos."),
-            onLoginClick = { _, _ -> }, onIrARegistro = {}, onIrARecuperar = {}
+            onLoginClick = { _, _ -> }, onGoogleLoginClick = {}, onIrARegistro = {}, onIrARecuperar = {}
         )
     }
 }
@@ -174,7 +191,7 @@ private fun LoginPreviewError() {
 private fun LoginPreviewDark() {
     TerapiaTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
-            LoginContent(AuthUiState.Idle, { _, _ -> }, {}, {})
+            LoginContent(AuthUiState.Idle, { _, _ -> }, {}, {}, {})
         }
     }
 }

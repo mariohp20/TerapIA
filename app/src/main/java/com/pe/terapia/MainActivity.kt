@@ -9,6 +9,10 @@ import com.pe.terapia.ui.theme.TerapiaTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { TerapiaTheme { NavGraph() } }
+        setContent {
+            TerapiaTheme {
+                NavGraph()
+            }
+        }
     }
 }
