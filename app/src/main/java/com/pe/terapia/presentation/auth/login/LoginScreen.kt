@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pe.terapia.domain.model.Usuario
 import com.pe.terapia.presentation.auth.AuthUiState
 import com.pe.terapia.presentation.auth.AuthViewModel
 import com.pe.terapia.ui.theme.TerapiaTheme
@@ -27,7 +28,7 @@ import kotlinx.coroutines.launch
 // SCREEN
 @Composable
 fun LoginScreen(
-    onLoginExitoso: () -> Unit,
+    onLoginExitoso: (Usuario) -> Unit,
     onIrARegistro: () -> Unit,
     onIrARecuperar: () -> Unit,
     viewModel: AuthViewModel = koinViewModel()
@@ -40,7 +41,8 @@ fun LoginScreen(
     val googleAuthClient = remember { GoogleAuthClient(context) }
 
     LaunchedEffect(uiState) {
-        if (uiState is AuthUiState.Success) onLoginExitoso()
+        val currentState = uiState
+        if (currentState is AuthUiState.Success) onLoginExitoso(currentState.usuario)
     }
 
     LoginContent(

@@ -7,7 +7,7 @@ interface AuthRepository {
     suspend fun registro(email: String, password: String, nombre: String): Result<Usuario>
     suspend fun loginConGoogle(idToken: String): Result<Usuario>
     suspend fun recuperarPassword(email: String): Result<Unit>
-    fun obtenerUsuarioActual(): Usuario?
+    suspend fun obtenerUsuarioActual(): Usuario?
     fun haySesionActiva(): Boolean
-    fun cerrarSesion()
+    suspend fun cerrarSesion()
 }

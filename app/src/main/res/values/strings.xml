@@ -25,4 +25,12 @@
     <!-- Errores genéricos de autenticación -->
     <string name="auth_error_generico_login">Ocurrió un error al iniciar sesión.</string>
     <string name="auth_error_generico_registro">Ocurrió un error al registrarte.</string>
+
+    <!-- Recuperar contraseña -->
+    <string name="recuperar_titulo">Recuperar contraseña</string>
+    <string name="recuperar_subtitulo">Te enviaremos un enlace para restablecer tu contraseña.</string>
+    <string name="recuperar_email_hint">Correo electrónico</string>
+    <string name="recuperar_boton">Enviar enlace</string>
+    <string name="recuperar_exito">Revisa tu correo para actualizar tu contraseña.</string>
+    <string name="recuperar_volver_login">Volver al inicio de sesión</string>
 </resources>
