@@ -1,6 +1,7 @@
 package com.pe.terapia.data.remote.firebase
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -39,7 +40,11 @@ class AuthDataSource(
         auth.sendPasswordResetEmail(email).await()
     }
 
+    fun obtenerUsuarioActual(): FirebaseUser? = auth.currentUser
+
     fun obtenerUidActual(): String? = auth.currentUser?.uid
 
-    fun cerrarSesion() = auth.signOut()
+    suspend fun cerrarSesion() {
+        auth.signOut()
+    }
 }
