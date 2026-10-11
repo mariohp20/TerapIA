@@ -1,26 +1,61 @@
 <resources>
+
     <string name="app_name">TerapIA</string>
+    <string name="home_saludo">Hola,</string>
+
+    <!-- Splash -->
+    <string name="splash_nombre_clinica">Clínicas Psicología del Perú</string>
+    <string name="splash_subtitulo">TerapIA · tu espacio de bienestar</string>
+    <string name="splash_logo_content_description">Logo de Clínicas Psicología del Perú</string>
 
     <!-- Login -->
-    <string name="login_titulo">TerapIA</string>
-    <string name="login_subtitulo">Tu espacio de bienestar</string>
+    <string name="login_encabezado">Inicia sesión para gestionar tus citas y bienestar.</string>
+    <string name="login_titulo_formulario">Iniciar Sesión</string>
+    <string name="login_registro_pregunta">¿No tienes una cuenta?</string>
+    <string name="login_google_divisor">O ingresa con</string>
+    <string name="auth_logo_content_description">Logo TerapIA</string>
+
     <string name="login_email">Correo electrónico</string>
     <string name="login_password">Contraseña</string>
+
+    <string name="home_paciente">Paciente</string>
     <string name="login_olvide_password">¿Olvidaste tu contraseña?</string>
     <string name="login_boton_ingresar">Iniciar sesión</string>
-    <string name="login_sin_cuenta">¿No tienes cuenta? </string>
+    <string name="login_o_divisor">o</string>
+
     <string name="login_ir_registro">Regístrate</string>
+
     <string name="login_google_continuar">Continuar con Google</string>
+    <string name="login_google_nombre">Google</string>
+
+    <string name="login_mostrar_password">Mostrar contraseña</string>
+    <string name="login_ocultar_password">Ocultar contraseña</string>
+
+    <string name="login_email_content_description">Icono de correo electrónico</string>
+    <string name="login_password_content_description">Icono de contraseña</string>
 
     <!-- Registro -->
     <string name="registro_titulo">Crear cuenta</string>
+    <string name="registro_encabezado">Crea tu cuenta y empieza tu camino al bienestar.</string>
+    <string name="registro_titulo_formulario">Regístrate</string>
+    <string name="registro_login_pregunta">¿Ya tienes una cuenta?</string>
     <string name="registro_aviso_rol">Todas las cuentas nuevas se crean como paciente</string>
-    <string name="registro_nombre">Nombre completo</string>
+    <string name="registro_nombres">Nombres</string>
+    <string name="registro_apellidos">Apellidos</string>
+    <string name="registro_telefono_opcional">Teléfono (opcional)</string>
     <string name="registro_confirmar_password">Confirmar contraseña</string>
     <string name="registro_boton_crear">Crear cuenta</string>
-    <string name="registro_ya_tengo_cuenta">¿Ya tienes cuenta? </string>
     <string name="registro_ir_login">Inicia sesión</string>
     <string name="registro_error_passwords_no_coinciden">Las contraseñas no coinciden.</string>
+    <string name="perfil_completar_titulo">Completa tu perfil</string>
+    <string name="perfil_completar_subtitulo">Necesitamos tus nombres y apellidos para crear tu perfil. No completaremos datos personales por ti.</string>
+    <string name="perfil_completar_boton">Guardar y continuar</string>
+
+    <!-- Requisitos de contraseña -->
+    <string name="registro_requisito_longitud">Mínimo 8 caracteres</string>
+    <string name="registro_requisito_mayuscula">Al menos una mayúscula</string>
+    <string name="registro_requisito_numero">Al menos un número</string>
+    <string name="registro_requisito_especial">Al menos un carácter especial</string>
 
     <!-- Errores genéricos de autenticación -->
     <string name="auth_error_generico_login">Ocurrió un error al iniciar sesión.</string>
@@ -33,4 +68,46 @@
     <string name="recuperar_boton">Enviar enlace</string>
     <string name="recuperar_exito">Revisa tu correo para actualizar tu contraseña.</string>
     <string name="recuperar_volver_login">Volver al inicio de sesión</string>
+
+    <!-- Citas (Reserva y Confirmación) -->
+    <string name="citas_reserva_titulo">Reservar cita</string>
+    <string name="citas_boton_volver">← Volver</string>
+    <string name="citas_reserva_paso1">1. Elige la especialidad</string>
+    <string name="citas_reserva_placeholder_especialidad">Selecciona una especialidad</string>
+    <string name="citas_reserva_paso2">2. Elige un psicólogo disponible</string>
+    <string name="citas_reserva_sin_psicologos">No hay psicólogos disponibles para esta especialidad.</string>
+    <string name="citas_reserva_paso3">3. Elige la fecha</string>
+    <string name="citas_reserva_placeholder_fecha">Selecciona una fecha</string>
+    <string name="citas_reserva_paso4">4. Elige el horario</string>
+    <string name="citas_reserva_sin_horarios">No hay horarios disponibles para esta fecha.</string>
+    <string name="citas_boton_continuar">Continuar</string>
+    <string name="citas_dialogo_aceptar">Aceptar</string>
+    <string name="citas_dialogo_cancelar">Cancelar</string>
+
+    <string name="citas_confirmar_titulo">Confirmar cita</string>
+    <string name="citas_confirmar_especialidad">Especialidad</string>
+    <string name="citas_confirmar_psicologo">Psicólogo</string>
+    <string name="citas_confirmar_fecha">Fecha</string>
+    <string name="citas_confirmar_hora">Hora</string>
+    <string name="citas_confirmar_boton">Confirmar cita</string>
+
+    <!-- Home -->
+    <string name="home_paciente_titulo">Home Paciente</string>
+    <string name="home_paciente_reservar_boton">Reservar una Cita</string>
+    <string name="home_cerrar_sesion">Cerrar sesión</string>
+    <string name="home_psicologo_titulo">Home Psicólogo</string>
+    <string name="home_psicologo_subtitulo">Próxima pantalla del psicólogo</string>
+    <string name="home_admin_titulo">Administración</string>
+    <string name="home_admin_pendiente">El panel de administración se definirá en su HU correspondiente.</string>
+    <string name="home_nueva_cita">Nueva cita</string>
+    <string name="home_reserva_subtitulo">Reserva tu espacio de bienestar</string>
+    <string name="home_proxima_cita">Tu próxima cita</string>
+    <string name="home_sin_citas">Aún no tienes citas programadas.</string>
+    <string name="home_psicologo_resumen">Resumen de hoy</string>
+    <string name="home_psicologo_proximas">Próximas citas</string>
+    <string name="home_psicologo_sin_citas">No hay citas cargadas para mostrar.</string>
+    <string name="citas_disponibilidad_pendiente">La disponibilidad estará disponible cuando se definan los horarios laborales y sus excepciones.</string>
+    <string name="citas_especialidades_vacias">No hay especialidades disponibles.</string>
+    <string name="citas_especialidades_cargando">Cargando especialidades…</string>
+
 </resources>
