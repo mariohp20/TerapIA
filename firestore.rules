@@ -1,0 +1,252 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isActivePatient(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && get(/databases/$(database)/documents/usuarios/$(uid)).data.rol == 'paciente'
+        && get(/databases/$(database)/documents/usuarios/$(uid)).data.activo == true;
+    }
+
+    function ownsProfile(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validDeclaredDni(data) {
+      return data.dni is string && data.dni.matches('^[0-9]{8}$');
+    }
+
+    function allowedPatientProfileKeys(data) {
+      return data.keys().hasOnly([
+        'nombres', 'apellidos', 'correo', 'telefono', 'rol', 'activo',
+        'fechaRegistro', 'fotoUrl', 'dni', 'nombre', 'email', 'uid'
+      ]);
+    }
+
+    function twoDigits(value) {
+      return value < 10 ? '0' + string(value) : string(value);
+    }
+
+    function validSchedule(scheduleId, data) {
+      let schedulePath = /databases/$(database)/documents/horariosLaborales/$(scheduleId);
+      let psychologistPath = /databases/$(database)/documents/psicologos/$(data.psicologoId);
+      let sitePath = /databases/$(database)/documents/sedes/$(data.sedeId);
+      let specialtyPath = /databases/$(database)/documents/especialidades/$(data.especialidadId);
+      let startLocal = data.inicioAt - duration.value(5, 'h');
+      let localDate = string(startLocal.year()) + '-' + twoDigits(startLocal.month()) + '-' + twoDigits(startLocal.day());
+      let localTime = twoDigits(startLocal.hours()) + ':' + twoDigits(startLocal.minutes());
+      return scheduleId == data.psicologoId + '~' + data.sedeId
+        && data.horarioId == scheduleId
+        && data.slotId == string(data.inicioAt.toMillis())
+        && data.inicioEpochMillis == data.inicioAt.toMillis()
+        && data.duracionMinutos == 60
+        && data.inicioAt > request.time
+        && data.fecha == localDate
+        && data.hora == localTime
+        && startLocal.dayOfWeek() >= 1 && startLocal.dayOfWeek() <= 7
+        && get(schedulePath).data.activo == true
+        && get(schedulePath).data.zonaHoraria == 'America/Lima'
+        && get(schedulePath).data.psicologoId == data.psicologoId
+        && get(schedulePath).data.sedeId == data.sedeId
+        && get(schedulePath).data.duracionMinutos == data.duracionMinutos
+        && get(psychologistPath).data.activo == true
+        && data.sedeId in get(psychologistPath).data.sedeIds
+        && data.especialidadId in get(psychologistPath).data.especialidadIds
+        && get(sitePath).data.activa == true
+        && get(specialtyPath).data.activa == true;
+    }
+
+    function validBlock(scheduleId, data) {
+      let blockPath = /databases/$(database)/documents/horariosLaborales/$(scheduleId)/bloques/$(data.bloqueId);
+      let startLocal = data.inicioAt - duration.value(5, 'h');
+      let startMinute = startLocal.hours() * 60 + startLocal.minutes();
+      return get(blockPath).data.activo == true
+        && get(blockPath).data.diaSemana == startLocal.dayOfWeek()
+        && startMinute >= get(blockPath).data.inicioMinuto
+        && startMinute + data.duracionMinutos <= get(blockPath).data.finMinuto
+        && (startMinute - get(blockPath).data.inicioMinuto) % data.duracionMinutos == 0;
+    }
+
+    function validException(scheduleId, data) {
+      let exceptionId = scheduleId + '~' + data.slotId;
+      let exceptionPath = /databases/$(database)/documents/excepcionesHorario/$(exceptionId);
+      return !exists(exceptionPath)
+        || (get(exceptionPath).data.horarioId == scheduleId
+          && get(exceptionPath).data.psicologoId == data.psicologoId
+          && get(exceptionPath).data.sedeId == data.sedeId
+          && get(exceptionPath).data.fecha == data.fecha
+          && get(exceptionPath).data.hora == data.hora
+          && get(exceptionPath).data.inicioEpochMillis == data.inicioEpochMillis
+          && get(exceptionPath).data.tipo == 'DISPONIBILIDAD_EXTRA');
+    }
+
+    function reservationLockAfter(reservationId, data) {
+      let lockPath = /databases/$(database)/documents/horariosLaborales/$(data.horarioId)/turnos/$(data.slotId);
+      return getAfter(lockPath).data.reservaId == reservationId
+        && getAfter(lockPath).data.inicioEpochMillis == data.inicioEpochMillis;
+    }
+
+    function appointmentAfter(reservationId, data) {
+      let appointmentPath = /databases/$(database)/documents/citas/$(data.citaId);
+      return existsAfter(appointmentPath)
+        && getAfter(appointmentPath).data.reservaId == reservationId
+        && getAfter(appointmentPath).data.pacienteId == data.pacienteId
+        && getAfter(appointmentPath).data.slotId == data.slotId
+        && getAfter(appointmentPath).data.inicioEpochMillis == data.inicioEpochMillis;
+    }
+
+    function validReservationCreate(reservationId) {
+      let data = request.resource.data;
+      return isActivePatient(data.pacienteId)
+        && data.id == reservationId
+        && data.estado == 'CONFIRMADA'
+        && data.keys().hasOnly([
+          'id', 'pacienteId', 'psicologoId', 'sedeId', 'horarioId', 'bloqueId', 'slotId',
+          'especialidadId', 'fecha', 'hora', 'inicioEpochMillis', 'inicioAt',
+          'duracionMinutos', 'estado', 'citaId', 'creadaEn'
+        ])
+        && data.creadaEn == request.time
+        && validSchedule(data.horarioId, data)
+        && validException(data.horarioId, data)
+        && (validBlock(data.horarioId, data)
+          || (exists(/databases/$(database)/documents/excepcionesHorario/$(data.horarioId + '~' + data.slotId))
+            && get(/databases/$(database)/documents/excepcionesHorario/$(data.horarioId + '~' + data.slotId)).data.tipo == 'DISPONIBILIDAD_EXTRA'))
+        && reservationLockAfter(reservationId, data)
+        && appointmentAfter(reservationId, data);
+    }
+
+    match /usuarios/{uid} {
+      allow get: if ownsProfile(uid);
+      allow list: if false;
+      allow create: if ownsProfile(uid)
+        && request.resource.data.keys().hasOnly([
+          'nombres', 'apellidos', 'correo', 'telefono', 'rol', 'activo',
+          'fechaRegistro', 'fotoUrl', 'dni'
+        ])
+        && request.resource.data.nombres is string
+        && request.resource.data.nombres.size() > 0
+        && request.resource.data.nombres.size() <= 100
+        && request.resource.data.apellidos is string
+        && request.resource.data.apellidos.size() > 0
+        && request.resource.data.apellidos.size() <= 100
+        && (!request.resource.data.keys().hasAny(['telefono']) || request.resource.data.telefono is string)
+        && (!request.resource.data.keys().hasAny(['fotoUrl']) || request.resource.data.fotoUrl is string)
+        && validDeclaredDni(request.resource.data)
+        && request.resource.data.correo == request.auth.token.email
+        && request.resource.data.rol == 'paciente'
+        && request.resource.data.activo == true
+        && request.resource.data.fechaRegistro == request.time;
+      allow update: if ownsProfile(uid)
+        && allowedPatientProfileKeys(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nombres', 'apellidos', 'correo', 'telefono', 'fotoUrl', 'fechaRegistro', 'dni', 'rol', 'activo'
+        ])
+        && request.resource.data.nombres is string
+        && request.resource.data.nombres.size() > 0
+        && request.resource.data.nombres.size() <= 100
+        && request.resource.data.apellidos is string
+        && request.resource.data.apellidos.size() > 0
+        && request.resource.data.apellidos.size() <= 100
+        && validDeclaredDni(request.resource.data)
+        && (!request.resource.data.keys().hasAny(['telefono']) || request.resource.data.telefono is string)
+        && (!request.resource.data.keys().hasAny(['fotoUrl']) || request.resource.data.fotoUrl is string)
+        && (!resource.data.keys().hasAny(['uid']) || resource.data.uid == uid)
+        && request.resource.data.correo == request.auth.token.email
+        && (!resource.data.keys().hasAny(['rol']) || request.resource.data.rol == resource.data.rol)
+        && (!resource.data.keys().hasAny(['rol']) || resource.data.rol == 'paciente')
+        && request.resource.data.rol == 'paciente'
+        && (!resource.data.keys().hasAny(['activo']) || request.resource.data.activo == resource.data.activo)
+        && request.resource.data.activo == true
+        && (!resource.data.keys().hasAny(['fechaRegistro'])
+          || !(resource.data.fechaRegistro is timestamp)
+          || request.resource.data.fechaRegistro == resource.data.fechaRegistro)
+        && (!resource.data.keys().hasAny(['dni']) || resource.data.dni == null || request.resource.data.dni == resource.data.dni)
+        && ((resource.data.keys().hasAny(['fechaRegistro']) && resource.data.fechaRegistro is timestamp)
+          || request.resource.data.fechaRegistro == request.time);
+      allow delete: if false;
+    }
+
+    match /psicologos/{psicologoId} {
+      allow get, list: if signedIn() && resource.data.activo == true;
+      allow write: if false;
+    }
+
+    match /especialidades/{especialidadId} {
+      allow get, list: if signedIn() && resource.data.activa == true;
+      allow write: if false;
+    }
+
+    match /sedes/{sedeId} {
+      allow get, list: if signedIn() && resource.data.activa == true;
+      allow write: if false;
+    }
+
+    match /horariosLaborales/{horarioId} {
+      allow get, list: if signedIn() && resource.data.activo == true;
+      allow create, update, delete: if false;
+
+      match /bloques/{bloqueId} {
+        allow get, list: if signedIn() && resource.data.activo == true;
+        allow write: if false;
+      }
+
+      match /turnos/{slotId} {
+        allow get, list: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.slotId == slotId
+          && request.resource.data.reservaId is string
+          && existsAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId))
+          && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.horarioId == horarioId
+          && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.slotId == slotId
+          && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.pacienteId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioEpochMillis == request.resource.data.inicioEpochMillis;
+        allow update, delete: if false;
+      }
+    }
+
+    match /excepcionesHorario/{exceptionId} {
+      allow get, list: if signedIn();
+      allow write: if false;
+    }
+
+    match /reservas/{reservaId} {
+      allow get, list: if signedIn() && resource.data.pacienteId == request.auth.uid;
+      allow create: if validReservationCreate(reservaId);
+      allow update, delete: if false;
+    }
+
+    match /citas/{citaId} {
+      allow get, list: if signedIn() && resource.data.pacienteId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'id', 'reservaId', 'pacienteId', 'psicologoId', 'sedeId', 'especialidadId',
+          'slotId', 'fecha', 'hora', 'inicioEpochMillis', 'inicioAt',
+          'duracionMinutos', 'estado', 'creadaEn'
+        ])
+        && request.resource.data.id == citaId
+        && request.resource.data.estado == 'PROGRAMADA'
+        && request.resource.data.creadaEn == request.time
+        && request.resource.data.pacienteId == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId))
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.citaId == citaId
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.pacienteId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.slotId == request.resource.data.slotId
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.psicologoId == request.resource.data.psicologoId
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.sedeId == request.resource.data.sedeId
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.especialidadId == request.resource.data.especialidadId
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioEpochMillis == request.resource.data.inicioEpochMillis
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioAt == request.resource.data.inicioAt
+        && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.duracionMinutos == request.resource.data.duracionMinutos;
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
