@@ -1,11 +1,18 @@
 package com.pe.terapia.domain.repository
 
 import com.pe.terapia.domain.model.Cita
+import com.pe.terapia.domain.model.Especialidad
+import com.pe.terapia.domain.model.Reserva
+import com.pe.terapia.domain.model.Sede
+import com.pe.terapia.domain.model.SlotDisponible
+import com.pe.terapia.domain.model.Psicologo
+import com.pe.terapia.domain.model.ProximaCita
 
 interface CitaRepository {
-    // Devuelve una lista de horas (ej. ["15:00", "16:00"]) que ya están ocupadas o disponibles
-    suspend fun obtenerDisponibilidad(psicologoId: String, fecha: String): Result<List<String>>
-
-    // Guarda la cita en la base de datos
-    suspend fun reservarCita(cita: Cita): Result<Boolean>
+    suspend fun obtenerEspecialidades(): Result<List<Especialidad>>
+    suspend fun obtenerPsicologosPorEspecialidad(especialidadId: String): Result<List<Psicologo>>
+    suspend fun obtenerSedes(psicologoId: String): Result<List<Sede>>
+    suspend fun obtenerDisponibilidad(psicologoId: String, sedeId: String, fecha: String): Result<List<SlotDisponible>>
+    suspend fun obtenerProximaCita(pacienteId: String): Result<ProximaCita?>
+    suspend fun reservarYConfirmar(reserva: Reserva): Result<Cita>
 }

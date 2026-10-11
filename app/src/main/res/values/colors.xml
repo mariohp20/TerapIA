@@ -7,4 +7,6 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="terapia_fondo_claro">#F2F6F5</color>
+    <color name="terapia_fondo_oscuro">#151918</color>
 </resources>

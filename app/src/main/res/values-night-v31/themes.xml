@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.TerapIA"
+        parent="android:style/Theme.Material.Light.NoActionBar">
+
+        <!-- Fondo del Splash nativo en modo oscuro -->
+        <item name="android:windowSplashScreenBackground">
+            @color/terapia_fondo_oscuro
+        </item>
+
+        <!-- Oculta el icono del launcher durante el Splash nativo -->
+        <item name="android:windowSplashScreenAnimatedIcon">
+            @android:color/transparent
+        </item>
+
+    </style>
+
+</resources>
