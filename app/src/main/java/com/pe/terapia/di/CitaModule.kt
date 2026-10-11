@@ -21,7 +21,7 @@ val citaModule = module {
     single<HistoriaClinicaRepository> { HistoriaClinicaRepositoryImpl(get()) }
     factory { ObtenerDisponibilidadUseCase(get()) }
     factory { ObtenerProximaCitaUseCase(get()) }
-    factory { ReservarCitaUseCase(get()) }
+    factory { ReservarCitaUseCase(get(), get()) }
 
     viewModel { ReservaCitaViewModel(get()) }
     viewModel { HomePacienteViewModel(get(), get()) }
