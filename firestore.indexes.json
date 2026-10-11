@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "psicologos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "especialidadIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "activo", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bloques",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "diaSemana", "order": "ASCENDING" },
+        { "fieldPath": "activo", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "excepcionesHorario",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "horarioId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
