@@ -1,6 +1,7 @@
 *.iml
 .gradle
 /local.properties
+local.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -12,4 +13,9 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
+/outputs
+/.gradle-audit/
+/.workbook_build/
+.kotlin/
+functions/
+firebase.json
