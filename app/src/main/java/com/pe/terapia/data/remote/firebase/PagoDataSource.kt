@@ -235,4 +235,35 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             detalles = doc.getString("detalles").orEmpty()
         )
     }
+
+    suspend fun obtenerPagoPorCita(citaId: String): Pago? {
+        val snapshot = firestore.collection("pagos")
+            .whereEqualTo("citaId", citaId)
+            .get()
+            .await()
+
+        val doc = snapshot.documents.firstOrNull() ?: return null
+        return Pago(
+            id = doc.getString("id") ?: doc.id,
+            citaId = doc.getString("citaId").orEmpty(),
+            pacienteId = doc.getString("pacienteId").orEmpty(),
+            psicologoId = doc.getString("psicologoId").orEmpty(),
+            monto = doc.getDouble("monto") ?: PRECIO_ESTANDAR_CITA,
+            moneda = doc.getString("moneda") ?: "PEN",
+            estado = runCatching { EstadoPago.valueOf(doc.getString("estado") ?: "") }.getOrDefault(EstadoPago.PENDIENTE),
+            metodoPago = doc.getString("metodoPago")?.let { runCatching { MetodoPago.valueOf(it) }.getOrNull() },
+            referenciaTransaccion = doc.getString("referenciaTransaccion"),
+            creadaEn = doc.getLong("creadaEn") ?: System.currentTimeMillis(),
+            actualizadaEn = doc.getLong("actualizadaEn")
+        )
+    }
+
+    suspend fun seleccionarPagoEnClinica(pagoId: String) {
+        firestore.collection("pagos").document(pagoId).update(
+            mapOf(
+                "metodoPago" to MetodoPago.EFECTIVO_CLINICA.name,
+                "actualizadaEn" to System.currentTimeMillis()
+            )
+        ).await()
+    }
 }

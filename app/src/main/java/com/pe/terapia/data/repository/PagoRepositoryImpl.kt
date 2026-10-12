@@ -28,6 +28,14 @@ class PagoRepositoryImpl(private val dataSource: PagoDataSource) : PagoRepositor
         dataSource.obtenerComprobantePorCita(citaId)
     }
 
+    override suspend fun obtenerPagoPorCita(citaId: String): Result<Pago?> = capture {
+        dataSource.obtenerPagoPorCita(citaId)
+    }
+
+    override suspend fun seleccionarPagoEnClinica(pagoId: String): Result<Unit> = capture {
+        dataSource.seleccionarPagoEnClinica(pagoId)
+    }
+
     private suspend fun <T> capture(action: suspend () -> T): Result<T> = try {
         Result.success(action())
     } catch (exception: CancellationException) {

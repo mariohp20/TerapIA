@@ -217,7 +217,17 @@ fun NavGraph(
                     horarioId = args.horarioId,
                     bloqueId = args.bloqueId,
                     inicioEpochMillis = args.inicioEpochMillis,
-                    onConfirmada = {
+                    onPagarOnline = { pagoId ->
+                        navController.navigate(Route.PasarelaPago(pagoId)) {
+                            popUpTo<Route.HomePaciente>()
+                        }
+                    },
+                    onPagarEnClinica = {
+                        navController.navigate(Route.HistorialPagos) {
+                            popUpTo<Route.HomePaciente>()
+                        }
+                    },
+                    onFinalizar = {
                         navController.navigate(Route.HomePaciente) {
                             popUpTo<Route.HomePaciente> { inclusive = true }
                         }

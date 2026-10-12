@@ -16,7 +16,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,7 +46,9 @@ fun ConfirmacionCitaScreen(
     horarioId: String,
     bloqueId: String,
     inicioEpochMillis: Long,
-    onConfirmada: () -> Unit,
+    onPagarOnline: (String) -> Unit,
+    onPagarEnClinica: (String) -> Unit,
+    onFinalizar: () -> Unit,
     onVolver: () -> Unit,
     viewModel: ConfirmacionCitaViewModel = koinViewModel(
         parameters = { parametersOf(psicologoId, psicologoNombre, especialidadId, especialidadNombre, sedeId, sedeNombre, fecha, hora, horarioId, bloqueId, inicioEpochMillis) }
@@ -59,8 +60,14 @@ fun ConfirmacionCitaScreen(
         resumen = viewModel.resumen.copy(sedeDireccion = sedeDireccion),
         uiState = uiState,
         onConfirmar = viewModel::confirmar,
+        onPagarOnline = onPagarOnline,
+        onPagarEnClinica = { pagoId ->
+            viewModel.seleccionarPagoEnClinica(pagoId) {
+                onPagarEnClinica(pagoId)
+            }
+        },
         onVolver = onVolver,
-        onFinalizar = onConfirmada
+        onFinalizar = onFinalizar
     )
 }
 
@@ -70,11 +77,14 @@ fun ConfirmacionCitaContent(
     resumen: ResumenCita,
     uiState: ConfirmacionCitaUiState,
     onConfirmar: () -> Unit,
+    onPagarOnline: (String) -> Unit,
+    onPagarEnClinica: (String) -> Unit,
     onVolver: () -> Unit,
     onFinalizar: () -> Unit
 ) {
     val colorFondoTurquesaClaro = MaterialTheme.colorScheme.primaryContainer
     val isConfirmada = uiState is ConfirmacionCitaUiState.Confirmada
+    val pagoId = (uiState as? ConfirmacionCitaUiState.Confirmada)?.pagoId.orEmpty()
 
     Scaffold(
         topBar = {
@@ -98,19 +108,48 @@ fun ConfirmacionCitaContent(
                     .navigationBarsPadding(),
                 color = colorFondoTurquesaClaro
             ) {
-                Button(
-                    onClick = { if (isConfirmada) onFinalizar() else onConfirmar() },
-                    enabled = uiState !is ConfirmacionCitaUiState.Cargando,
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    if (uiState is ConfirmacionCitaUiState.Cargando) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (isConfirmada) {
+                        Button(
+                            onClick = { onPagarOnline(pagoId) },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text(text = "Pagar Online con Mercado Pago (S/ 50.00)", style = MaterialTheme.typography.titleMedium)
+                        }
+
+                        OutlinedButton(
+                            onClick = { onPagarEnClinica(pagoId) },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                        ) {
+                            Text(text = "Pagar Físicamente en Clínica (Efectivo)", style = MaterialTheme.typography.titleMedium)
+                        }
+
+                        TextButton(
+                            onClick = onFinalizar,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "Pagar más tarde / Ir al inicio", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                        }
                     } else {
-                        Text(
-                            text = if (isConfirmada) "Ir a Mis Citas" else stringResource(R.string.citas_confirmar_boton),
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        Button(
+                            onClick = onConfirmar,
+                            enabled = uiState !is ConfirmacionCitaUiState.Cargando,
+                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            if (uiState is ConfirmacionCitaUiState.Cargando) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.citas_confirmar_boton),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -137,25 +176,25 @@ fun ConfirmacionCitaContent(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (confirmado) {
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(8.dp))
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
                             contentDescription = "Éxito",
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(80.dp)
+                            modifier = Modifier.size(64.dp)
                         )
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             text = "¡Cita Confirmada!",
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Tu comprobante de cita",
+                            text = "Selecciona tu método de pago",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
-                        Spacer(Modifier.height(32.dp))
+                        Spacer(Modifier.height(20.dp))
                     } else {
                         Spacer(Modifier.height(16.dp))
                         Text(
@@ -204,18 +243,18 @@ fun ConfirmacionCitaContent(
                                 }
                             }
 
-                            Spacer(Modifier.height(24.dp))
+                            Spacer(Modifier.height(20.dp))
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            Spacer(Modifier.height(24.dp))
+                            Spacer(Modifier.height(20.dp))
 
                             // Date Info
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                    Text(text = resumen.fecha.toFechaLegible(), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = resumen.fecha.toFechaLegible(), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             }
 
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(14.dp))
 
                             // Time Info
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -224,7 +263,7 @@ fun ConfirmacionCitaContent(
                                 Text(text = resumen.hora, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             }
 
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(14.dp))
                             Row(verticalAlignment = Alignment.Top) {
                                 Icon(Icons.Outlined.LocationOn, contentDescription = "Ubicación", tint = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -238,9 +277,9 @@ fun ConfirmacionCitaContent(
 
                             // Si está confirmada, mostramos el código de cita
                             if (confirmado && uiState is ConfirmacionCitaUiState.Confirmada) {
-                                Spacer(Modifier.height(24.dp))
+                                Spacer(Modifier.height(20.dp))
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                Spacer(Modifier.height(24.dp))
+                                Spacer(Modifier.height(20.dp))
 
                                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
@@ -250,10 +289,10 @@ fun ConfirmacionCitaContent(
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = uiState.citaId,
-                                        style = MaterialTheme.typography.titleLarge,
+                                        text = (uiState as ConfirmacionCitaUiState.Confirmada).citaId,
+                                        style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.primary,
-                                        letterSpacing = 2.sp
+                                        letterSpacing = 1.sp
                                     )
                                 }
                             }
@@ -264,7 +303,7 @@ fun ConfirmacionCitaContent(
                     if (uiState is ConfirmacionCitaUiState.Error) {
                         Spacer(Modifier.height(24.dp))
                         Text(
-                            text = uiState.mensaje,
+                            text = (uiState as ConfirmacionCitaUiState.Error).mensaje,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
@@ -273,37 +312,8 @@ fun ConfirmacionCitaContent(
                     }
                 }
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(30.dp))
         }
-    }
-}
-
-// PREVIEWS
-@Preview(showBackground = true)
-@Composable
-private fun ConfirmacionCitaPreviewIdle() {
-    TerapiaTheme {
-        ConfirmacionCitaContent(
-            resumen = ResumenCita("Dra. Ana Pérez", "Psicología Clínica", "Sede principal", "2026-10-15", "10:00", "Av. Lima 123, Miraflores, Lima"),
-            uiState = ConfirmacionCitaUiState.Idle,
-            onConfirmar = {},
-            onVolver = {},
-            onFinalizar = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun ConfirmacionCitaPreviewConfirmada() {
-    TerapiaTheme {
-        ConfirmacionCitaContent(
-            resumen = ResumenCita("Dra. Ana Pérez", "Psicología Clínica", "Sede principal", "2026-10-15", "10:00", "Av. Lima 123, Miraflores, Lima"),
-            uiState = ConfirmacionCitaUiState.Confirmada("TER-2026-B0492"),
-            onConfirmar = {},
-            onVolver = {},
-            onFinalizar = {}
-        )
     }
 }
 

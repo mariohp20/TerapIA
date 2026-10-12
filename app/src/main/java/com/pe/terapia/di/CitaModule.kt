@@ -5,6 +5,7 @@ import com.pe.terapia.data.repository.CitaRepositoryImpl
 import com.pe.terapia.data.repository.HistoriaClinicaRepositoryImpl
 import com.pe.terapia.domain.repository.CitaRepository
 import com.pe.terapia.domain.repository.HistoriaClinicaRepository
+import com.pe.terapia.domain.repository.PagoRepository
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
@@ -39,7 +40,8 @@ val citaModule = module {
             parameters[9],
             parameters[10],
             get(),
-            get<ObtenerUsuarioActualUseCase>()
+            get<ObtenerUsuarioActualUseCase>(),
+            get<PagoRepository>()
         )
     }
 }

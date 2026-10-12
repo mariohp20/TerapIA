@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Reserva
 import com.pe.terapia.domain.model.Rol
+import com.pe.terapia.domain.repository.PagoRepository
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 sealed interface ConfirmacionCitaUiState {
     data object Idle : ConfirmacionCitaUiState
     data object Cargando : ConfirmacionCitaUiState
-    data class Confirmada(val citaId: String) : ConfirmacionCitaUiState
+    data class Confirmada(val citaId: String, val pagoId: String) : ConfirmacionCitaUiState
     data class Error(val mensaje: String) : ConfirmacionCitaUiState
 }
 
@@ -40,7 +41,8 @@ class ConfirmacionCitaViewModel(
     private val bloqueId: String,
     private val inicioEpochMillis: Long,
     private val reservarCitaUseCase: ReservarCitaUseCase,
-    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase
+    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
+    private val pagoRepository: PagoRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ConfirmacionCitaUiState>(ConfirmacionCitaUiState.Idle)
@@ -77,10 +79,23 @@ class ConfirmacionCitaViewModel(
             )
 
             reservarCitaUseCase(reserva)
-                .onSuccess {
-                    _uiState.value = ConfirmacionCitaUiState.Confirmada(it.id)
+                .onSuccess { cita ->
+                    val pago = pagoRepository.obtenerPagoPorCita(cita.id).getOrNull()
+                    _uiState.value = ConfirmacionCitaUiState.Confirmada(
+                        citaId = cita.id,
+                        pagoId = pago?.id.orEmpty()
+                    )
                 }
                 .onFailure { _uiState.value = ConfirmacionCitaUiState.Error(it.message ?: "No se pudo confirmar la cita.") }
+        }
+    }
+
+    fun seleccionarPagoEnClinica(pagoId: String, onCompletado: () -> Unit) {
+        viewModelScope.launch {
+            if (pagoId.isNotBlank()) {
+                pagoRepository.seleccionarPagoEnClinica(pagoId)
+            }
+            onCompletado()
         }
     }
 }

@@ -9,4 +9,6 @@ interface PagoRepository {
     suspend fun confirmarPagoClinica(pagoId: String): Result<Comprobante>
     suspend fun procesarPagoOnline(pagoId: String, referenciaTransaccion: String): Result<Comprobante>
     suspend fun obtenerComprobantePorCita(citaId: String): Result<Comprobante?>
+    suspend fun obtenerPagoPorCita(citaId: String): Result<Pago?>
+    suspend fun seleccionarPagoEnClinica(pagoId: String): Result<Unit>
 }
