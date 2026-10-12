@@ -32,6 +32,7 @@ import com.pe.terapia.presentation.auth.registro.RegistroScreen
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaScreen
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaScreen
 import com.pe.terapia.presentation.home.admin.HomeAdminScreen
+import com.pe.terapia.presentation.home.admin.PromoverUsuarioScreen
 import com.pe.terapia.presentation.home.paciente.HomePacienteScreen
 import com.pe.terapia.presentation.home.psicologo.HomePsicologoScreen
 import com.pe.terapia.presentation.navigation.HomeAccessUiState
@@ -216,14 +217,40 @@ fun NavGraph(
             }
         }
 
-        composable<Route.HomeAdmin> {
+        composable<Route.HomeAdmin> (
+            enterTransition = {
+                slideInVertically(
+                    initialOffsetY = { it / 8 },
+                    animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing)
+                ) + fadeIn(animationSpec = tween(800))
+            },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
             ProtectedHomeRoute(Rol.ADMIN, navController) { authViewModel, error ->
                 HomeAdminScreen(
+                    onPromoverUsuario = { navController.navigate(Route.PromoverUsuario) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     mensajeError = error
                 )
             }
         }
+
+        composable<Route.PromoverUsuario>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                // Asumiendo que crearás este Composable próximamente
+                PromoverUsuarioScreen(
+                    onVolver = { navController.popBackStack() },
+                    onPromocionExitosa = {
+                        // Opcional: mostrar un mensaje y regresar
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
     }
 }
 

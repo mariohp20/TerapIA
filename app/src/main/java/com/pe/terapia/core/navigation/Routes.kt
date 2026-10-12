@@ -45,4 +45,7 @@ sealed class Route {
         val bloqueId: String,
         val inicioEpochMillis: Long
     ) : Route()
+
+    @Serializable
+    data object PromoverUsuario : Route()
 }

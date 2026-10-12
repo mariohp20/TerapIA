@@ -1,6 +1,7 @@
 package com.pe.terapia
 
 import android.app.Application
+import com.pe.terapia.di.adminModule
 import com.pe.terapia.di.authModule
 import com.pe.terapia.di.citaModule
 import com.pe.terapia.di.firebaseModule
@@ -15,7 +16,7 @@ class TerapiaApp : Application(){
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@TerapiaApp)
-            modules(listOf(firebaseModule, authModule, citaModule))
+            modules(listOf(firebaseModule, authModule, citaModule, adminModule))
         }
     }
 }
