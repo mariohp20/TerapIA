@@ -136,6 +136,9 @@ fun NavGraph(
                 HomePacienteScreen(
                     onReservarCita = { navController.navigate(Route.ReservaCita) },
                     onCerrarSesion = authViewModel::cerrarSesion,
+                    onVerHistorial = { pacienteId, pacienteNombre ->
+                        navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre))
+                    },
                     mensajeError = error
                 )
             }
@@ -258,12 +261,19 @@ fun NavGraph(
         ) { entry ->
             val args = entry.toRoute<Route.HistorialClinico>()
 
-            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+            val authViewModel: AuthViewModel = koinViewModel()
+            val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+
+            if (authState !is AuthUiState.Loading && authState !is AuthUiState.SignedOut) {
                 com.pe.terapia.presentation.historial.HistorialClinicoScreen(
                     pacienteId = args.pacienteId,
                     pacienteNombre = args.pacienteNombre,
                     onVolver = { navController.popBackStack() }
                 )
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
         }
 

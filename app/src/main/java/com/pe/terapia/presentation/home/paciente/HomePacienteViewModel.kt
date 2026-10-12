@@ -53,4 +53,16 @@ class HomePacienteViewModel(
             )
         }
     }
+
+    fun verHistorial(onNavegarAHistorial: (String, String) -> Unit) {
+        viewModelScope.launch {
+            val usuario = obtenerUsuarioActual().getOrNull()
+            if (usuario != null) {
+                onNavegarAHistorial(
+                    usuario.uid,
+                    "${usuario.nombres} ${usuario.apellidos}"
+                )
+            }
+        }
+    }
 }

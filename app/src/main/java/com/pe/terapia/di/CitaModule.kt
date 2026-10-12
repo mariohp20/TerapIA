@@ -22,6 +22,7 @@ val citaModule = module {
     factory { ObtenerProximaCitaUseCase(get()) }
     factory { ReservarCitaUseCase(get()) }
     factory { ObtenerCitasHoyPsicologoUseCase(get()) }
+    factory { ObtenerUsuarioActualUseCase(get()) }
 
     viewModel { ReservaCitaViewModel(get()) }
     viewModel { HomePacienteViewModel(get(), get()) }
