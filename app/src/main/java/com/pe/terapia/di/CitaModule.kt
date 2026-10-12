@@ -27,7 +27,7 @@ val citaModule = module {
     factory { ObtenerUsuarioActualUseCase(get()) }
 
     viewModel { ReservaCitaViewModel(get()) }
-    viewModel { HomePacienteViewModel(get(), get()) }
+    viewModel { HomePacienteViewModel(get(), get(), get()) }
     viewModel { parameters ->
         ConfirmacionCitaViewModel(
             parameters[0],
