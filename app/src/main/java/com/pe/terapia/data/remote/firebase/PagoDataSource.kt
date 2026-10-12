@@ -1,5 +1,7 @@
 package com.pe.terapia.data.remote.firebase
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.Comprobante
@@ -12,6 +14,28 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.tasks.await
 
 class PagoDataSource(private val firestore: FirebaseFirestore) {
+
+    private fun DocumentSnapshot.getSafeLong(field: String): Long {
+        val value = get(field)
+        return when (value) {
+            is Long -> value
+            is Number -> value.toLong()
+            is Timestamp -> value.toDate().time
+            is String -> value.toLongOrNull() ?: System.currentTimeMillis()
+            else -> System.currentTimeMillis()
+        }
+    }
+
+    private fun DocumentSnapshot.getSafeLongOrNull(field: String): Long? {
+        val value = get(field) ?: return null
+        return when (value) {
+            is Long -> value
+            is Number -> value.toLong()
+            is Timestamp -> value.toDate().time
+            is String -> value.toLongOrNull()
+            else -> null
+        }
+    }
 
     suspend fun obtenerHistorialPagos(pacienteId: String): List<Pair<Pago, Comprobante?>> {
         require(pacienteId.isNotBlank()) { "Paciente ID inválido" }
@@ -62,8 +86,8 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 estado = runCatching { EstadoPago.valueOf(doc.getString("estado") ?: "") }.getOrDefault(EstadoPago.PENDIENTE),
                 metodoPago = doc.getString("metodoPago")?.let { runCatching { MetodoPago.valueOf(it) }.getOrNull() },
                 referenciaTransaccion = doc.getString("referenciaTransaccion"),
-                creadaEn = doc.getLong("creadaEn") ?: System.currentTimeMillis(),
-                actualizadaEn = doc.getLong("actualizadaEn")
+                creadaEn = doc.getSafeLong("creadaEn"),
+                actualizadaEn = doc.getSafeLongOrNull("actualizadaEn")
             )
 
             // Buscar comprobante asociado
@@ -109,7 +133,7 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 monto = doc.getDouble("monto") ?: PRECIO_ESTANDAR_CITA,
                 moneda = doc.getString("moneda") ?: "PEN",
                 estado = EstadoPago.PENDIENTE,
-                creadaEn = doc.getLong("creadaEn") ?: System.currentTimeMillis()
+                creadaEn = doc.getSafeLong("creadaEn")
             )
         }
     }
@@ -284,8 +308,8 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 estado = runCatching { EstadoPago.valueOf(doc.getString("estado") ?: "") }.getOrDefault(EstadoPago.PENDIENTE),
                 metodoPago = doc.getString("metodoPago")?.let { runCatching { MetodoPago.valueOf(it) }.getOrNull() },
                 referenciaTransaccion = doc.getString("referenciaTransaccion"),
-                creadaEn = doc.getLong("creadaEn") ?: System.currentTimeMillis(),
-                actualizadaEn = doc.getLong("actualizadaEn")
+                creadaEn = doc.getSafeLong("creadaEn"),
+                actualizadaEn = doc.getSafeLongOrNull("actualizadaEn")
             )
         }
 
