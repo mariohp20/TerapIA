@@ -11,4 +11,10 @@ class HistoriaClinicaRepositoryImpl(
     override suspend fun registrarAtencion(atencion: Atencion): Result<Unit> = runCatching {
         dataSource.registrarAtencionYCrearHistoriaSiNoExiste(atencion)
     }
+    override suspend fun obtenerAtencionesPorPaciente(pacienteId: String): Result<List<Atencion>> = runCatching {
+        dataSource.obtenerAtencionesPorPaciente(pacienteId)
+    }
+    override suspend fun obtenerPacientesDelPsicologo(psicologoId: String): Result<List<com.pe.terapia.domain.model.PacienteResumen>> = runCatching {
+        dataSource.obtenerPacientesDelPsicologo(psicologoId)
+    }
 }

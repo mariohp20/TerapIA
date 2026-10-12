@@ -58,5 +58,15 @@ sealed class Route {
     @Serializable
     data object AsignarHorario : Route()
 
+    @Serializable
+    data class HistorialClinico(
+        val pacienteId: String,
+        val pacienteNombre: String
+    ) : Route()
+
+    @Serializable
+    data object BuscadorPacientes : Route()
+
+
 
 }

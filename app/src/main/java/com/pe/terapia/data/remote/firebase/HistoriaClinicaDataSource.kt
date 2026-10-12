@@ -1,6 +1,7 @@
 package com.pe.terapia.data.remote.firebase
 
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.Atencion
 import kotlinx.coroutines.tasks.await
@@ -58,5 +59,66 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
 
         // Ejecutamos todo de golpe
         batch.commit().await()
+    }
+
+    suspend fun obtenerAtencionesPorPaciente(pacienteId: String): List<Atencion> {
+        val snapshot = firestore.collection("atenciones")
+            .whereEqualTo("pacienteId", pacienteId)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            val data = doc.data ?: return@mapNotNull null
+
+            val timestamp = data["fechaAtencion"] as? com.google.firebase.Timestamp
+            val fechaInstant = timestamp?.let { java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong()) } ?: java.time.Instant.now()
+
+            Atencion(
+                citaId = data["citaId"] as? String ?: "",
+                pacienteId = data["pacienteId"] as? String ?: "",
+                psicologoId = data["psicologoId"] as? String ?: "",
+                historiaClinicaId = data["historiaClinicaId"] as? String ?: "",
+                fechaAtencion = fechaInstant,
+                motivoConsulta = data["motivoConsulta"] as? String ?: "",
+                observaciones = data["observaciones"] as? String ?: "",
+                evaluacion = data["evaluacion"] as? String ?: "",
+                evolucion = data["evolucion"] as? String ?: "",
+                indicaciones = data["indicaciones"] as? String ?: ""
+            )
+        }.sortedByDescending { it.fechaAtencion }
+    }
+
+    suspend fun obtenerPacientesDelPsicologo(psicologoId: String): List<com.pe.terapia.domain.model.PacienteResumen> {
+        val citasSnapshot = firestore.collection("citas")
+            .whereEqualTo("psicologoId", psicologoId)
+            .get()
+            .await()
+
+        val pacienteIds = citasSnapshot.documents.mapNotNull { it.getString("pacienteId") }.distinct()
+
+        if (pacienteIds.isEmpty()) return emptyList()
+
+        val pacientes = mutableListOf<com.pe.terapia.domain.model.PacienteResumen>()
+
+        pacienteIds.chunked(10).forEach { chunk ->
+            val usuariosSnapshot = firestore.collection("usuarios")
+                .whereIn(FieldPath.documentId(), chunk)
+                .get()
+                .await()
+
+            usuariosSnapshot.documents.forEach { doc ->
+                val nombres = doc.getString("nombres") ?: ""
+                val apellidos = doc.getString("apellidos") ?: ""
+                val nombreCompleto = "$nombres $apellidos".trim()
+
+                pacientes.add(
+                    com.pe.terapia.domain.model.PacienteResumen(
+                        id = doc.id,
+                        nombreCompleto = nombreCompleto.ifBlank { "Paciente Desconocido" }
+                    )
+                )
+            }
+        }
+        return pacientes
     }
 }

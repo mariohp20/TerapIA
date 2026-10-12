@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -30,94 +31,111 @@ import org.koin.androidx.compose.koinViewModel
 fun HomePsicologoScreen(
     onCerrarSesion: () -> Unit,
     onRegistrarAtencion: (citaId: String, pacienteId: String) -> Unit,
+    onIrAHistorialClinico: () -> Unit, // <--- NUEVO PARÁMETRO
     viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        // CABECERA
-        Box(
+    Scaffold(
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onIrAHistorialClinico,
+                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Historiales") },
+                text = { Text("Historiales Clínicos") },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 24.dp)
-                .padding(top = 32.dp, bottom = 32.dp)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(paddingValues) // <--- Respetamos el espacio del FAB
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // CABECERA
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 32.dp, bottom = 32.dp)
             ) {
-                Column {
-                    Text(text = stringResource(R.string.home_saludo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
-                    Text(text = stringResource(R.string.home_psicologo_titulo), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-                IconButton(
-                    onClick = onCerrarSesion,
-                    modifier = Modifier.background(Color.White.copy(alpha = 0.5f), CircleShape)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = stringResource(R.string.home_cerrar_sesion), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Column {
+                        Text(text = stringResource(R.string.home_saludo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                        Text(text = stringResource(R.string.home_psicologo_titulo), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    IconButton(
+                        onClick = onCerrarSesion,
+                        modifier = Modifier.background(Color.White.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = stringResource(R.string.home_cerrar_sesion), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
                 }
             }
-        }
 
-        // TARJETA BLANCA PRINCIPAL
-        Surface(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            if (uiState.cargando) {
-                // Estado de Carga
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                // Estado de Éxito / Error
-                Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
-                ) {
-                    uiState.error?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(16.dp))
+            // TARJETA BLANCA PRINCIPAL
+            Surface(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                if (uiState.cargando) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
-
-                    // RESUMEN DE HOY
-                    Text("Resumen de hoy", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
                     ) {
-                        ResumenCard(titulo = "Citas hoy", valor = uiState.citasHoy.toString())
-                        ResumenCard(titulo = "Pendientes", valor = uiState.pendientes.toString())
-                        ResumenCard(titulo = "Pacientes\nactivos", valor = uiState.pacientesActivos.toString())
-                    }
+                        uiState.error?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                        // RESUMEN DE HOY
+                        Text("Resumen de hoy", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // PRÓXIMAS CITAS
-                    Text(stringResource(R.string.home_psicologo_proximas), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (uiState.proximasCitas.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(150.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.home_psicologo_sin_citas), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            ResumenCard(titulo = "Citas hoy", valor = uiState.citasHoy.toString())
+                            ResumenCard(titulo = "Pendientes", valor = uiState.pendientes.toString())
+                            ResumenCard(titulo = "Pacientes\nactivos", valor = uiState.pacientesActivos.toString())
                         }
-                    } else {
-                        uiState.proximasCitas.forEach { cita ->
-                            CitaItemCard(
-                                cita = cita,
-                                onClick = { onRegistrarAtencion(cita.citaId, cita.pacienteId) }
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // PRÓXIMAS CITAS
+                        Text(stringResource(R.string.home_psicologo_proximas), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (uiState.proximasCitas.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(150.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(stringResource(R.string.home_psicologo_sin_citas), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            uiState.proximasCitas.forEach { cita ->
+                                CitaItemCard(
+                                    cita = cita,
+                                    onClick = { onRegistrarAtencion(cita.citaId, cita.pacienteId) }
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
                         }
+
+                        // Espacio extra al final para que el scroll pase por encima del botón flotante sin tapar la última cita
+                        Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
             }
@@ -157,7 +175,6 @@ fun CitaItemCard(cita: CitaPacienteDetalle, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Línea indicadora izquierda
             Box(modifier = Modifier.width(4.dp).height(24.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50)))
             Spacer(modifier = Modifier.width(12.dp))
 

@@ -214,6 +214,9 @@ fun NavGraph(
                     onCerrarSesion = authViewModel::cerrarSesion,
                     onRegistrarAtencion = { citaId, pacienteId ->
                         navController.navigate(Route.RegistrarAtencion(citaId, pacienteId))
+                    },
+                    onIrAHistorialClinico = {
+                        navController.navigate(Route.BuscadorPacientes)
                     }
                 )
             }
@@ -231,6 +234,35 @@ fun NavGraph(
                     pacienteId = args.pacienteId,
                     onVolver = { navController.popBackStack() },
                     onGuardadoExitoso = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable<Route.BuscadorPacientes>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                com.pe.terapia.presentation.buscadorPacientes.BuscadorPacientesScreen(
+                    onVolver = { navController.popBackStack() },
+                    onPacienteSeleccionado = { pacienteId, pacienteNombre ->
+                        navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre))
+                    }
+                )
+            }
+        }
+
+        composable<Route.HistorialClinico>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) { entry ->
+            val args = entry.toRoute<Route.HistorialClinico>()
+
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                com.pe.terapia.presentation.historial.HistorialClinicoScreen(
+                    pacienteId = args.pacienteId,
+                    pacienteNombre = args.pacienteNombre,
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }
