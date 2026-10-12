@@ -1,5 +1,7 @@
 package com.pe.terapia.domain.repository
 
+import com.pe.terapia.domain.model.Atencion
+
 interface HistoriaClinicaRepository {
-    suspend fun verificarOCrearHistoria(pacienteId: String): Result<Boolean>
+    suspend fun registrarAtencion(atencion: Atencion): Result<Unit>
 }

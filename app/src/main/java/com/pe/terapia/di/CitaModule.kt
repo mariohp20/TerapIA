@@ -2,9 +2,7 @@ package com.pe.terapia.di
 
 import com.pe.terapia.data.remote.firebase.CitaDataSource
 import com.pe.terapia.data.repository.CitaRepositoryImpl
-import com.pe.terapia.data.repository.HistoriaClinicaRepositoryImpl
 import com.pe.terapia.domain.repository.CitaRepository
-import com.pe.terapia.domain.repository.HistoriaClinicaRepository
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
@@ -18,10 +16,9 @@ import org.koin.dsl.module
 val citaModule = module {
     single { CitaDataSource(get()) }
     single<CitaRepository> { CitaRepositoryImpl(get()) }
-    single<HistoriaClinicaRepository> { HistoriaClinicaRepositoryImpl(get()) }
     factory { ObtenerDisponibilidadUseCase(get()) }
     factory { ObtenerProximaCitaUseCase(get()) }
-    factory { ReservarCitaUseCase(get(), get()) }
+    factory { ReservarCitaUseCase(get()) }
 
     viewModel { ReservaCitaViewModel(get()) }
     viewModel { HomePacienteViewModel(get(), get()) }
