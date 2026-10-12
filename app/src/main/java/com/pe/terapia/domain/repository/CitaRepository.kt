@@ -1,6 +1,7 @@
 package com.pe.terapia.domain.repository
 
 import com.pe.terapia.domain.model.Cita
+import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.Especialidad
 import com.pe.terapia.domain.model.Reserva
 import com.pe.terapia.domain.model.Sede
@@ -15,4 +16,6 @@ interface CitaRepository {
     suspend fun obtenerDisponibilidad(psicologoId: String, sedeId: String, fecha: String): Result<List<SlotDisponible>>
     suspend fun obtenerProximaCita(pacienteId: String): Result<ProximaCita?>
     suspend fun reservarYConfirmar(reserva: Reserva): Result<Cita>
+
+    suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>>
 }

@@ -1,4 +1,4 @@
-package com.pe.terapia.presentation.home.admin
+package com.pe.terapia.presentation.admin.promover
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*

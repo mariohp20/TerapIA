@@ -48,4 +48,15 @@ sealed class Route {
 
     @Serializable
     data object PromoverUsuario : Route()
+
+    @Serializable
+    data class RegistrarAtencion(
+        val citaId: String,
+        val pacienteId: String
+    ) : Route()
+
+    @Serializable
+    data object AsignarHorario : Route()
+
+
 }

@@ -4,12 +4,14 @@ import com.pe.terapia.data.remote.firebase.CitaDataSource
 import com.pe.terapia.data.repository.CitaRepositoryImpl
 import com.pe.terapia.domain.repository.CitaRepository
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerCitasHoyPsicologoUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaViewModel
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaViewModel
 import com.pe.terapia.presentation.home.paciente.HomePacienteViewModel
+import com.pe.terapia.presentation.home.psicologo.HomePsicologoViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
@@ -19,6 +21,7 @@ val citaModule = module {
     factory { ObtenerDisponibilidadUseCase(get()) }
     factory { ObtenerProximaCitaUseCase(get()) }
     factory { ReservarCitaUseCase(get()) }
+    factory { ObtenerCitasHoyPsicologoUseCase(get()) }
 
     viewModel { ReservaCitaViewModel(get()) }
     viewModel { HomePacienteViewModel(get(), get()) }
@@ -39,4 +42,5 @@ val citaModule = module {
             get<ObtenerUsuarioActualUseCase>()
         )
     }
+    viewModel { HomePsicologoViewModel(get(), get()) }
 }

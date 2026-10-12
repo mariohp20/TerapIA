@@ -1,4 +1,4 @@
-package com.pe.terapia.presentation.home.admin
+package com.pe.terapia.presentation.admin.promover
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

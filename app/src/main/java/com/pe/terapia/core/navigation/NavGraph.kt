@@ -32,7 +32,7 @@ import com.pe.terapia.presentation.auth.registro.RegistroScreen
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaScreen
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaScreen
 import com.pe.terapia.presentation.home.admin.HomeAdminScreen
-import com.pe.terapia.presentation.home.admin.PromoverUsuarioScreen
+import com.pe.terapia.presentation.admin.promover.PromoverUsuarioScreen
 import com.pe.terapia.presentation.home.paciente.HomePacienteScreen
 import com.pe.terapia.presentation.home.psicologo.HomePsicologoScreen
 import com.pe.terapia.presentation.navigation.HomeAccessUiState
@@ -209,10 +209,28 @@ fun NavGraph(
             },
             exitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
-            ProtectedHomeRoute(Rol.PSICOLOGO, navController) { authViewModel, error ->
+            ProtectedHomeRoute(Rol.PSICOLOGO, navController) { authViewModel, _ ->
                 HomePsicologoScreen(
                     onCerrarSesion = authViewModel::cerrarSesion,
-                    mensajeError = error
+                    onRegistrarAtencion = { citaId, pacienteId ->
+                        navController.navigate(Route.RegistrarAtencion(citaId, pacienteId))
+                    }
+                )
+            }
+        }
+
+        composable<Route.RegistrarAtencion>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) { entry ->
+            val args = entry.toRoute<Route.RegistrarAtencion>()
+
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                com.pe.terapia.presentation.atencion.RegistrarAtencionScreen(
+                    citaId = args.citaId,
+                    pacienteId = args.pacienteId,
+                    onVolver = { navController.popBackStack() },
+                    onGuardadoExitoso = { navController.popBackStack() }
                 )
             }
         }
@@ -229,6 +247,7 @@ fun NavGraph(
             ProtectedHomeRoute(Rol.ADMIN, navController) { authViewModel, error ->
                 HomeAdminScreen(
                     onPromoverUsuario = { navController.navigate(Route.PromoverUsuario) },
+                    onAsignarHorario = { navController.navigate(Route.AsignarHorario) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     mensajeError = error
                 )
@@ -250,6 +269,18 @@ fun NavGraph(
                 )
             }
         }
+
+        composable<Route.AsignarHorario>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                com.pe.terapia.presentation.admin.horario.AsignarHorarioScreen(
+                    onVolver = { navController.popBackStack() }
+                )
+            }
+        }
+
 
     }
 }

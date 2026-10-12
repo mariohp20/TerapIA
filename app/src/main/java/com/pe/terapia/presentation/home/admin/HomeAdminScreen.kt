@@ -8,7 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.ManageAccounts
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.SupervisedUserCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.R
 import com.pe.terapia.ui.theme.TerapiaTheme
@@ -31,6 +32,7 @@ import org.koin.androidx.compose.koinViewModel
 fun HomeAdminScreen(
     onPromoverUsuario: () -> Unit,
     onCerrarSesion: () -> Unit,
+    onAsignarHorario: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomeAdminViewModel = koinViewModel()
 ) {
@@ -39,6 +41,7 @@ fun HomeAdminScreen(
         uiState = uiState,
         mensajeError = mensajeError,
         onPromoverUsuario = onPromoverUsuario,
+        onAsignarHorario = onAsignarHorario,
         onCerrarSesion = onCerrarSesion
     )
 }
@@ -48,6 +51,7 @@ private fun HomeAdminContent(
     uiState: HomeAdminUiState,
     mensajeError: String?,
     onPromoverUsuario: () -> Unit,
+    onAsignarHorario: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
@@ -66,7 +70,6 @@ private fun HomeAdminContent(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    // Añadir esta y las otras strings en strings.xml
                     text = "Panel de control general",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
@@ -134,22 +137,18 @@ private fun HomeAdminContent(
 
                 Spacer(Modifier.height(30.dp))
 
-                // Espacio para futuras opciones del admin (estadísticas, reportes, etc.)
+                // Otras herramientas (Ahora con un Botón simple)
                 Text("Otras herramientas", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(14.dp))
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                Button(
+                    onClick = onAsignarHorario,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Outlined.ManageAccounts, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
-                        Spacer(Modifier.height(10.dp))
-                        Text("Gestión de clínicas y especialidades", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Próximamente", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                    }
+                    Icon(Icons.Outlined.CalendarMonth, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Asignar Horarios a Psicólogos", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -164,6 +163,7 @@ private fun HomeAdminPreview() {
             uiState = HomeAdminUiState(nombreAdmin = "Carlos", cargando = false),
             mensajeError = null,
             onPromoverUsuario = {},
+            onAsignarHorario = {},
             onCerrarSesion = {}
         )
     }

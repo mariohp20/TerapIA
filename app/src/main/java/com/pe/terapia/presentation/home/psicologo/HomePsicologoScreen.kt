@@ -1,27 +1,39 @@
 package com.pe.terapia.presentation.home.psicologo
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.R
+import com.pe.terapia.domain.model.CitaPacienteDetalle
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun HomePsicologoScreen(
     onCerrarSesion: () -> Unit,
-    mensajeError: String? = null
+    onRegistrarAtencion: (citaId: String, pacienteId: String) -> Unit,
+    viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     Column(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)
     ) {
@@ -57,22 +69,106 @@ fun HomePsicologoScreen(
             shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
             color = MaterialTheme.colorScheme.background
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
-            ) {
-                mensajeError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Text(stringResource(R.string.home_psicologo_resumen), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(stringResource(R.string.home_psicologo_proximas), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(150.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
+            if (uiState.cargando) {
+                // Estado de Carga
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else {
+                // Estado de Éxito / Error
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
                 ) {
-                    Text(stringResource(R.string.home_psicologo_sin_citas), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    uiState.error?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // RESUMEN DE HOY
+                    Text("Resumen de hoy", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        ResumenCard(titulo = "Citas hoy", valor = uiState.citasHoy.toString())
+                        ResumenCard(titulo = "Pendientes", valor = uiState.pendientes.toString())
+                        ResumenCard(titulo = "Pacientes\nactivos", valor = uiState.pacientesActivos.toString())
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // PRÓXIMAS CITAS
+                    Text(stringResource(R.string.home_psicologo_proximas), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (uiState.proximasCitas.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(150.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(stringResource(R.string.home_psicologo_sin_citas), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        uiState.proximasCitas.forEach { cita ->
+                            CitaItemCard(
+                                cita = cita,
+                                onClick = { onRegistrarAtencion(cita.citaId, cita.pacienteId) }
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+@Composable
+fun ResumenCard(titulo: String, valor: String) {
+    Card(
+        modifier = Modifier.width(100.dp).height(100.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = valor, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = titulo, fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center, lineHeight = 14.sp)
+        }
+    }
+}
+
+@Composable
+fun CitaItemCard(cita: CitaPacienteDetalle, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Línea indicadora izquierda
+            Box(modifier = Modifier.width(4.dp).height(24.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50)))
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(text = cita.hora, fontWeight = FontWeight.Medium, color = Color.Gray)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "·", color = Color.Gray)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = cita.nombrePaciente, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Ir", modifier = Modifier.size(16.dp), tint = Color.Gray)
+        }
+    }
+}
