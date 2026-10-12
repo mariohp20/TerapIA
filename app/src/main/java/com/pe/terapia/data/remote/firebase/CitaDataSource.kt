@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.BloqueHorario
 import com.pe.terapia.domain.model.Cita
+import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
 import com.pe.terapia.domain.model.EstadoPago
@@ -320,6 +321,34 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
             ))
             cita
         }.await()
+    }
+
+    suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): List<CitaPacienteDetalle> {
+        // 1. Buscamos las citas programadas para este psicólogo en la fecha indicada
+        val snapshot = firestore.collection("citas")
+            .whereEqualTo("psicologoId", psicologoId)
+            .whereEqualTo("fecha", fechaText)
+            .whereEqualTo("estado", EstadoCita.PROGRAMADA.name)
+            .get()
+            .await()
+
+        // 2. Mapeamos los resultados y buscamos el nombre de cada paciente
+        return snapshot.documents.mapNotNull { doc ->
+            val pacienteId = doc.getString("pacienteId") ?: return@mapNotNull null
+
+            // Consultamos la colección usuarios para obtener el nombre
+            val pacienteSnapshot = firestore.collection("usuarios").document(pacienteId).get().await()
+            val nombres = pacienteSnapshot.getString("nombres") ?: ""
+            val apellidos = pacienteSnapshot.getString("apellidos") ?: ""
+            val nombreCompleto = "$nombres $apellidos".trim()
+
+            CitaPacienteDetalle(
+                citaId = doc.id,
+                pacienteId = pacienteId,
+                hora = doc.getString("hora").orEmpty(),
+                nombrePaciente = nombreCompleto.ifBlank { "Paciente sin registrar" }
+            )
+        }.sortedBy { it.hora } // Las ordenamos por hora de atención
     }
 
     private fun Reserva.toFirestore(startAt: Timestamp, citaId: String): Map<String, Any> = mapOf(

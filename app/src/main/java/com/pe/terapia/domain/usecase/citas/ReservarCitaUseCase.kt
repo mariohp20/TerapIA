@@ -3,12 +3,10 @@ package com.pe.terapia.domain.usecase.citas
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.Reserva
 import com.pe.terapia.domain.repository.CitaRepository
-import com.pe.terapia.domain.repository.HistoriaClinicaRepository
 import kotlinx.coroutines.CancellationException
 
 class ReservarCitaUseCase(
     private val repository: CitaRepository,
-    private val historiaRepository: HistoriaClinicaRepository
 ) {
     suspend operator fun invoke(reserva: Reserva): Result<Cita> {
         if (
@@ -21,9 +19,6 @@ class ReservarCitaUseCase(
 
         return try {
             val resultadoCita = repository.reservarYConfirmar(reserva)
-            if (resultadoCita.isSuccess) {
-                historiaRepository.verificarOCrearHistoria(reserva.pacienteId)
-            }
             resultadoCita
         } catch (exception: CancellationException) {
             throw exception

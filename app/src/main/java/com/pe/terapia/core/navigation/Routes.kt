@@ -47,6 +47,7 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+
     data object HistorialPagos : Route()
 
     @Serializable
@@ -54,4 +55,29 @@ sealed class Route {
 
     @Serializable
     data object GestionPagosPsicologo : Route()
+
+    @Serializable
+    data object PromoverUsuario : Route()
+
+    @Serializable
+    data class RegistrarAtencion(
+        val citaId: String,
+        val pacienteId: String
+    ) : Route()
+
+    @Serializable
+    data object AsignarHorario : Route()
+
+    @Serializable
+    data class HistorialClinico(
+        val pacienteId: String,
+        val pacienteNombre: String
+    ) : Route()
+
+    @Serializable
+    data object BuscadorPacientes : Route()
+
+
+
+
 }

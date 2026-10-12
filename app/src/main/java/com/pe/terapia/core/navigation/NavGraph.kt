@@ -32,6 +32,7 @@ import com.pe.terapia.presentation.auth.registro.RegistroScreen
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaScreen
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaScreen
 import com.pe.terapia.presentation.home.admin.HomeAdminScreen
+import com.pe.terapia.presentation.admin.promover.PromoverUsuarioScreen
 import com.pe.terapia.presentation.home.paciente.HomePacienteScreen
 import com.pe.terapia.presentation.home.psicologo.HomePsicologoScreen
 import com.pe.terapia.presentation.pagos.GestionPagosPsicologoScreen
@@ -139,6 +140,9 @@ fun NavGraph(
                     onReservarCita = { navController.navigate(Route.ReservaCita) },
                     onVerHistorialPagos = { navController.navigate(Route.HistorialPagos) },
                     onCerrarSesion = authViewModel::cerrarSesion,
+                    onVerHistorial = { pacienteId, pacienteNombre ->
+                        navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre))
+                    },
                     mensajeError = error
                 )
             }
@@ -246,9 +250,85 @@ fun NavGraph(
             },
             exitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
-            ProtectedHomeRoute(Rol.PSICOLOGO, navController) { authViewModel, error ->
+            ProtectedHomeRoute(Rol.PSICOLOGO, navController) { authViewModel, _ ->
                 HomePsicologoScreen(
                     onGestionarPagos = { navController.navigate(Route.GestionPagosPsicologo) },
+                    onCerrarSesion = authViewModel::cerrarSesion,
+                    onRegistrarAtencion = { citaId, pacienteId ->
+                        navController.navigate(Route.RegistrarAtencion(citaId, pacienteId))
+                    },
+                    onIrAHistorialClinico = {
+                        navController.navigate(Route.BuscadorPacientes)
+                    }
+                )
+            }
+        }
+
+        composable<Route.RegistrarAtencion>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) { entry ->
+            val args = entry.toRoute<Route.RegistrarAtencion>()
+
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                com.pe.terapia.presentation.atencion.RegistrarAtencionScreen(
+                    citaId = args.citaId,
+                    pacienteId = args.pacienteId,
+                    onVolver = { navController.popBackStack() },
+                    onGuardadoExitoso = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable<Route.BuscadorPacientes>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                com.pe.terapia.presentation.buscadorPacientes.BuscadorPacientesScreen(
+                    onVolver = { navController.popBackStack() },
+                    onPacienteSeleccionado = { pacienteId, pacienteNombre ->
+                        navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre))
+                    }
+                )
+            }
+        }
+
+        composable<Route.HistorialClinico>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) { entry ->
+            val args = entry.toRoute<Route.HistorialClinico>()
+
+            val authViewModel: AuthViewModel = koinViewModel()
+            val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+
+            if (authState !is AuthUiState.Loading && authState !is AuthUiState.SignedOut) {
+                com.pe.terapia.presentation.historial.HistorialClinicoScreen(
+                    pacienteId = args.pacienteId,
+                    pacienteNombre = args.pacienteNombre,
+                    onVolver = { navController.popBackStack() }
+                )
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+
+        composable<Route.HomeAdmin> (
+            enterTransition = {
+                slideInVertically(
+                    initialOffsetY = { it / 8 },
+                    animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing)
+                ) + fadeIn(animationSpec = tween(800))
+            },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            ProtectedHomeRoute(Rol.ADMIN, navController) { authViewModel, error ->
+                HomeAdminScreen(
+                    onPromoverUsuario = { navController.navigate(Route.PromoverUsuario) },
+                    onAsignarHorario = { navController.navigate(Route.AsignarHorario) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     mensajeError = error
                 )
@@ -263,14 +343,32 @@ fun NavGraph(
             }
         }
 
-        composable<Route.HomeAdmin> {
-            ProtectedHomeRoute(Rol.ADMIN, navController) { authViewModel, error ->
-                HomeAdminScreen(
-                    onCerrarSesion = authViewModel::cerrarSesion,
-                    mensajeError = error
+        composable<Route.PromoverUsuario>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                PromoverUsuarioScreen(
+                    onVolver = { navController.popBackStack() },
+                    onPromocionExitosa = {
+                        navController.popBackStack()
+                    }
                 )
             }
         }
+
+        composable<Route.AsignarHorario>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                com.pe.terapia.presentation.admin.horario.AsignarHorarioScreen(
+                    onVolver = { navController.popBackStack() }
+                )
+            }
+        }
+
+
     }
 }
 

@@ -109,5 +109,27 @@
     <string name="citas_disponibilidad_pendiente">La disponibilidad estará disponible cuando se definan los horarios laborales y sus excepciones.</string>
     <string name="citas_especialidades_vacias">No hay especialidades disponibles.</string>
     <string name="citas_especialidades_cargando">Cargando especialidades…</string>
+    <string name="resumen_de_hoy">Resumen de hoy</string>
+    <string name="historiales_clinicos">Historiales Clínicos</string>
+    <string name="historiales">Historiales</string>
+    <string name="citas_hoy">Citas hoy</string>
+    <string name="pendientes">Pendientes</string>
+    <string name="pacientes_activos">Pacientes\nactivos</string>
+    <string name="historia_clinica">Historia clínica</string>
+    <string name="volver">Volver</string>
+    <string name="buscar_paciente">Buscar paciente...</string>
+    <string name="buscar">Buscar</string>
+    <string name="ver_detalles">Ver detalles</string>
+    <string name="proximamente">Próximamente</string>
+    <string name="ultima_sesion">Última sesión</string>
+    <string name="no_hay_sesiones_previas_registradas">No hay sesiones previas registradas.</string>
+    <string name="fase_actual">Fase actual</string>
+    <string name="guardar_atencion_clinica">Guardar Atención Clínica</string>
+    <string name="indicaciones_tareas">Indicaciones / Tareas</string>
+    <string name="evolucion_del_paciente">Evolución del Paciente</string>
+    <string name="evaluacion_psicologica">Evaluación Psicológica</string>
+    <string name="observaciones_generales">Observaciones Generales</string>
+    <string name="motivo_de_consulta">Motivo de Consulta</string>
+    <string name="registrar_atencion">Registrar Atención</string>
 
 </resources>
