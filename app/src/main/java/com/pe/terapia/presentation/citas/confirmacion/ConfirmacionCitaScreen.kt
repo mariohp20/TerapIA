@@ -116,7 +116,7 @@ fun ConfirmacionCitaContent(
                             shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Text(text = "Pagar Online con Mercado Pago (S/ 50.00)", style = MaterialTheme.typography.titleMedium)
+                            Text(text = "Pagar Online con Mercado Pago", style = MaterialTheme.typography.titleMedium)
                         }
 
                         OutlinedButton(
@@ -125,7 +125,7 @@ fun ConfirmacionCitaContent(
                             shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
                         ) {
-                            Text(text = "Pagar Físicamente en Clínica (Efectivo)", style = MaterialTheme.typography.titleMedium)
+                            Text(text = "Pagar Físicamente en Clínica", style = MaterialTheme.typography.titleMedium)
                         }
 
                         TextButton(

@@ -67,7 +67,7 @@ fun PasarelaPagoScreen(
                             Spacer(Modifier.height(16.dp))
                             Text(text = "Checkout Seguro - Mercado Pago", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(8.dp))
-                            Text(text = "Estás a punto de pagar tu consulta médica en TerapIA por S/ 50.00 PEN.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Text(text = "Estás a punto de pagar tu cita psicologica (S/50.00", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(24.dp))
                             Button(
                                 onClick = viewModel::simularPagoMercadoPago,
