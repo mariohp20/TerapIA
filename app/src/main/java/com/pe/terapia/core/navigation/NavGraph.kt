@@ -34,6 +34,9 @@ import com.pe.terapia.presentation.citas.reserva.ReservaCitaScreen
 import com.pe.terapia.presentation.home.admin.HomeAdminScreen
 import com.pe.terapia.presentation.home.paciente.HomePacienteScreen
 import com.pe.terapia.presentation.home.psicologo.HomePsicologoScreen
+import com.pe.terapia.presentation.pagos.GestionPagosPsicologoScreen
+import com.pe.terapia.presentation.pagos.HistorialPagosScreen
+import com.pe.terapia.presentation.pagos.PasarelaPagoScreen
 import com.pe.terapia.presentation.navigation.HomeAccessUiState
 import com.pe.terapia.presentation.navigation.HomeAccessViewModel
 import com.pe.terapia.presentation.splash.SplashScreen
@@ -134,8 +137,33 @@ fun NavGraph(
             ProtectedHomeRoute(Rol.PACIENTE, navController) { authViewModel, error ->
                 HomePacienteScreen(
                     onReservarCita = { navController.navigate(Route.ReservaCita) },
+                    onVerHistorialPagos = { navController.navigate(Route.HistorialPagos) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     mensajeError = error
+                )
+            }
+        }
+
+        composable<Route.HistorialPagos> {
+            RoleProtectedRoute(Rol.PACIENTE, navController) {
+                HistorialPagosScreen(
+                    onPagarOnline = { pagoId -> navController.navigate(Route.PasarelaPago(pagoId)) },
+                    onVolver = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable<Route.PasarelaPago> { entry ->
+            val args = entry.toRoute<Route.PasarelaPago>()
+            RoleProtectedRoute(Rol.PACIENTE, navController) {
+                PasarelaPagoScreen(
+                    pagoId = args.pagoId,
+                    onPagoExitoso = {
+                        navController.navigate(Route.HistorialPagos) {
+                            popUpTo<Route.HomePaciente>()
+                        }
+                    },
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }
@@ -210,8 +238,17 @@ fun NavGraph(
         ) {
             ProtectedHomeRoute(Rol.PSICOLOGO, navController) { authViewModel, error ->
                 HomePsicologoScreen(
+                    onGestionarPagos = { navController.navigate(Route.GestionPagosPsicologo) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     mensajeError = error
+                )
+            }
+        }
+
+        composable<Route.GestionPagosPsicologo> {
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                GestionPagosPsicologoScreen(
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }

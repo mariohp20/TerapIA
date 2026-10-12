@@ -8,9 +8,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -36,6 +38,7 @@ import java.util.Locale
 @Composable
 fun HomePacienteScreen(
     onReservarCita: () -> Unit,
+    onVerHistorialPagos: () -> Unit,
     onCerrarSesion: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomePacienteViewModel = koinViewModel()
@@ -45,6 +48,7 @@ fun HomePacienteScreen(
         uiState = uiState,
         mensajeError = mensajeError,
         onReservarCita = onReservarCita,
+        onVerHistorialPagos = onVerHistorialPagos,
         onCerrarSesion = onCerrarSesion
     )
 }
@@ -54,6 +58,7 @@ private fun HomePacienteContent(
     uiState: HomePacienteUiState,
     mensajeError: String?,
     onReservarCita: () -> Unit,
+    onVerHistorialPagos: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
@@ -99,7 +104,7 @@ private fun HomePacienteContent(
 
                 Card(
                     onClick = onReservarCita,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 148.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 130.dp),
                     shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -107,26 +112,51 @@ private fun HomePacienteContent(
                     Row(
                         modifier = Modifier.fillMaxWidth().background(
                             Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))
-                        ).padding(horizontal = 22.dp, vertical = 24.dp),
+                        ).padding(horizontal = 22.dp, vertical = 20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(R.string.home_nueva_cita), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.height(6.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text(stringResource(R.string.home_reserva_subtitulo), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.88f))
                         }
                         Spacer(Modifier.width(16.dp))
                         Box(
-                            Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)),
+                            Modifier.size(54.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Outlined.AddCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(38.dp))
+                            Icon(Icons.Outlined.AddCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(32.dp))
                         }
                     }
                 }
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(16.dp))
+
+                Card(
+                    onClick = onVerHistorialPagos,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.AutoMirrored.Outlined.ReceiptLong, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text("Historial de Pagos y Comprobantes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Consulta pagos y estado de tus citas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(26.dp))
                 Text(stringResource(R.string.home_proxima_cita), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(14.dp))
 
@@ -223,6 +253,7 @@ private fun HomePacientePreview() {
             ),
             mensajeError = null,
             onReservarCita = {},
+            onVerHistorialPagos = {},
             onCerrarSesion = {}
         )
     }
