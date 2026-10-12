@@ -45,4 +45,13 @@ sealed class Route {
         val bloqueId: String,
         val inicioEpochMillis: Long
     ) : Route()
+
+    @Serializable
+    data object HistorialPagos : Route()
+
+    @Serializable
+    data class PasarelaPago(val pagoId: String) : Route()
+
+    @Serializable
+    data object GestionPagosPsicologo : Route()
 }

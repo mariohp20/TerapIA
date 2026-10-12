@@ -242,6 +242,17 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioEpochMillis == request.resource.data.inicioEpochMillis
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioAt == request.resource.data.inicioAt
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.duracionMinutos == request.resource.data.duracionMinutos;
+      allow update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /pagos/{pagoId} {
+      allow get, list, create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /comprobantes/{comprobanteId} {
+      allow get, list, create: if signedIn();
       allow update, delete: if false;
     }
 

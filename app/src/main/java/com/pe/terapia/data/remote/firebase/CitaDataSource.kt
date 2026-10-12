@@ -7,8 +7,10 @@ import com.pe.terapia.domain.model.BloqueHorario
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
+import com.pe.terapia.domain.model.EstadoPago
 import com.pe.terapia.domain.model.EstadoReserva
 import com.pe.terapia.domain.model.Especialidad
+import com.pe.terapia.domain.model.PRECIO_ESTANDAR_CITA
 import com.pe.terapia.domain.model.ExcepcionHorario
 import com.pe.terapia.domain.model.HorarioLaboral
 import com.pe.terapia.domain.model.Reserva
