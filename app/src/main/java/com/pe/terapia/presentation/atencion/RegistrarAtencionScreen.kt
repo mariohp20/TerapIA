@@ -10,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pe.terapia.R
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,10 +44,10 @@ fun RegistrarAtencionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registrar Atención") },
+                title = { Text(stringResource(R.string.registrar_atencion)) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.volver))
                     }
                 }
             )
@@ -65,53 +67,65 @@ fun RegistrarAtencionScreen(
             OutlinedTextField(
                 value = motivo,
                 onValueChange = { viewModel.motivoConsulta.value = it },
-                label = { Text("Motivo de Consulta") },
-                modifier = Modifier.fillMaxWidth().height(100.dp)
+                label = { Text(stringResource(R.string.motivo_de_consulta)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = observaciones,
                 onValueChange = { viewModel.observaciones.value = it },
-                label = { Text("Observaciones Generales") },
-                modifier = Modifier.fillMaxWidth().height(100.dp)
+                label = { Text(stringResource(R.string.observaciones_generales)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = evaluacion,
                 onValueChange = { viewModel.evaluacion.value = it },
-                label = { Text("Evaluación Psicológica") },
-                modifier = Modifier.fillMaxWidth().height(100.dp)
+                label = { Text(stringResource(R.string.evaluacion_psicologica)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = evolucion,
                 onValueChange = { viewModel.evolucion.value = it },
-                label = { Text("Evolución del Paciente") },
-                modifier = Modifier.fillMaxWidth().height(100.dp)
+                label = { Text(stringResource(R.string.evolucion_del_paciente)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = indicaciones,
                 onValueChange = { viewModel.indicaciones.value = it },
-                label = { Text("Indicaciones / Tareas") },
-                modifier = Modifier.fillMaxWidth().height(100.dp)
+                label = { Text(stringResource(R.string.indicaciones_tareas)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = { viewModel.guardarAtencion(citaId, pacienteId) },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
                 enabled = !uiState.guardando
             ) {
                 if (uiState.guardando) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
-                    Text("Guardar Atención Clínica")
+                    Text(stringResource(R.string.guardar_atencion_clinica))
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))

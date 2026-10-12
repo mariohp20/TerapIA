@@ -18,10 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pe.terapia.R
 import com.pe.terapia.domain.model.PacienteResumen
 import org.koin.androidx.compose.koinViewModel
 
@@ -38,10 +40,12 @@ fun BuscadorPacientesScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Historia clínica", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.historia_clinica), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(
+                            R.string.volver
+                        ))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -66,8 +70,8 @@ fun BuscadorPacientesScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                placeholder = { Text("Buscar paciente...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar", tint = Color.Gray) },
+                placeholder = { Text(stringResource(R.string.buscar_paciente), color = Color.Gray) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.buscar), tint = Color.Gray) },
                 shape = RoundedCornerShape(28.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
@@ -146,7 +150,7 @@ fun PacienteItemList(paciente: PacienteResumen, onClick: () -> Unit) {
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Ver detalles",
+                contentDescription = stringResource(R.string.ver_detalles),
                 tint = Color.LightGray
             )
         }

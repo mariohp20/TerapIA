@@ -31,7 +31,7 @@ import org.koin.androidx.compose.koinViewModel
 fun HomePsicologoScreen(
     onCerrarSesion: () -> Unit,
     onRegistrarAtencion: (citaId: String, pacienteId: String) -> Unit,
-    onIrAHistorialClinico: () -> Unit, // <--- NUEVO PARÁMETRO
+    onIrAHistorialClinico: () -> Unit,
     viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -40,8 +40,8 @@ fun HomePsicologoScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onIrAHistorialClinico,
-                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Historiales") },
-                text = { Text("Historiales Clínicos") },
+                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.historiales)) },
+                text = { Text(stringResource(R.string.historiales_clinicos)) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
@@ -51,7 +51,7 @@ fun HomePsicologoScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(paddingValues) // <--- Respetamos el espacio del FAB
+                .padding(paddingValues)
         ) {
             // CABECERA
             Box(
@@ -68,7 +68,11 @@ fun HomePsicologoScreen(
                 ) {
                     Column {
                         Text(text = stringResource(R.string.home_saludo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
-                        Text(text = stringResource(R.string.home_psicologo_titulo), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(
+                            text = if (uiState.nombrePsicologo.isNotBlank()) "Dr. ${uiState.nombrePsicologo}" else stringResource(R.string.home_psicologo_titulo),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                     IconButton(
                         onClick = onCerrarSesion,
@@ -81,7 +85,9 @@ fun HomePsicologoScreen(
 
             // TARJETA BLANCA PRINCIPAL
             Surface(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
                 color = MaterialTheme.colorScheme.background
             ) {
@@ -91,7 +97,10 @@ fun HomePsicologoScreen(
                     }
                 } else {
                     Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(24.dp)
                     ) {
                         uiState.error?.let {
                             Text(it, color = MaterialTheme.colorScheme.error)
@@ -99,16 +108,16 @@ fun HomePsicologoScreen(
                         }
 
                         // RESUMEN DE HOY
-                        Text("Resumen de hoy", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+                        Text(stringResource(R.string.resumen_de_hoy), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            ResumenCard(titulo = "Citas hoy", valor = uiState.citasHoy.toString())
-                            ResumenCard(titulo = "Pendientes", valor = uiState.pendientes.toString())
-                            ResumenCard(titulo = "Pacientes\nactivos", valor = uiState.pacientesActivos.toString())
+                            ResumenCard(titulo = stringResource(R.string.citas_hoy), valor = uiState.citasHoy.toString())
+                            ResumenCard(titulo = stringResource(R.string.pendientes), valor = uiState.pendientes.toString())
+                            ResumenCard(titulo = stringResource(R.string.pacientes_activos), valor = uiState.pacientesActivos.toString())
                         }
 
                         Spacer(modifier = Modifier.height(32.dp))
@@ -119,7 +128,13 @@ fun HomePsicologoScreen(
 
                         if (uiState.proximasCitas.isEmpty()) {
                             Box(
-                                modifier = Modifier.fillMaxWidth().height(150.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(150.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        RoundedCornerShape(16.dp)
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(stringResource(R.string.home_psicologo_sin_citas), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -134,7 +149,6 @@ fun HomePsicologoScreen(
                             }
                         }
 
-                        // Espacio extra al final para que el scroll pase por encima del botón flotante sin tapar la última cita
                         Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
@@ -146,13 +160,17 @@ fun HomePsicologoScreen(
 @Composable
 fun ResumenCard(titulo: String, valor: String) {
     Card(
-        modifier = Modifier.width(100.dp).height(100.dp),
+        modifier = Modifier
+            .width(100.dp)
+            .height(100.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -166,16 +184,23 @@ fun ResumenCard(titulo: String, valor: String) {
 @Composable
 fun CitaItemCard(cita: CitaPacienteDetalle, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.width(4.dp).height(24.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50)))
+            Box(modifier = Modifier
+                .width(4.dp)
+                .height(24.dp)
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50)))
             Spacer(modifier = Modifier.width(12.dp))
 
             Text(text = cita.hora, fontWeight = FontWeight.Medium, color = Color.Gray)

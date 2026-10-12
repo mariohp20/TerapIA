@@ -16,6 +16,7 @@ import com.pe.terapia.domain.model.Usuario
 data class HomePsicologoUiState(
     val cargando: Boolean = true,
     val error: String? = null,
+    val nombrePsicologo: String = "",
     val citasHoy: Int = 0,
     val pendientes: Int = 0,
     val pacientesActivos: Int = 0,
@@ -38,25 +39,25 @@ class HomePsicologoViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cargando = true, error = null)
 
-            // 1. Obtener quién es el psicólogo logueado extrayéndolo del Result
             val resultUsuario = obtenerUsuarioActualUseCase()
-            val usuarioActual = resultUsuario.getOrNull() // Sacamos el usuario del envoltorio Result
+            val usuarioActual = resultUsuario.getOrNull()
 
             if (usuarioActual == null) {
                 _uiState.value = _uiState.value.copy(cargando = false, error = "No se detectó sesión")
                 return@launch
             }
 
-            // 2. Obtener la fecha de hoy en Perú
+            val primerNombre = usuarioActual.nombres.split(" ").firstOrNull() ?: ""
             val fechaHoy = LocalDate.now(ZoneId.of("America/Lima")).toString()
 
-            // 3. Consultar las citas a Firebase (ahora sí podemos usar .uid porque usuarioActual es de tipo Usuario)
+
             val resultado = obtenerCitasHoyPsicologoUseCase(usuarioActual.uid, fechaHoy)
 
             resultado.fold(
                 onSuccess = { citas ->
                     _uiState.value = _uiState.value.copy(
                         cargando = false,
+                        nombrePsicologo = primerNombre,
                         proximasCitas = citas,
                         citasHoy = citas.size,
                         pendientes = citas.size,
@@ -66,6 +67,7 @@ class HomePsicologoViewModel(
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
                         cargando = false,
+                        nombrePsicologo = primerNombre,
                         error = "No se pudieron cargar las citas: ${error.message}"
                     )
                 }

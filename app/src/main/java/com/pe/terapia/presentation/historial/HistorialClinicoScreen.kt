@@ -19,10 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pe.terapia.R
 import com.pe.terapia.domain.model.Atencion
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -49,10 +51,10 @@ fun HistorialClinicoScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Historia clínica", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.historia_clinica), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.volver))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -65,13 +67,18 @@ fun HistorialClinicoScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // 1. Cabecera del Paciente
+            // Cabecera del Paciente
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -83,12 +90,12 @@ fun HistorialClinicoScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 2. Fila deslizable de pestañas (TabRow)
+            // Fila deslizable de pestañas (TabRow)
             ScrollableTabRow(
                 selectedTabIndex = tabSeleccionado,
                 edgePadding = 24.dp,
                 containerColor = Color.Transparent,
-                divider = {} // Quitamos la línea separadora gris para un look más limpio
+                divider = {}
             ) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -107,7 +114,7 @@ fun HistorialClinicoScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. Contenido dinámico según la pestaña
+            // Contenido dinámico según la pestaña
             if (uiState.cargando) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -121,7 +128,7 @@ fun HistorialClinicoScreen(
                     )
                     1 -> SesionesTab(atenciones = uiState.atenciones, esPsicologo = uiState.esPsicologo)
                     else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Próximamente", color = Color.Gray)
+                        Text(stringResource(R.string.proximamente), color = Color.Gray)
                     }
                 }
             }
@@ -143,15 +150,19 @@ fun ResumenTab(
     )
     var expandido by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 24.dp)) {
 
         // Bloque Fase Actual
-        Text("Fase actual", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.DarkGray)
+        Text(stringResource(R.string.fase_actual), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.DarkGray)
         Spacer(modifier = Modifier.height(12.dp))
 
         Box {
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { expandido = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expandido = true },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -177,7 +188,7 @@ fun ResumenTab(
         Spacer(modifier = Modifier.height(32.dp))
 
         // Bloque Última Sesión
-        Text("Última sesión", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.DarkGray)
+        Text(stringResource(R.string.ultima_sesion), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.DarkGray)
         Spacer(modifier = Modifier.height(12.dp))
 
         if (ultimaAtencion != null) {
@@ -195,7 +206,7 @@ fun ResumenTab(
                 }
             }
         } else {
-            Text("No hay sesiones previas registradas.", color = Color.Gray)
+            Text(stringResource(R.string.no_hay_sesiones_previas_registradas), color = Color.Gray)
         }
     }
 }
