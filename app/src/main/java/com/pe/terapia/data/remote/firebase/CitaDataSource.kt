@@ -7,8 +7,10 @@ import com.pe.terapia.domain.model.BloqueHorario
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
+import com.pe.terapia.domain.model.EstadoPago
 import com.pe.terapia.domain.model.EstadoReserva
 import com.pe.terapia.domain.model.Especialidad
+import com.pe.terapia.domain.model.PRECIO_ESTANDAR_CITA
 import com.pe.terapia.domain.model.ExcepcionHorario
 import com.pe.terapia.domain.model.HorarioLaboral
 import com.pe.terapia.domain.model.Reserva
@@ -306,6 +308,21 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 estado = EstadoReserva.CONFIRMADA,
                 duracionMinutos = duration
             )
+            val pagoRef = firestore.collection("pagos").document()
+            val pagoMap = mapOf(
+                "id" to pagoRef.id,
+                "citaId" to appointmentRef.id,
+                "pacienteId" to reserva.pacienteId,
+                "psicologoId" to reserva.psicologoId,
+                "monto" to PRECIO_ESTANDAR_CITA,
+                "moneda" to "PEN",
+                "estado" to EstadoPago.PENDIENTE.name,
+                "metodoPago" to null,
+                "referenciaTransaccion" to null,
+                "creadaEn" to FieldValue.serverTimestamp(),
+                "actualizadaEn" to null
+            )
+            transaction.set(pagoRef, pagoMap)
             transaction.set(reservationRef, confirmedReservation.toFirestore(startAt, appointmentRef.id))
             transaction.set(appointmentRef, cita.toFirestore(startAt))
             transaction.set(lockRef, mapOf(
