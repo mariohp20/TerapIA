@@ -317,10 +317,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 "monto" to PRECIO_ESTANDAR_CITA,
                 "moneda" to "PEN",
                 "estado" to EstadoPago.PENDIENTE.name,
-                "metodoPago" to null,
-                "referenciaTransaccion" to null,
-                "creadaEn" to FieldValue.serverTimestamp(),
-                "actualizadaEn" to null
+                "creadaEn" to FieldValue.serverTimestamp()
             )
             transaction.set(pagoRef, pagoMap)
             transaction.set(reservationRef, confirmedReservation.toFirestore(startAt, appointmentRef.id))
