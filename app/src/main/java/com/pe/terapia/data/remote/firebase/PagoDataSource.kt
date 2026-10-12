@@ -15,6 +15,36 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
 
     suspend fun obtenerHistorialPagos(pacienteId: String): List<Pair<Pago, Comprobante?>> {
         require(pacienteId.isNotBlank()) { "Paciente ID inválido" }
+
+        // Lazy/on-demand: asegurar que todas las citas del paciente tengan su pago creado
+        val citasSnapshot = firestore.collection("citas")
+            .whereEqualTo("pacienteId", pacienteId)
+            .get()
+            .await()
+
+        for (citaDoc in citasSnapshot.documents) {
+            val citaId = citaDoc.id
+            val psicologoId = citaDoc.getString("psicologoId").orEmpty()
+            val pagoExistente = firestore.collection("pagos")
+                .whereEqualTo("citaId", citaId)
+                .get()
+                .await()
+            if (pagoExistente.isEmpty) {
+                val nuevoPagoRef = firestore.collection("pagos").document()
+                val pagoMap = mapOf(
+                    "id" to nuevoPagoRef.id,
+                    "citaId" to citaId,
+                    "pacienteId" to pacienteId,
+                    "psicologoId" to psicologoId,
+                    "monto" to PRECIO_ESTANDAR_CITA,
+                    "moneda" to "PEN",
+                    "estado" to EstadoPago.PENDIENTE.name,
+                    "creadaEn" to FieldValue.serverTimestamp()
+                )
+                runCatching { nuevoPagoRef.set(pagoMap).await() }
+            }
+        }
+
         val pagosSnapshot = firestore.collection("pagos")
             .whereEqualTo("pacienteId", pacienteId)
             .get()
@@ -242,19 +272,50 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             .get()
             .await()
 
-        val doc = snapshot.documents.firstOrNull() ?: return null
+        val doc = snapshot.documents.firstOrNull()
+        if (doc != null) {
+            return Pago(
+                id = doc.getString("id") ?: doc.id,
+                citaId = doc.getString("citaId").orEmpty(),
+                pacienteId = doc.getString("pacienteId").orEmpty(),
+                psicologoId = doc.getString("psicologoId").orEmpty(),
+                monto = doc.getDouble("monto") ?: PRECIO_ESTANDAR_CITA,
+                moneda = doc.getString("moneda") ?: "PEN",
+                estado = runCatching { EstadoPago.valueOf(doc.getString("estado") ?: "") }.getOrDefault(EstadoPago.PENDIENTE),
+                metodoPago = doc.getString("metodoPago")?.let { runCatching { MetodoPago.valueOf(it) }.getOrNull() },
+                referenciaTransaccion = doc.getString("referenciaTransaccion"),
+                creadaEn = doc.getLong("creadaEn") ?: System.currentTimeMillis(),
+                actualizadaEn = doc.getLong("actualizadaEn")
+            )
+        }
+
+        val citaDoc = firestore.collection("citas").document(citaId).get().await()
+        if (!citaDoc.exists()) return null
+        val pacienteId = citaDoc.getString("pacienteId").orEmpty()
+        val psicologoId = citaDoc.getString("psicologoId").orEmpty()
+
+        val nuevoPagoRef = firestore.collection("pagos").document()
+        val pagoMap = mapOf(
+            "id" to nuevoPagoRef.id,
+            "citaId" to citaId,
+            "pacienteId" to pacienteId,
+            "psicologoId" to psicologoId,
+            "monto" to PRECIO_ESTANDAR_CITA,
+            "moneda" to "PEN",
+            "estado" to EstadoPago.PENDIENTE.name,
+            "creadaEn" to FieldValue.serverTimestamp()
+        )
+        runCatching { nuevoPagoRef.set(pagoMap).await() }
+
         return Pago(
-            id = doc.getString("id") ?: doc.id,
-            citaId = doc.getString("citaId").orEmpty(),
-            pacienteId = doc.getString("pacienteId").orEmpty(),
-            psicologoId = doc.getString("psicologoId").orEmpty(),
-            monto = doc.getDouble("monto") ?: PRECIO_ESTANDAR_CITA,
-            moneda = doc.getString("moneda") ?: "PEN",
-            estado = runCatching { EstadoPago.valueOf(doc.getString("estado") ?: "") }.getOrDefault(EstadoPago.PENDIENTE),
-            metodoPago = doc.getString("metodoPago")?.let { runCatching { MetodoPago.valueOf(it) }.getOrNull() },
-            referenciaTransaccion = doc.getString("referenciaTransaccion"),
-            creadaEn = doc.getLong("creadaEn") ?: System.currentTimeMillis(),
-            actualizadaEn = doc.getLong("actualizadaEn")
+            id = nuevoPagoRef.id,
+            citaId = citaId,
+            pacienteId = pacienteId,
+            psicologoId = psicologoId,
+            monto = PRECIO_ESTANDAR_CITA,
+            moneda = "PEN",
+            estado = EstadoPago.PENDIENTE,
+            creadaEn = System.currentTimeMillis()
         )
     }
 

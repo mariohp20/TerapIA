@@ -308,18 +308,6 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 estado = EstadoReserva.CONFIRMADA,
                 duracionMinutos = duration
             )
-            val pagoRef = firestore.collection("pagos").document()
-            val pagoMap = mapOf(
-                "id" to pagoRef.id,
-                "citaId" to appointmentRef.id,
-                "pacienteId" to reserva.pacienteId,
-                "psicologoId" to reserva.psicologoId,
-                "monto" to PRECIO_ESTANDAR_CITA,
-                "moneda" to "PEN",
-                "estado" to EstadoPago.PENDIENTE.name,
-                "creadaEn" to FieldValue.serverTimestamp()
-            )
-            transaction.set(pagoRef, pagoMap)
             transaction.set(reservationRef, confirmedReservation.toFirestore(startAt, appointmentRef.id))
             transaction.set(appointmentRef, cita.toFirestore(startAt))
             transaction.set(lockRef, mapOf(
