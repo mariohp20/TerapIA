@@ -99,5 +99,39 @@ class AdminDataSource(
             )
         }
     }
+    suspend fun asignarHorarioPsicologo(
+        psicologoId: String,
+        sedeId: String,
+        diaSemana: Int,
+        inicioMinuto: Int,
+        finMinuto: Int
+    ) {
+        val horarioId = "${psicologoId}~${sedeId}"
+        val horarioRef = firestore.collection("horariosLaborales").document(horarioId)
 
+        val batch = firestore.batch()
+
+        // 1. Crear el documento principal del horario
+        val horarioData = mapOf(
+            "activo" to true,
+            "duracionMinutos" to 60,
+            "psicologoId" to psicologoId,
+            "sedeId" to sedeId,
+            "zonaHoraria" to "America/Lima"
+        )
+        batch.set(horarioRef, horarioData)
+
+        // 2. Crear el bloque de disponibilidad
+        val bloqueRef = horarioRef.collection("bloques").document()
+        val bloqueData = mapOf(
+            "activo" to true,
+            "diaSemana" to diaSemana,
+            "inicioMinuto" to inicioMinuto,
+            "finMinuto" to finMinuto
+        )
+        batch.set(bloqueRef, bloqueData)
+
+        // Subimos todo a Firebase al mismo tiempo
+        batch.commit().await()
+    }
 }

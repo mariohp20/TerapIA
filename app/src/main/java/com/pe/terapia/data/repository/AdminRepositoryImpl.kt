@@ -38,4 +38,19 @@ class AdminRepositoryImpl(
     override suspend fun obtenerEspecialidades(): Result<List<Especialidad>> = runCatching {
         adminDataSource.obtenerEspecialidadesGlobales()
     }
+    override suspend fun asignarHorarioPsicologo(
+        psicologoId: String,
+        sedeId: String,
+        diaSemana: Int,
+        inicioMinuto: Int,
+        finMinuto: Int
+    ): Result<Unit> = runCatching {
+        adminDataSource.asignarHorarioPsicologo(
+            psicologoId,
+            sedeId,
+            diaSemana,
+            inicioMinuto,
+            finMinuto
+        )
+    }
 }

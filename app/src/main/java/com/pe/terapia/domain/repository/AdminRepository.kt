@@ -16,4 +16,11 @@ interface AdminRepository {
     suspend fun obtenerPacientes(): Result<List<Usuario>>
     suspend fun obtenerSedes(): Result<List<Sede>>
     suspend fun obtenerEspecialidades(): Result<List<Especialidad>>
+    suspend fun asignarHorarioPsicologo(
+        psicologoId: String,
+        sedeId: String,
+        diaSemana: Int,
+        inicioMinuto: Int,
+        finMinuto: Int
+    ): Result<Unit>
 }
