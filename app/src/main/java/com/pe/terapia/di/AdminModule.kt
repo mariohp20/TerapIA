@@ -6,6 +6,7 @@ import com.pe.terapia.domain.repository.AdminRepository
 import com.pe.terapia.domain.usecase.admin.AsignarHorarioPsicologoUseCase
 import com.pe.terapia.domain.usecase.admin.ObtenerEspecialidadesUseCase
 import com.pe.terapia.domain.usecase.admin.ObtenerPacientesUseCase
+import com.pe.terapia.domain.usecase.admin.ObtenerPsicologosUseCase
 import com.pe.terapia.domain.usecase.admin.ObtenerSedesUseCase
 import com.pe.terapia.domain.usecase.admin.PromoverUsuarioUseCase
 import com.pe.terapia.presentation.admin.horario.AsignarHorarioViewModel
@@ -21,6 +22,7 @@ val adminModule = module {
     // Casos de uso
     factory { PromoverUsuarioUseCase(get()) }
     factory { ObtenerPacientesUseCase(get()) }
+    factory { ObtenerPsicologosUseCase(get ()) }
     factory { ObtenerSedesUseCase(get()) }
     factory { ObtenerEspecialidadesUseCase(get()) }
     factory { AsignarHorarioPsicologoUseCase(get()) }
@@ -28,6 +30,6 @@ val adminModule = module {
     // ViewModels
     viewModel { HomeAdminViewModel(get()) }
     viewModel { PromoverUsuarioViewModel(get(), get(), get(), get()) }
-    viewModel { AsignarHorarioViewModel(get()) }
+    viewModel { AsignarHorarioViewModel(get(),get(),get()) }
 
 }

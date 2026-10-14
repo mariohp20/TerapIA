@@ -69,11 +69,18 @@ fun HomePsicologoScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(text = stringResource(R.string.home_saludo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                         Text(
-                            text = if (uiState.nombrePsicologo.isNotBlank()) "Dr. ${uiState.nombrePsicologo}" else stringResource(R.string.home_psicologo_titulo),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            text = if (uiState.nombrePsicologo.isNotBlank()) "Hola, Dr. ${uiState.nombrePsicologo}"
+                                    else "Hola, Doctor",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.home_psicologo_titulo),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
                         )
                     }
                     IconButton(
@@ -109,7 +116,7 @@ fun HomePsicologoScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                         }
 
-                        // --- TU BOTÓN DE GESTIONAR PAGOS ---
+                        // Boton para gestionar pagos
                         Card(
                             onClick = onGestionarPagos,
                             modifier = Modifier.fillMaxWidth(),
@@ -132,7 +139,7 @@ fun HomePsicologoScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // --- RESUMEN DE HOY (De tu amigo) ---
+                        // Resumen de hoy
                         Text(stringResource(R.string.resumen_de_hoy), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -147,7 +154,7 @@ fun HomePsicologoScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // --- PRÓXIMAS CITAS (De tu amigo) ---
+                        // Proximas citas
                         Text(stringResource(R.string.home_psicologo_proximas), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.height(16.dp))
 
