@@ -6,6 +6,7 @@ import com.pe.terapia.domain.repository.HistoriaClinicaRepository
 import com.pe.terapia.domain.usecase.historiaclinica.ObtenerAtencionesPacienteUseCase
 import com.pe.terapia.domain.usecase.historiaclinica.ObtenerPacientesDePsicologoUseCase
 import com.pe.terapia.domain.usecase.historiaclinica.RegistrarAtencionUseCase
+import com.pe.terapia.domain.usecase.historiaclinica.ObtenerAtencionPorCitaUseCase
 import com.pe.terapia.presentation.buscadorPacientes.BuscadorPacientesViewModel
 import com.pe.terapia.presentation.atencion.RegistrarAtencionViewModel
 import com.pe.terapia.presentation.historial.HistorialClinicoViewModel
@@ -16,11 +17,12 @@ val historiaClinicaModule = module {
     single { HistoriaClinicaDataSource(get()) }
     single<HistoriaClinicaRepository> { HistoriaClinicaRepositoryImpl(get()) }
 
+    factory { ObtenerAtencionPorCitaUseCase (get()) }
     factory { RegistrarAtencionUseCase(get()) }
     factory { ObtenerAtencionesPacienteUseCase(get()) }
     factory { ObtenerPacientesDePsicologoUseCase(get()) }
 
-    viewModel { RegistrarAtencionViewModel(get(), get()) }
+    viewModel { RegistrarAtencionViewModel(get(), get(),get()) }
     viewModel { HistorialClinicoViewModel(get(), get()) }
     viewModel { BuscadorPacientesViewModel(get(), get()) }
 }

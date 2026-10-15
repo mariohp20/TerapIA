@@ -2,65 +2,115 @@ package com.pe.terapia.presentation.admin.horario
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pe.terapia.domain.model.Psicologo // <-- Modelo actualizado
+import com.pe.terapia.domain.model.Sede
 import com.pe.terapia.domain.usecase.admin.AsignarHorarioPsicologoUseCase
+import com.pe.terapia.domain.usecase.admin.ObtenerPsicologosUseCase // Debe retornar List<Psicologo>
+import com.pe.terapia.domain.usecase.admin.ObtenerSedesUseCase
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class AsignarHorarioUiState(
+    val cargandoInicial: Boolean = true,
     val guardando: Boolean = false,
     val exito: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val psicologos: List<Psicologo> = emptyList(), // <-- Ahora es lista de Psicologo
+    val sedes: List<Sede> = emptyList()
 )
 
 class AsignarHorarioViewModel(
-    private val asignarHorarioPsicologoUseCase: AsignarHorarioPsicologoUseCase
+    private val asignarHorarioPsicologoUseCase: AsignarHorarioPsicologoUseCase,
+    private val obtenerPsicologos: ObtenerPsicologosUseCase,
+    private val obtenerSedes: ObtenerSedesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AsignarHorarioUiState())
     val uiState: StateFlow<AsignarHorarioUiState> = _uiState.asStateFlow()
 
-    var psicologoId = MutableStateFlow("")
-    var sedeId = MutableStateFlow("")
-    var diaSemana = MutableStateFlow("1") // 1 = Lunes, 2 = Martes...
-    var horaInicio = MutableStateFlow("08:00")
-    var horaFin = MutableStateFlow("13:00")
+    init {
+        cargarDatos()
+    }
 
-    fun guardarHorario() {
+    private fun cargarDatos() {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(cargandoInicial = true, error = null)
+
+            val psicologosDeferred = async { obtenerPsicologos() }
+            val sedesDeferred = async { obtenerSedes() }
+
+            val resultPsicologos = psicologosDeferred.await()
+            val resultSedes = sedesDeferred.await()
+
+            if (resultPsicologos.isFailure || resultSedes.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    cargandoInicial = false,
+                    error = "Hubo un error al cargar los datos del sistema."
+                )
+                return@launch
+            }
+
+            _uiState.value = _uiState.value.copy(
+                cargandoInicial = false,
+                psicologos = resultPsicologos.getOrNull().orEmpty(),
+                sedes = resultSedes.getOrNull().orEmpty()
+            )
+        }
+    }
+
+    fun guardarHorario(
+        psicologoId: String,
+        sedesIds: Set<String>,
+        diaSemana: Int,
+        horaInicio: Int,
+        horaFin: Int
+    ) {
+        viewModelScope.launch {
+            if (sedesIds.isEmpty()) {
+                _uiState.value = _uiState.value.copy(error = "Debe seleccionar al menos una sede")
+                return@launch
+            }
+            if (horaInicio >= horaFin) {
+                _uiState.value = _uiState.value.copy(error = "La hora de fin debe ser mayor a la de inicio")
+                return@launch
+            }
+
             _uiState.value = _uiState.value.copy(guardando = true, error = null)
 
             try {
-                // Convertir "08:00" a minutos (ej. 8 * 60 + 0 = 480)
-                val inicioParts = horaInicio.value.split(":")
-                val finParts = horaFin.value.split(":")
+                val inicioMinuto = horaInicio * 60
+                val finMinuto = horaFin * 60
 
-                val inicioMinuto = inicioParts[0].toInt() * 60 + inicioParts[1].toInt()
-                val finMinuto = finParts[0].toInt() * 60 + finParts[1].toInt()
-                val dia = diaSemana.value.toInt()
+                var huboError = false
+                var ultimoErrorMsg: String? = null
 
-                val result = asignarHorarioPsicologoUseCase(
-                    psicologoId = psicologoId.value.trim(),
-                    sedeId = sedeId.value.trim(),
-                    diaSemana = dia,
-                    inicioMinuto = inicioMinuto,
-                    finMinuto = finMinuto
-                )
+                // Iteramos para guardar el horario en cada sede seleccionada
+                for (sedeId in sedesIds) {
+                    val result = asignarHorarioPsicologoUseCase(
+                        psicologoId = psicologoId,
+                        sedeId = sedeId,
+                        diaSemana = diaSemana,
+                        inicioMinuto = inicioMinuto,
+                        finMinuto = finMinuto
+                    )
 
-                result.fold(
-                    onSuccess = {
-                        _uiState.value = _uiState.value.copy(guardando = false, exito = true)
-                    },
-                    onFailure = {
-                        _uiState.value = _uiState.value.copy(guardando = false, error = it.message)
+                    if (result.isFailure) {
+                        huboError = true
+                        ultimoErrorMsg = result.exceptionOrNull()?.message
+                        break
                     }
-                )
+                }
+
+                if (huboError) {
+                    _uiState.value = _uiState.value.copy(guardando = false, error = ultimoErrorMsg ?: "Error al asignar horario")
+                } else {
+                    _uiState.value = _uiState.value.copy(guardando = false, exito = true)
+                }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    guardando = false,
-                    error = "Por favor verifica el formato de los datos (Horas en formato HH:mm y Día en número 1-7)"
-                )
+                _uiState.value = _uiState.value.copy(guardando = false, error = "Error al procesar el horario")
             }
         }
     }

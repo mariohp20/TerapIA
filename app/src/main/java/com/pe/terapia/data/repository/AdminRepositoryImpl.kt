@@ -3,6 +3,7 @@ package com.pe.terapia.data.repository
 import com.pe.terapia.data.remote.firebase.AdminDataSource
 import com.pe.terapia.domain.repository.AdminRepository
 import com.pe.terapia.domain.model.Especialidad
+import com.pe.terapia.domain.model.Psicologo
 import com.pe.terapia.domain.model.Sede
 import com.pe.terapia.domain.model.Usuario
 
@@ -29,6 +30,10 @@ class AdminRepositoryImpl(
     }
     override suspend fun obtenerPacientes(): Result<List<Usuario>> = runCatching {
         adminDataSource.obtenerPacientes()
+    }
+
+    override suspend fun obtenerPsicologos(): Result<List<Psicologo>> = runCatching {
+        adminDataSource.obtenerPsicologos()
     }
 
     override suspend fun obtenerSedes(): Result<List<Sede>> = runCatching {

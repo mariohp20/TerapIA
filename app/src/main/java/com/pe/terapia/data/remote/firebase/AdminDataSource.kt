@@ -4,6 +4,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import com.pe.terapia.data.remote.firebase.UsuarioFirestoreMapper
 import com.pe.terapia.domain.model.Especialidad
+import com.pe.terapia.domain.model.Psicologo
 import com.pe.terapia.domain.model.Sede
 import com.pe.terapia.domain.model.Usuario
 class AdminDataSource(
@@ -60,6 +61,25 @@ class AdminDataSource(
             runCatching {
                 UsuarioFirestoreMapper.fromFirestore(doc.id, doc.data, doc.getString("correo"))
             }.getOrNull()
+        }
+    }
+
+    suspend fun obtenerPsicologos(): List<Psicologo> {
+        val snapshot = firestore.collection("psicologos").get().await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            val activo = doc.getBoolean("activo") ?: false
+
+            Psicologo(
+                id = doc.id,
+                usuarioId = doc.getString("usuarioId") ?: "",
+                nombres = doc.getString("nombres") ?: "",
+                apellidos = doc.getString("apellidos") ?: "",
+                descripcionProfesional = doc.getString("descripcionProfesional") ?: "",
+                especialidadIds = (doc.get("especialidadIds") as? List<String>) ?: emptyList(),
+                sedeIds = (doc.get("sedeIds") as? List<String>) ?: emptyList(),
+                activo = activo
+            )
         }
     }
 
