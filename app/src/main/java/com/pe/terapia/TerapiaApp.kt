@@ -8,6 +8,7 @@ import com.pe.terapia.di.firebaseModule
 import com.pe.terapia.di.pagoModule
 import com.pe.terapia.di.historiaClinicaModule
 import com.pe.terapia.di.tiempoModule
+import com.pe.terapia.di.roomModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -19,9 +20,8 @@ class TerapiaApp : Application(){
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@TerapiaApp)
-            modules(listOf(firebaseModule, authModule, citaModule, pagoModule,adminModule,
-                historiaClinicaModule, tiempoModule
-            ))
+            modules(listOf(firebaseModule, authModule, citaModule, pagoModule, adminModule,
+                historiaClinicaModule, tiempoModule, roomModule))
         }
     }
 }
