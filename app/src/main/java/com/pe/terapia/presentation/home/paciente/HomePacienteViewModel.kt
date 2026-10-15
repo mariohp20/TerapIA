@@ -2,6 +2,8 @@ package com.pe.terapia.presentation.home.paciente
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pe.terapia.data.local.room.CitaDao
+import com.pe.terapia.data.local.room.CitaEntity
 import com.pe.terapia.domain.model.ProximaCita
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
@@ -19,7 +21,8 @@ data class HomePacienteUiState(
 
 class HomePacienteViewModel(
     private val obtenerUsuarioActual: ObtenerUsuarioActualUseCase,
-    private val obtenerProximaCita: ObtenerProximaCitaUseCase
+    private val obtenerProximaCita: ObtenerProximaCitaUseCase,
+    private val citaDao: CitaDao
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomePacienteUiState())
     val uiState: StateFlow<HomePacienteUiState> = _uiState.asStateFlow()
@@ -40,10 +43,43 @@ class HomePacienteViewModel(
                     val currentName = usuario.nombres.ifBlank { "" }
                     obtenerProximaCita(usuario.uid).fold(
                         onSuccess = { cita ->
+                            if (cita != null) {
+                                runCatching {
+                                    val entity = CitaEntity(
+                                        id = "${usuario.uid}_${cita.fecha}_${cita.hora}",
+                                        pacienteId = usuario.uid,
+                                        psicologoNombre = cita.psicologoNombre,
+                                        especialidadNombre = cita.especialidadNombre,
+                                        sedeNombre = cita.sedeNombre,
+                                        sedeDireccion = cita.sedeDireccion,
+                                        fecha = cita.fecha,
+                                        hora = cita.hora,
+                                        inicioEpochMillis = System.currentTimeMillis() + 86400000
+                                    )
+                                    citaDao.insertarCita(entity)
+                                }
+                            }
                             _uiState.value = HomePacienteUiState(nombrePaciente = currentName, proximaCita = cita, cargando = false)
                         },
-                        onFailure = { error ->
-                            _uiState.value = HomePacienteUiState(nombrePaciente = currentName, cargando = false, error = error.message)
+                        onFailure = { _ ->
+                            // Fallback a Room (Caché local) cuando no hay internet
+                            val local = runCatching { citaDao.obtenerProximaCitaLocal(usuario.uid, 0L) }.getOrNull()
+                            val proximaLocal = local?.let {
+                                ProximaCita(
+                                    psicologoNombre = it.psicologoNombre,
+                                    especialidadNombre = it.especialidadNombre,
+                                    fecha = it.fecha,
+                                    hora = it.hora,
+                                    sedeNombre = it.sedeNombre,
+                                    sedeDireccion = it.sedeDireccion
+                                )
+                            }
+                            _uiState.value = HomePacienteUiState(
+                                nombrePaciente = currentName,
+                                proximaCita = proximaLocal,
+                                cargando = false,
+                                error = if (proximaLocal == null) "Sin conexión a internet y sin citas en caché local." else "Modo sin conexión (Datos de caché local Room)"
+                            )
                         }
                     )
                 },
