@@ -41,6 +41,7 @@ val citaModule = module {
             parameters[8],
             parameters[9],
             parameters[10],
+            parameters[11],
             get(),
             get<ObtenerUsuarioActualUseCase>(),
             get<PagoRepository>()

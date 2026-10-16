@@ -121,7 +121,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         val snapshot = firestore.collection("especialidades").whereEqualTo("activa", true).get().await()
         return snapshot.documents.mapNotNull { document ->
             document.getString("nombre")?.let { nombre ->
-                Especialidad(document.id, nombre, document.getString("descripcion").orEmpty(), true)
+                Especialidad(document.id, nombre, document.getString("descripcion").orEmpty(), true, document.getDouble("costo_cita")?: 0.00)
             }
         }
     }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Schedule
@@ -45,13 +46,14 @@ fun ConfirmacionCitaScreen(
     hora: String,
     horarioId: String,
     bloqueId: String,
+    costo_cita: Double,
     inicioEpochMillis: Long,
     onPagarOnline: (String) -> Unit,
     onPagarEnClinica: (String) -> Unit,
     onFinalizar: () -> Unit,
     onVolver: () -> Unit,
     viewModel: ConfirmacionCitaViewModel = koinViewModel(
-        parameters = { parametersOf(psicologoId, psicologoNombre, especialidadId, especialidadNombre, sedeId, sedeNombre, fecha, hora, horarioId, bloqueId, inicioEpochMillis) }
+        parameters = { parametersOf(psicologoId, psicologoNombre, especialidadId, especialidadNombre, sedeId, sedeNombre, fecha, hora, horarioId, bloqueId, costo_cita, inicioEpochMillis) }
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -263,6 +265,7 @@ fun ConfirmacionCitaContent(
                                 Text(text = resumen.hora, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             }
 
+                            //Sede info
                             Spacer(Modifier.height(14.dp))
                             Row(verticalAlignment = Alignment.Top) {
                                 Icon(Icons.Outlined.LocationOn, contentDescription = "Ubicación", tint = MaterialTheme.colorScheme.primary)
@@ -274,6 +277,16 @@ fun ConfirmacionCitaContent(
                                     }
                                 }
                             }
+                            //Costo info
+                            Spacer(Modifier.height(14.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.AttachMoney, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(text = resumen.costo_cita.toString(), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            }
+
+                            Spacer(Modifier.height(14.dp))
 
                             // Si está confirmada, mostramos el código de cita
                             if (confirmado && uiState is ConfirmacionCitaUiState.Confirmada) {

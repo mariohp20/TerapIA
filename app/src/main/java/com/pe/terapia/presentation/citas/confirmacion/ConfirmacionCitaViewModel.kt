@@ -25,7 +25,8 @@ data class ResumenCita(
     val sede: String,
     val fecha: String,
     val hora: String,
-    val sedeDireccion: String = ""
+    val sedeDireccion: String = "",
+    val costo_cita: Double
 )
 
 class ConfirmacionCitaViewModel(
@@ -39,6 +40,7 @@ class ConfirmacionCitaViewModel(
     private val hora: String,
     private val horarioId: String,
     private val bloqueId: String,
+    private val costo_cita: Double,
     private val inicioEpochMillis: Long,
     private val reservarCitaUseCase: ReservarCitaUseCase,
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
@@ -48,7 +50,7 @@ class ConfirmacionCitaViewModel(
     private val _uiState = MutableStateFlow<ConfirmacionCitaUiState>(ConfirmacionCitaUiState.Idle)
     val uiState: StateFlow<ConfirmacionCitaUiState> = _uiState.asStateFlow()
 
-    val resumen = ResumenCita(psicologoNombre, especialidadNombre, sedeNombre, fecha, hora)
+    val resumen = ResumenCita(psicologoNombre, especialidadNombre, sedeNombre, fecha, hora,"", costo_cita)
 
     fun confirmar() {
         viewModelScope.launch {
