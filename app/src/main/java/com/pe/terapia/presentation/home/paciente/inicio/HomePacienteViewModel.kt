@@ -1,4 +1,4 @@
-package com.pe.terapia.presentation.home.paciente
+package com.pe.terapia.presentation.home.paciente.inicio
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

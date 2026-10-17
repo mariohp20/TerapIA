@@ -33,7 +33,7 @@ import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaScreen
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaScreen
 import com.pe.terapia.presentation.home.admin.HomeAdminScreen
 import com.pe.terapia.presentation.admin.promover.PromoverUsuarioScreen
-import com.pe.terapia.presentation.home.paciente.HomePacienteScreen
+import com.pe.terapia.presentation.home.paciente.PacienteShell
 import com.pe.terapia.presentation.home.psicologo.HomePsicologoScreen
 import com.pe.terapia.presentation.pagos.GestionPagosPsicologoScreen
 import com.pe.terapia.presentation.pagos.HistorialPagosScreen
@@ -136,7 +136,7 @@ fun NavGraph(
             popEnterTransition = { fadeIn(animationSpec = tween(300)) }
         ) {
             ProtectedHomeRoute(Rol.PACIENTE, navController) { authViewModel, error ->
-                HomePacienteScreen(
+                PacienteShell(
                     onReservarCita = { navController.navigate(Route.ReservaCita) },
                     onVerHistorialPagos = { navController.navigate(Route.HistorialPagos) },
                     onCerrarSesion = authViewModel::cerrarSesion,
@@ -453,3 +453,4 @@ private fun NavHostController.navigateReplacingCurrent(destination: Route) {
 private fun NavHostController.navigateHome(usuario: Usuario) {
     navigateReplacingCurrent(homeRoute(usuario))
 }
+

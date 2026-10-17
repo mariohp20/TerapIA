@@ -93,6 +93,11 @@
 
     <!-- Home -->
     <string name="home_paciente_titulo">Home Paciente</string>
+    <string name="paciente_tab_inicio">Inicio</string>
+    <string name="paciente_tab_mis_citas">Mis citas</string>
+    <string name="paciente_tab_asistente">TerapIA chat</string>
+    <string name="paciente_tab_perfil">Perfil</string>
+    <string name="paciente_tab_proximamente">Próximamente</string>
     <string name="home_paciente_reservar_boton">Reservar una Cita</string>
     <string name="home_cerrar_sesion">Cerrar sesión</string>
     <string name="home_psicologo_titulo">Home Psicólogo</string>
@@ -131,5 +136,12 @@
     <string name="observaciones_generales">Observaciones Generales</string>
     <string name="motivo_de_consulta">Motivo de Consulta</string>
     <string name="registrar_atencion">Registrar Atención</string>
+
+    <string name="inicio_saludo">Hola, %1$s</string>
+    <string name="inicio_paciente_generico">paciente</string>
+    <string name="inicio_reservar_boton">Reservar cita</string>
+    <string name="inicio_accesos_titulo">¿Qué necesitas hoy?</string>
+    <string name="inicio_accion_pagos">Pagos</string>
+    <string name="inicio_accion_historial">Historial</string>
 
 </resources>
