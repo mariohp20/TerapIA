@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,16 +23,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pe.terapia.R
-import com.pe.terapia.ui.theme.TerapiaTheme
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import com.pe.terapia.domain.usecase.citas.GenerarCodigoQrCitaUseCase
 
 @Composable
 fun ConfirmacionCitaScreen(
@@ -307,6 +307,8 @@ fun ConfirmacionCitaContent(
                                         color = MaterialTheme.colorScheme.primary,
                                         letterSpacing = 1.sp
                                     )
+                                    Spacer(Modifier.height(8.dp))
+                                    CitaQRCode((uiState as ConfirmacionCitaUiState.Confirmada).citaId)
                                 }
                             }
                         }
@@ -328,6 +330,20 @@ fun ConfirmacionCitaContent(
             Spacer(Modifier.height(30.dp))
         }
     }
+}
+
+@Composable
+fun CitaQRCode(token: String) {
+    var codigoqrUseCase = GenerarCodigoQrCitaUseCase()
+    val bitmap = remember(token) {
+        codigoqrUseCase.generarBitmapQR(token)
+    }
+
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = "QR de la cita",
+        modifier = Modifier.size(240.dp)
+    )
 }
 
 private fun String.toFechaLegible(): String = runCatching {

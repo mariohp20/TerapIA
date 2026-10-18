@@ -71,6 +71,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.material.icons.extended)
 
+    implementation("com.google.zxing:core:3.5.4")
+    implementation( "com.google.android.gms:play-services-code-scanner:16.1.0")
+
     // Room Database (Caché local)
     val roomVersion = "2.8.5"
     implementation("androidx.room:room-runtime:$roomVersion")

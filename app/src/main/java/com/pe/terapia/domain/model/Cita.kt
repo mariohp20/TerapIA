@@ -2,6 +2,7 @@ package com.pe.terapia.domain.model
 
 enum class EstadoCita {
     PROGRAMADA,
+    EN_CURSO,
     COMPLETADA,
     CANCELADA,
     NO_ASISTIO

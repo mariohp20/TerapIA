@@ -1,35 +1,41 @@
 package com.pe.terapia.presentation.home.paciente
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List // <--- Nuevo icono importado
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.R
 import com.pe.terapia.domain.model.ProximaCita
+import com.pe.terapia.domain.usecase.citas.GenerarCodigoQrCitaUseCase
 import com.pe.terapia.ui.theme.TerapiaTheme
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
@@ -52,7 +58,8 @@ fun HomePacienteScreen(
         onReservarCita = onReservarCita,
         onVerHistorialPagos = onVerHistorialPagos,
         onCerrarSesion = onCerrarSesion,
-        onVerHistorial = { viewModel.verHistorial(onVerHistorial) }
+        onVerHistorial = { viewModel.verHistorial(onVerHistorial) },
+        onToggleQr = viewModel::setMostrarQr
     )
 }
 
@@ -63,7 +70,8 @@ private fun HomePacienteContent(
     onReservarCita: () -> Unit,
     onVerHistorialPagos: () -> Unit,
     onCerrarSesion: () -> Unit,
-    onVerHistorial: () -> Unit
+    onVerHistorial: () -> Unit,
+    onToggleQr: (Boolean) -> Unit
 ) {
     Scaffold(
         floatingActionButton = {
@@ -194,7 +202,15 @@ private fun HomePacienteContent(
                                 CircularProgressIndicator()
                             }
                         }
-                        uiState.proximaCita != null -> ProximaCitaCard(uiState.proximaCita)
+                        uiState.proximaCita != null -> {
+                            val cita = uiState.proximaCita
+                            if (cita != null) {
+                                ProximaCitaCard(
+                                    cita = cita,
+                                    modifier = Modifier.clickable { onToggleQr(true) }
+                                )
+                            }
+                        }
                         else -> Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(22.dp),
@@ -208,6 +224,14 @@ private fun HomePacienteContent(
                             }
                         }
                     }
+
+                    if (uiState.mostrarQr) {
+                        CitaQrDialog(
+                            token = uiState.proximaCita?.id.orEmpty(),
+                            onDismiss = { onToggleQr(false) }
+                        )
+                    }
+
                     Spacer(Modifier.height(80.dp))
                 }
             }
@@ -216,9 +240,9 @@ private fun HomePacienteContent(
 }
 
 @Composable
-private fun ProximaCitaCard(cita: ProximaCita) {
+private fun ProximaCitaCard(cita: ProximaCita, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
@@ -265,6 +289,84 @@ private fun String.toFechaLegible(): String = runCatching {
         .replaceFirstChar { it.uppercase() }
 }.getOrDefault(this)
 
+@Composable
+fun CitaQRCode(token: String) {
+    val codigoqrUseCase = GenerarCodigoQrCitaUseCase()
+    val bitmap = remember(token) {
+        codigoqrUseCase.generarBitmapQR(token)
+    }
+
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = "QR de la cita",
+        modifier = Modifier.size(240.dp)
+    )
+}
+
+@Composable
+fun CitaQrDialog(
+    token: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            ),
+            elevation = CardDefaults.cardElevation(12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Código QR de tu cita",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Presenta este código al llegar a tu cita",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                // Contenedor blanco para garantizar el contraste y escaneo perfecto del QR
+                Surface(
+                    color = Color.White,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.padding(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CitaQRCode(token = token)
+                    }
+                }
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Cerrar", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun HomePacientePreview() {
@@ -272,14 +374,15 @@ private fun HomePacientePreview() {
         HomePacienteContent(
             uiState = HomePacienteUiState(
                 nombrePaciente = "Andrea",
-                proximaCita = ProximaCita("Dra. Ana Pérez", "Psicología general", "2026-10-14", "10:00", "Sede principal", "Av. Lima 100, Miraflores, Lima"),
+                proximaCita = ProximaCita("1", "Dra. Ana Pérez", "Psicología general", "2026-10-14", "10:00", "Sede principal", "Av. Lima 100, Miraflores, Lima"),
                 cargando = false
             ),
             mensajeError = null,
             onReservarCita = {},
             onVerHistorialPagos = {},
             onCerrarSesion = {},
-            onVerHistorial = {}
+            onVerHistorial = {},
+            onToggleQr = {}
         )
     }
 }

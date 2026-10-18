@@ -26,6 +26,7 @@ val citaModule = module {
     factory { ObtenerCitasHoyPsicologoUseCase(get()) }
     factory { ObtenerUsuarioActualUseCase(get()) }
 
+
     viewModel { ReservaCitaViewModel(get()) }
     viewModel { HomePacienteViewModel(get(), get(), get()) }
     viewModel { parameters ->
