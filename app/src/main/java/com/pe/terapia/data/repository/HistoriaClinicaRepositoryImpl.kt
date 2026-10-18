@@ -2,6 +2,7 @@ package com.pe.terapia.data.repository
 
 import com.pe.terapia.data.remote.firebase.HistoriaClinicaDataSource
 import com.pe.terapia.domain.model.Atencion
+import com.pe.terapia.domain.model.TipoEtapa
 import com.pe.terapia.domain.repository.HistoriaClinicaRepository
 
 class HistoriaClinicaRepositoryImpl(
@@ -13,8 +14,13 @@ class HistoriaClinicaRepositoryImpl(
     }
 
     override suspend fun registrarAtencion(atencion: Atencion): Result<Unit> = runCatching {
-        dataSource.registrarAtencionYCrearHistoriaSiNoExiste(atencion)
+        dataSource.registrarAtencionYProcesoSiNoExiste(atencion)
     }
+
+    override suspend fun obtenerTiposEtapas(): Result<List<TipoEtapa>> = runCatching {
+        dataSource.obtenerTiposEtapas()
+    }
+
     override suspend fun obtenerAtencionesPorPaciente(pacienteId: String): Result<List<Atencion>> = runCatching {
         dataSource.obtenerAtencionesPorPaciente(pacienteId)
     }

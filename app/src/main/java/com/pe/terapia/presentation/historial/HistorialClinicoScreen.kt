@@ -29,6 +29,7 @@ import com.pe.terapia.domain.model.Atencion
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import org.koin.androidx.compose.koinViewModel
+import com.pe.terapia.domain.model.TipoEtapa
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +58,7 @@ fun HistorialClinicoScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.volver))
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -91,7 +92,7 @@ fun HistorialClinicoScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Fila deslizable de pestañas (TabRow)
-            ScrollableTabRow(
+            PrimaryScrollableTabRow(
                 selectedTabIndex = tabSeleccionado,
                 edgePadding = 24.dp,
                 containerColor = Color.Transparent,
@@ -122,7 +123,8 @@ fun HistorialClinicoScreen(
             } else {
                 when (tabSeleccionado) {
                     0 -> ResumenTab(
-                        faseActual = uiState.faseActual,
+                        etapaActual = uiState.etapaActual,
+                        tiposEtapas = uiState.tiposEtapas,
                         ultimaAtencion = uiState.atenciones.firstOrNull(),
                         onFaseChange = viewModel::cambiarFase
                     )
@@ -138,16 +140,12 @@ fun HistorialClinicoScreen(
 
 @Composable
 fun ResumenTab(
-    faseActual: String,
+    etapaActual: TipoEtapa?,
+    tiposEtapas: List<TipoEtapa>,
     ultimaAtencion: Atencion?,
-    onFaseChange: (String) -> Unit
+    onFaseChange: (TipoEtapa) -> Unit
 ) {
-    val opcionesFase = listOf(
-        "Evaluación y orientación",
-        "Explicación de las hipótesis diagnósticas",
-        "Tratamiento",
-        "Finalización de la terapia"
-    )
+
     var expandido by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier
@@ -168,16 +166,21 @@ fun ResumenTab(
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(faseActual, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(
+                        text = etapaActual?.nombre ?: "Sin etapa asignada",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
                     Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
             DropdownMenu(expanded = expandido, onDismissRequest = { expandido = false }) {
-                opcionesFase.forEach { opcion ->
+                tiposEtapas.forEach { etapa ->
                     DropdownMenuItem(
-                        text = { Text(opcion) },
+                        text = { Text(etapa.nombre) },
                         onClick = {
-                            onFaseChange(opcion)
+                            onFaseChange(etapa)
                             expandido = false
                         }
                     )

@@ -10,17 +10,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.pe.terapia.domain.model.TipoEtapa
+import com.pe.terapia.domain.usecase.historiaclinica.ObtenerTiposEtapasUseCase
+import kotlinx.coroutines.async
 
 data class HistorialClinicoUiState(
     val cargando: Boolean = true,
     val atenciones: List<Atencion> = emptyList(),
-    val faseActual: String = "Evaluación y orientación",
+    val tiposEtapas: List<TipoEtapa> = emptyList(),
+    val etapaActual: TipoEtapa? = null,
     val esPsicologo: Boolean = false,
     val error: String? = null
 )
 
 class HistorialClinicoViewModel(
     private val obtenerAtencionesUseCase: ObtenerAtencionesPacienteUseCase,
+    private val obtenerTiposEtapasUseCase: ObtenerTiposEtapasUseCase,
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase
 ) : ViewModel() {
 
@@ -40,24 +45,35 @@ class HistorialClinicoViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cargando = true)
 
-            obtenerAtencionesUseCase(pacienteId).fold(
-                onSuccess = { lista ->
-                    _uiState.value = _uiState.value.copy(
-                        cargando = false,
-                        atenciones = lista
-                    )
-                },
-                onFailure = { excepcion ->
-                    _uiState.value = _uiState.value.copy(
-                        cargando = false,
-                        error = excepcion.message
-                    )
-                }
+            val etapasDeferred = async { obtenerTiposEtapasUseCase() }
+            val atencionesDeferred = async { obtenerAtencionesUseCase(pacienteId) }
+
+            val etapasResult = etapasDeferred.await()
+            val atencionesResult = atencionesDeferred.await()
+
+            if (atencionesResult.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    cargando = false,
+                    error = atencionesResult.exceptionOrNull()?.message ?: "Error al cargar el historial"
+                )
+                return@launch
+            }
+
+            val listaAtenciones = atencionesResult.getOrDefault(emptyList())
+            val listaEtapas = etapasResult.getOrDefault(emptyList())
+
+            val etapaActiva = listaEtapas.firstOrNull()
+
+            _uiState.value = _uiState.value.copy(
+                cargando = false,
+                atenciones = listaAtenciones,
+                tiposEtapas = listaEtapas,
+                etapaActual = etapaActiva
             )
         }
     }
 
-    fun cambiarFase(nuevaFase: String) {
-        _uiState.value = _uiState.value.copy(faseActual = nuevaFase)
+    fun cambiarFase(nuevaEtapa: TipoEtapa) {
+        _uiState.value = _uiState.value.copy(etapaActual = nuevaEtapa)
     }
 }
