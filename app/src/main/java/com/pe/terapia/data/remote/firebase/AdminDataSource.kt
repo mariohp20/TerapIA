@@ -115,7 +115,8 @@ class AdminDataSource(
                 id = doc.id,
                 nombre = doc.getString("nombre") ?: return@mapNotNull null,
                 descripcion = doc.getString("descripcion").orEmpty(),
-                activa = true
+                activa = true,
+                costo_cita = doc.getDouble("costo_cita")?: return@mapNotNull null
             )
         }
     }

@@ -8,10 +8,8 @@ import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
-import com.pe.terapia.domain.model.EstadoPago
 import com.pe.terapia.domain.model.EstadoReserva
 import com.pe.terapia.domain.model.Especialidad
-import com.pe.terapia.domain.model.PRECIO_ESTANDAR_CITA
 import com.pe.terapia.domain.model.ExcepcionHorario
 import com.pe.terapia.domain.model.HorarioLaboral
 import com.pe.terapia.domain.model.Reserva
@@ -24,7 +22,6 @@ import com.pe.terapia.domain.model.ProximaCita
 import com.pe.terapia.domain.usecase.citas.GenerarSlotsDisponibles
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -100,6 +97,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         }
 
         return ProximaCita(
+            id = appointment.id,
             psicologoNombre = psychologistName,
             especialidadNombre = specialtyName,
             fecha = appointment.getString("fecha").orEmpty(),
@@ -121,7 +119,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         val snapshot = firestore.collection("especialidades").whereEqualTo("activa", true).get().await()
         return snapshot.documents.mapNotNull { document ->
             document.getString("nombre")?.let { nombre ->
-                Especialidad(document.id, nombre, document.getString("descripcion").orEmpty(), true)
+                Especialidad(document.id, nombre, document.getString("descripcion").orEmpty(), true, document.getDouble("costo_cita")?: 0.00)
             }
         }
     }
@@ -244,6 +242,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         val reservationRef = firestore.collection("reservas").document()
         val appointmentRef = firestore.collection("citas").document()
 
+
         return firestore.runTransaction { transaction ->
             val profile = transaction.get(profileRef)
             val psychologist = transaction.get(psychologistRef)
@@ -311,6 +310,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
             )
             transaction.set(reservationRef, confirmedReservation.toFirestore(startAt, appointmentRef.id))
             transaction.set(appointmentRef, cita.toFirestore(startAt))
+
             transaction.set(lockRef, mapOf(
                 "reservaId" to reservationRef.id,
                 "slotId" to slotId,
@@ -386,6 +386,68 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         "estado" to estado.name,
         "creadaEn" to FieldValue.serverTimestamp()
     )
+
+    suspend fun obtenerCitaPorId(citaId: String): ProximaCita{
+
+        val now = System.currentTimeMillis()
+        val appointment = firestore.collection("citas")
+            .document(citaId).get().await()
+
+        val psychologistName = readOrDefault("Profesional") {
+            val psychologist = firestore.collection("psicologos")
+                .document(appointment.getString("psicologoId").orEmpty())
+                .get()
+                .await()
+
+            listOf(
+                psychologist.getString("nombres"),
+                psychologist.getString("apellidos")
+            )
+                .filterNotNull()
+                .filter(String::isNotBlank)
+                .joinToString(" ")
+                .ifBlank { "Profesional" }
+        }
+
+        val specialtyName = readOrDefault("Especialidad") {
+            firestore.collection("especialidades")
+                .document(appointment.getString("especialidadId").orEmpty())
+                .get()
+                .await()
+                .getString("nombre")
+                ?: "Especialidad"
+        }
+
+        val (siteName, siteAddress) = readOrDefault("Sede" to "") {
+            val site = firestore.collection("sedes")
+                .document(appointment.getString("sedeId").orEmpty())
+                .get()
+                .await()
+
+            val address = listOf(
+                site.getString("direccion"),
+                site.getString("distrito"),
+                site.getString("ciudad")
+            )
+                .filterNotNull()
+                .filter(String::isNotBlank)
+                .distinct()
+                .joinToString(", ")
+
+            (site.getString("nombre") ?: "Sede") to address
+        }
+
+        return ProximaCita(
+            id = appointment.id,
+            psicologoNombre = psychologistName,
+            especialidadNombre = specialtyName,
+            fecha = appointment.getString("fecha").orEmpty(),
+            hora = appointment.getString("hora").orEmpty(),
+            sedeNombre = siteName,
+            sedeDireccion = siteAddress
+        )
+    }
+
 
     companion object {
         fun scheduleId(psicologoId: String, sedeId: String): String = "$psicologoId~$sedeId"

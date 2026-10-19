@@ -43,6 +43,7 @@ sealed class Route {
         val hora: String,
         val horarioId: String,
         val bloqueId: String,
+        val costoCita: Float,
         val inicioEpochMillis: Long
     ) : Route()
 

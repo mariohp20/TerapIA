@@ -35,7 +35,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReservaCitaScreen(
-    onContinuar: (psicologo: Psicologo, especialidadId: String, especialidadNombre: String, sede: Sede, slot: SlotDisponible) -> Unit,
+    onContinuar: (psicologo: Psicologo, especialidadId: String, especialidadNombre: String, sede: Sede, costoCita: Float, slot: SlotDisponible) -> Unit,
     onVolver: () -> Unit,
     viewModel: ReservaCitaViewModel = koinViewModel()
 ) {
@@ -74,10 +74,12 @@ fun ReservaCitaScreen(
                         val psicologo = uiState.psicologoSeleccionado
                         val especialidad = uiState.especialidadSeleccionada
                         val sede = uiState.sedeSeleccionada
+                        val costo = uiState.especialidadSeleccionada?.costo_cita
                         val slot = viewModel.slotSeleccionado()
 
                         if (psicologo != null && especialidad != null && sede != null && slot != null) {
-                            onContinuar(psicologo, especialidad.id, especialidad.nombre, sede, slot)
+                            onContinuar(psicologo, especialidad.id, especialidad.nombre, sede,
+                                costo!!.toFloat(),slot)
                         }
                     },
                     enabled = uiState.puedeContinuar,

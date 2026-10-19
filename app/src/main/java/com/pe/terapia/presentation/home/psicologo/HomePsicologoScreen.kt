@@ -27,6 +27,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.R
 import com.pe.terapia.domain.model.CitaPacienteDetalle
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.barcode.common.Barcode
 
 @Composable
 fun HomePsicologoScreen(
@@ -37,6 +45,9 @@ fun HomePsicologoScreen(
     viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var tokenLeido by remember {
+        mutableStateOf<String?>(null)
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -180,8 +191,18 @@ fun HomePsicologoScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
                         }
-
                         Spacer(modifier = Modifier.height(80.dp))
+                        /*Column {
+                            QRScannerScreen(
+                                onQRScanned = { token ->
+                                    tokenLeido = token
+                                }
+                            )
+
+                            tokenLeido?.let { token ->
+                                Text("Token obtenido: $token")
+                            }
+                        }*/
                     }
                 }
             }
@@ -247,3 +268,84 @@ fun CitaItemCard(cita: CitaPacienteDetalle, onClick: () -> Unit) {
         }
     }
 }
+
+@Composable
+fun QRScannerScreen(
+    onQRScanned: (String) -> Unit
+) {
+    val context = LocalContext.current
+
+    var scanning by remember {
+        mutableStateOf(false)
+    }
+
+    var error by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val scanner = remember(context) {
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .enableAutoZoom()
+            .build()
+
+        GmsBarcodeScanning.getClient(context, options)
+    }
+
+    Column(
+        modifier = Modifier.padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Escanear cita",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Text(
+            text = "Escanea el código QR presentado por la paciente."
+        )
+
+        Button(
+            onClick = {
+                scanning = true
+                error = null
+
+                scanner.startScan()
+                    .addOnSuccessListener { barcode ->
+                        val token = barcode.rawValue
+
+                        if (!token.isNullOrBlank()) {
+                            onQRScanned(token)
+                        } else {
+                            error = "El QR no contiene información."
+                        }
+                    }
+                    .addOnCanceledListener {
+                        //  cerró el escner.
+                    }
+                    .addOnFailureListener { exception ->
+                        error = exception.localizedMessage
+                            ?: "Error al escanear QR."
+                    }
+                    .addOnCompleteListener {
+                        scanning = false
+                    }
+            },
+            enabled = !scanning
+        ) {
+            Text(
+                if (scanning) "Escaneando..."
+                else "Abrir lector QR"
+            )
+        }
+
+        error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+

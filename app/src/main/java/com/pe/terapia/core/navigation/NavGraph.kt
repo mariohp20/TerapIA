@@ -178,7 +178,7 @@ fun NavGraph(
         ) {
             RoleProtectedRoute(Rol.PACIENTE, navController) {
                 ReservaCitaScreen(
-                    onContinuar = { psicologo, especialidadId, especialidadNombre, sede, slot ->
+                    onContinuar = { psicologo, especialidadId, especialidadNombre, sede ,costoCita,slot ->
                         navController.navigate(
                             Route.ConfirmacionCita(
                                 psicologoId = psicologo.id,
@@ -193,6 +193,7 @@ fun NavGraph(
                                 hora = slot.hora,
                                 horarioId = slot.horarioId,
                                 bloqueId = slot.bloqueId,
+                                costoCita = costoCita,
                                 inicioEpochMillis = slot.inicioEpochMillis
                             )
                         )
@@ -220,6 +221,7 @@ fun NavGraph(
                     hora = args.hora,
                     horarioId = args.horarioId,
                     bloqueId = args.bloqueId,
+                    costo_cita = args.costoCita.toDouble(),
                     inicioEpochMillis = args.inicioEpochMillis,
                     onPagarOnline = { pagoId ->
                         navController.navigate(Route.PasarelaPago(pagoId)) {

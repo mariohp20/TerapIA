@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Schedule
@@ -21,16 +23,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pe.terapia.R
-import com.pe.terapia.ui.theme.TerapiaTheme
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import com.pe.terapia.domain.usecase.citas.GenerarCodigoQrCitaUseCase
 
 @Composable
 fun ConfirmacionCitaScreen(
@@ -45,13 +46,14 @@ fun ConfirmacionCitaScreen(
     hora: String,
     horarioId: String,
     bloqueId: String,
+    costo_cita: Double,
     inicioEpochMillis: Long,
     onPagarOnline: (String) -> Unit,
     onPagarEnClinica: (String) -> Unit,
     onFinalizar: () -> Unit,
     onVolver: () -> Unit,
     viewModel: ConfirmacionCitaViewModel = koinViewModel(
-        parameters = { parametersOf(psicologoId, psicologoNombre, especialidadId, especialidadNombre, sedeId, sedeNombre, fecha, hora, horarioId, bloqueId, inicioEpochMillis) }
+        parameters = { parametersOf(psicologoId, psicologoNombre, especialidadId, especialidadNombre, sedeId, sedeNombre, fecha, hora, horarioId, bloqueId, costo_cita, inicioEpochMillis) }
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -263,6 +265,7 @@ fun ConfirmacionCitaContent(
                                 Text(text = resumen.hora, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             }
 
+                            //Sede info
                             Spacer(Modifier.height(14.dp))
                             Row(verticalAlignment = Alignment.Top) {
                                 Icon(Icons.Outlined.LocationOn, contentDescription = "Ubicación", tint = MaterialTheme.colorScheme.primary)
@@ -274,6 +277,16 @@ fun ConfirmacionCitaContent(
                                     }
                                 }
                             }
+                            //Costo info
+                            Spacer(Modifier.height(14.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.AttachMoney, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(text = resumen.costo_cita.toString(), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            }
+
+                            Spacer(Modifier.height(14.dp))
 
                             // Si está confirmada, mostramos el código de cita
                             if (confirmado && uiState is ConfirmacionCitaUiState.Confirmada) {
@@ -294,6 +307,8 @@ fun ConfirmacionCitaContent(
                                         color = MaterialTheme.colorScheme.primary,
                                         letterSpacing = 1.sp
                                     )
+                                    Spacer(Modifier.height(8.dp))
+                                    CitaQRCode((uiState as ConfirmacionCitaUiState.Confirmada).citaId)
                                 }
                             }
                         }
@@ -315,6 +330,20 @@ fun ConfirmacionCitaContent(
             Spacer(Modifier.height(30.dp))
         }
     }
+}
+
+@Composable
+fun CitaQRCode(token: String) {
+    var codigoqrUseCase = GenerarCodigoQrCitaUseCase()
+    val bitmap = remember(token) {
+        codigoqrUseCase.generarBitmapQR(token)
+    }
+
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = "QR de la cita",
+        modifier = Modifier.size(240.dp)
+    )
 }
 
 private fun String.toFechaLegible(): String = runCatching {
