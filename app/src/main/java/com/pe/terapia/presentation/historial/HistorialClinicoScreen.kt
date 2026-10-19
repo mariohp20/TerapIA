@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.R
 import com.pe.terapia.domain.model.Atencion
+import com.pe.terapia.domain.model.EstadoEtapa
+import com.pe.terapia.domain.model.EtapaClinica
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import org.koin.androidx.compose.koinViewModel
@@ -42,7 +45,7 @@ fun HistorialClinicoScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Estado para las pestañas
-    val tabs = listOf("Resumen", "Sesiones", "Notas", "Fases")
+    val tabs = listOf("Resumen", "Sesiones", "Notas", "Etapas")
     var tabSeleccionado by remember { mutableStateOf(0) }
 
     LaunchedEffect(pacienteId) {
@@ -123,12 +126,11 @@ fun HistorialClinicoScreen(
             } else {
                 when (tabSeleccionado) {
                     0 -> ResumenTab(
-                        etapaActual = uiState.etapaActual,
-                        tiposEtapas = uiState.tiposEtapas,
-                        ultimaAtencion = uiState.atenciones.firstOrNull(),
-                        onFaseChange = viewModel::cambiarFase
+                        etapaActivaNombre = uiState.etapaActivaNombre,
+                        ultimaAtencion = uiState.atenciones.firstOrNull()
                     )
                     1 -> SesionesTab(atenciones = uiState.atenciones, esPsicologo = uiState.esPsicologo)
+                    3 -> EtapasTab(etapas = uiState.historialEtapas, catalogo = uiState.tiposEtapas)
                     else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(stringResource(R.string.proximamente), color = Color.Gray)
                     }
@@ -140,14 +142,9 @@ fun HistorialClinicoScreen(
 
 @Composable
 fun ResumenTab(
-    etapaActual: TipoEtapa?,
-    tiposEtapas: List<TipoEtapa>,
-    ultimaAtencion: Atencion?,
-    onFaseChange: (TipoEtapa) -> Unit
+    etapaActivaNombre: String,
+    ultimaAtencion: Atencion?
 ) {
-
-    var expandido by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(horizontal = 24.dp)) {
@@ -156,35 +153,20 @@ fun ResumenTab(
         Text(stringResource(R.string.fase_actual), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.DarkGray)
         Spacer(modifier = Modifier.height(12.dp))
 
-        Box {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expandido = true },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = etapaActual?.nombre ?: "Sin etapa asignada",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                }
-            }
-            DropdownMenu(expanded = expandido, onDismissRequest = { expandido = false }) {
-                tiposEtapas.forEach { etapa ->
-                    DropdownMenuItem(
-                        text = { Text(etapa.nombre) },
-                        onClick = {
-                            onFaseChange(etapa)
-                            expandido = false
-                        }
-                    )
-                }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Diseño flat, sin sombra
+        ) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = etapaActivaNombre,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(Icons.Default.Timeline, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -247,38 +229,102 @@ fun AtencionCard(atencion: Atencion, esPsicologo: Boolean) {
             Text(text = formateador.format(atencion.fechaAtencion), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 1. CAMPO GENERAL (Ambos lo ven)
+            // Campo General
             if (atencion.motivoConsulta.isNotBlank()) {
                 Text("Motivo de consulta", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.DarkGray)
                 Text(atencion.motivoConsulta, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // 2. CAMPO PRIVADO (Solo Psicólogo)
+            // Solo Psicólogo
             if (esPsicologo && atencion.observaciones.isNotBlank()) {
                 Text("Observaciones", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.DarkGray)
                 Text(atencion.observaciones, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // 3. CAMPO GENERAL (Ambos lo ven)
+            // Campo General
             if (atencion.evaluacion.isNotBlank()) {
                 Text("Evaluación", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.DarkGray)
                 Text(atencion.evaluacion, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // 4. CAMPO PRIVADO (Solo Psicólogo)
+            // Solo Psicólogo
             if (esPsicologo && atencion.evolucion.isNotBlank()) {
                 Text("Evolución del paciente", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.DarkGray)
                 Text(atencion.evolucion, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // 5. CAMPO GENERAL (Ambos lo ven)
+            // Campo General
             if (atencion.indicaciones.isNotBlank()) {
                 Text("Indicaciones", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.DarkGray)
                 Text(atencion.indicaciones, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+fun EtapasTab(etapas: List<EtapaClinica>, catalogo: List<TipoEtapa>) {
+    if (etapas.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No hay etapas clínicas registradas.", color = Color.Gray)
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(etapas) { etapa ->
+                val tipo = catalogo.find { it.id == etapa.tipoEtapaId }
+                EtapaHistorialCard(etapa, tipo)
+            }
+        }
+    }
+}
+
+@Composable
+fun EtapaHistorialCard(etapa: EtapaClinica, tipoEtapa: TipoEtapa?) {
+    val formateador = DateTimeFormatter.ofPattern("dd MMM yyyy").withZone(ZoneId.systemDefault())
+    val esCompletado = etapa.estado == EstadoEtapa.COMPLETADO
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Fechas
+            val fechaInicio = formateador.format(etapa.fechaInicio)
+            val fechaFin = etapa.fechaFin?.let { formateador.format(it) } ?: "Actualidad"
+
+            Text(
+                text = "$fechaInicio - $fechaFin",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (esCompletado) Color.Gray else MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Nombre de la Etapa y Estado
+            Text(tipoEtapa?.nombre ?: "Etapa Desconocida", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.DarkGray)
+            Text(
+                text = if (esCompletado) "Completado" else "En Progreso",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (esCompletado) Color.Gray else MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Observaciones de cierre (solo si existen)
+            if (!etapa.observaciones.isNullOrBlank()) {
+                Text("Observaciones de cierre", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.DarkGray)
+                Text(etapa.observaciones, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
             }
         }
     }

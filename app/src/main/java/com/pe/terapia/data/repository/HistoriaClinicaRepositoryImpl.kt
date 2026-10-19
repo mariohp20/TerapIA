@@ -4,6 +4,8 @@ import com.pe.terapia.data.remote.firebase.HistoriaClinicaDataSource
 import com.pe.terapia.domain.model.Atencion
 import com.pe.terapia.domain.model.TipoEtapa
 import com.pe.terapia.domain.repository.HistoriaClinicaRepository
+import com.pe.terapia.domain.model.EtapaClinica
+import com.pe.terapia.domain.model.ProcesoTerapeutico
 
 class HistoriaClinicaRepositoryImpl(
     private val dataSource: HistoriaClinicaDataSource
@@ -19,6 +21,18 @@ class HistoriaClinicaRepositoryImpl(
 
     override suspend fun obtenerTiposEtapas(): Result<List<TipoEtapa>> = runCatching {
         dataSource.obtenerTiposEtapas()
+    }
+
+    override suspend fun transicionarEtapaClinica (procesoId: String,etapaActualId: String,nuevoTipoEtapaId: String,observacionesCierre: String): Result<Unit> =runCatching {
+        dataSource.transicionarEtapaClinica(procesoId,etapaActualId,nuevoTipoEtapaId,observacionesCierre)
+    }
+
+    override suspend fun obtenerProcesoActivo(pacienteId: String): Result<ProcesoTerapeutico?> = runCatching {
+        dataSource.obtenerProcesoActivo(pacienteId)
+    }
+
+    override suspend fun obtenerEtapasPorProceso(procesoId: String): Result<List<EtapaClinica>> = runCatching {
+        dataSource.obtenerEtapasPorProceso(procesoId)
     }
 
     override suspend fun obtenerAtencionesPorPaciente(pacienteId: String): Result<List<Atencion>> = runCatching {

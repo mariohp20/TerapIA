@@ -32,7 +32,7 @@ import org.koin.androidx.compose.koinViewModel
 fun HomePsicologoScreen(
     onGestionarPagos: () -> Unit,
     onCerrarSesion: () -> Unit,
-    onRegistrarAtencion: (citaId: String, pacienteId: String) -> Unit,
+    onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
     onIrAHistorialClinico: () -> Unit,
     viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
@@ -175,7 +175,7 @@ fun HomePsicologoScreen(
                             uiState.proximasCitas.forEach { cita ->
                                 CitaItemCard(
                                     cita = cita,
-                                    onClick = { onRegistrarAtencion(cita.citaId, cita.pacienteId) }
+                                    onClick = { onAbrirSalaConsulta(cita.citaId, cita.pacienteId, cita.nombrePaciente) }
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                             }

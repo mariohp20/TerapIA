@@ -10,6 +10,8 @@ import com.pe.terapia.domain.model.EstadoProceso
 import com.pe.terapia.domain.model.TipoEtapa
 import kotlinx.coroutines.tasks.await
 import android.util.Log
+import com.pe.terapia.domain.model.EtapaClinica
+import com.pe.terapia.domain.model.ProcesoTerapeutico
 
 
 class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
@@ -85,6 +87,7 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
         }
     }
 
+
     suspend fun obtenerTiposEtapas(): List<TipoEtapa> {
         val snapshot = firestore.collection("tiposEtapas")
             .whereEqualTo("activo", true)
@@ -101,6 +104,107 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
                 activo = doc.getBoolean("activo") ?: true
             )
         }
+    }
+
+    suspend fun transicionarEtapaClinica(
+        procesoId: String,
+        etapaActualId: String,
+        nuevoTipoEtapaId: String,
+        observacionesCierre: String
+    ) {
+        val batch = firestore.batch()
+
+        // 1. Cerrar la etapa actual
+        val etapaActualRef = firestore.collection("etapasClinicas").document(etapaActualId)
+        batch.update(
+            etapaActualRef,
+            mapOf(
+                "estado" to EstadoEtapa.COMPLETADO.name,
+                "fechaFin" to FieldValue.serverTimestamp(),
+                "observaciones" to observacionesCierre
+            )
+        )
+
+        // 2. Crear la nueva etapa
+        val nuevaEtapaRef = firestore.collection("etapasClinicas").document()
+        val nuevaEtapaData = hashMapOf(
+            "id" to nuevaEtapaRef.id,
+            "procesoTerapeuticoId" to procesoId,
+            "tipoEtapaId" to nuevoTipoEtapaId,
+            "estado" to EstadoEtapa.EN_PROGRESO.name,
+            "fechaInicio" to FieldValue.serverTimestamp(),
+            "fechaFin" to null
+        )
+        batch.set(nuevaEtapaRef, nuevaEtapaData)
+
+        batch.commit().await()
+    }
+
+    suspend fun obtenerProcesoActivo(pacienteId: String): ProcesoTerapeutico? {
+        val snapshot = firestore.collection("procesosTerapeuticos")
+            .whereEqualTo("pacienteId", pacienteId)
+            .whereEqualTo("estado", EstadoProceso.EN_CURSO.name)
+            .limit(1)
+            .get()
+            .await()
+
+        if (snapshot.isEmpty) return null
+
+        val doc = snapshot.documents.first()
+        val data = doc.data ?: return null
+
+        val timestampInicio = data["fechaInicio"] as? com.google.firebase.Timestamp
+        val fechaInicioInstant = timestampInicio?.let {
+            java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong())
+        } ?: java.time.Instant.now()
+
+        val timestampFin = data["fechaFin"] as? com.google.firebase.Timestamp
+        val fechaFinInstant = timestampFin?.let {
+            java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong())
+        }
+
+        return ProcesoTerapeutico(
+            id = doc.id,
+            historiaClinicaId = data["historiaClinicaId"] as? String ?: "",
+            pacienteId = data["pacienteId"] as? String ?: "",
+            psicologoId = data["psicologoId"] as? String ?: "",
+            estado = EstadoProceso.valueOf(data["estado"] as? String ?: EstadoProceso.EN_CURSO.name),
+            fechaInicio = fechaInicioInstant,
+            fechaFin = fechaFinInstant,
+            motivoConsultaPrincipal = data["motivoConsultaPrincipal"] as? String ?: ""
+        )
+    }
+
+    suspend fun obtenerEtapasPorProceso(procesoId: String): List<EtapaClinica> {
+        val snapshot = firestore.collection("etapasClinicas")
+            .whereEqualTo("procesoTerapeuticoId", procesoId)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            val data = doc.data ?: return@mapNotNull null
+
+            val timestampInicio = data["fechaInicio"] as? com.google.firebase.Timestamp
+            val fechaInicioInstant = timestampInicio?.let {
+                java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong())
+            }
+
+            val timestampFin = data["fechaFin"] as? com.google.firebase.Timestamp
+            val fechaFinInstant = timestampFin?.let {
+                java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong())
+            }
+
+            EtapaClinica(
+                id = doc.id,
+                procesoTerapeuticoId = data["procesoTerapeuticoId"] as? String ?: "",
+                tipoEtapaId = data["tipoEtapaId"] as? String ?: "",
+                estado = EstadoEtapa.valueOf(data["estado"] as? String ?: EstadoEtapa.PENDIENTE.name),
+                fechaInicio = fechaInicioInstant,
+                fechaFin = fechaFinInstant,
+                objetivosEspecificos = data["objetivosEspecificos"] as? String,
+                observaciones = data["observaciones"] as? String
+            )
+        }.sortedByDescending { it.fechaInicio } // Ordenamos para que la más reciente salga primero
     }
 
     suspend fun obtenerAtencionesPorPaciente(pacienteId: String): List<Atencion> {
