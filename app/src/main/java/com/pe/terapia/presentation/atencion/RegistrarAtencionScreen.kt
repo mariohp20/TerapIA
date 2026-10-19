@@ -29,13 +29,6 @@ fun RegistrarAtencionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
 
-    val motivo by viewModel.motivoConsulta.collectAsStateWithLifecycle()
-    val observaciones by viewModel.observaciones.collectAsStateWithLifecycle()
-    val evaluacion by viewModel.evaluacion.collectAsStateWithLifecycle()
-    val evolucion by viewModel.evolucion.collectAsStateWithLifecycle()
-    val indicaciones by viewModel.indicaciones.collectAsStateWithLifecycle()
-
-
     LaunchedEffect(citaId) {
         viewModel.cargarDatosPrevios(citaId)
     }
@@ -77,8 +70,8 @@ fun RegistrarAtencionScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
-                value = motivo,
-                onValueChange = { viewModel.motivoConsulta.value = it },
+                value = uiState.motivoConsulta,
+                onValueChange = viewModel::onMotivoConsultaChange,
                 label = { Text(stringResource(R.string.motivo_de_consulta)) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -87,8 +80,8 @@ fun RegistrarAtencionScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-                value = observaciones,
-                onValueChange = { viewModel.observaciones.value = it },
+                value = uiState.observaciones,
+                onValueChange = viewModel::onObservacionesChange,
                 label = { Text(stringResource(R.string.observaciones_generales)) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,8 +90,8 @@ fun RegistrarAtencionScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-                value = evaluacion,
-                onValueChange = { viewModel.evaluacion.value = it },
+                value = uiState.evaluacion,
+                onValueChange = viewModel::onEvaluacionChange,
                 label = { Text(stringResource(R.string.evaluacion_psicologica)) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,8 +100,8 @@ fun RegistrarAtencionScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-                value = evolucion,
-                onValueChange = { viewModel.evolucion.value = it },
+                value = uiState.evolucion,
+                onValueChange = viewModel::onEvolucionChange,
                 label = { Text(stringResource(R.string.evolucion_del_paciente)) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -117,8 +110,8 @@ fun RegistrarAtencionScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-                value = indicaciones,
-                onValueChange = { viewModel.indicaciones.value = it },
+                value = uiState.indicaciones,
+                onValueChange = viewModel::onIndicacionesChange,
                 label = { Text(stringResource(R.string.indicaciones_tareas)) },
                 modifier = Modifier
                     .fillMaxWidth()

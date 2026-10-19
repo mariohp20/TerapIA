@@ -34,8 +34,7 @@ fun BuscadorPacientesScreen(
     onPacienteSeleccionado: (String, String) -> Unit,
     viewModel: BuscadorPacientesViewModel = koinViewModel()
 ) {
-    val searchText by viewModel.searchText.collectAsStateWithLifecycle()
-    val pacientes by viewModel.pacientesFiltrados.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -48,7 +47,7 @@ fun BuscadorPacientesScreen(
                         ))
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
@@ -65,7 +64,7 @@ fun BuscadorPacientesScreen(
 
             // Barra de búsqueda redondeada
             OutlinedTextField(
-                value = searchText,
+                value = uiState.searchText,
                 onValueChange = viewModel::onSearchTextChange,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,15 +84,29 @@ fun BuscadorPacientesScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Lista de pacientes
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(pacientes) { paciente ->
-                    PacienteItemList(
-                        paciente = paciente,
-                        onClick = { onPacienteSeleccionado(paciente.id, paciente.nombreCompleto) }
-                    )
+            if (uiState.cargando) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.error != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = uiState.error!!, color = MaterialTheme.colorScheme.error)
+                }
+            } else if (uiState.pacientesFiltrados.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "No se encontraron pacientes.", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(uiState.pacientesFiltrados) { paciente ->
+                        PacienteItemList(
+                            paciente = paciente,
+                            onClick = { onPacienteSeleccionado(paciente.id, paciente.nombreCompleto) }
+                        )
+                    }
                 }
             }
         }
