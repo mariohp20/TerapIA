@@ -24,7 +24,7 @@ val pagoModule = module {
     factory { PagarOnlineUseCase(get()) }
     factory { ObtenerComprobantePorCitaUseCase(get()) }
 
-    viewModel { HistorialPagosViewModel(get(), get()) }
+    viewModel { HistorialPagosViewModel(get(), get(), get(), get(), get()) }
     viewModel { (pagoId: String) -> PasarelaPagoViewModel(pagoId, get()) }
     viewModel { GestionPagosPsicologoViewModel(get(), get(), get()) }
 }
