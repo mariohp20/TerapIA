@@ -1,4 +1,4 @@
-package com.pe.terapia.presentation.home.psicologo
+package com.pe.terapia.presentation.home.psicologo.inicio
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import com.pe.terapia.domain.model.Usuario
 
 data class HomePsicologoUiState(
     val cargando: Boolean = true,
