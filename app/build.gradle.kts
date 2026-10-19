@@ -41,6 +41,7 @@ android {
 dependencies {
     // Firebase usando el BoM desde el catálogo
     implementation(platform(libs.firebase.bom))
+    implementation(libs.androidx.compose.ui.text)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.koin.android)
@@ -52,6 +53,8 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
