@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.pe.terapia.domain.usecase.historiaclinica.ObtenerAtencionPorCitaUseCase
 
 data class RegistrarAtencionUiState(
+    val cargandoInicial: Boolean = true,
     val guardando: Boolean = false,
     val exito: Boolean = false,
     val error: String? = null
@@ -19,6 +21,7 @@ data class RegistrarAtencionUiState(
 
 class RegistrarAtencionViewModel(
     private val registrarAtencionUseCase: RegistrarAtencionUseCase,
+    private val obtenerAtencionPorCitaUseCase: ObtenerAtencionPorCitaUseCase,
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase
 ) : ViewModel() {
 
@@ -31,6 +34,26 @@ class RegistrarAtencionViewModel(
     var evaluacion = MutableStateFlow("")
     var evolucion = MutableStateFlow("")
     var indicaciones = MutableStateFlow("")
+
+    fun cargarDatosPrevios(citaId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(cargandoInicial = true)
+
+            val result = obtenerAtencionPorCitaUseCase(citaId)
+
+            result.onSuccess { atencionPrevia ->
+                if (atencionPrevia != null) {
+                    motivoConsulta.value = atencionPrevia.motivoConsulta
+                    observaciones.value = atencionPrevia.observaciones
+                    evaluacion.value = atencionPrevia.evaluacion
+                    evolucion.value = atencionPrevia.evolucion
+                    indicaciones.value = atencionPrevia.indicaciones
+                }
+            }
+
+            _uiState.value = _uiState.value.copy(cargandoInicial = false)
+        }
+    }
 
     fun guardarAtencion(citaId: String, pacienteId: String) {
         viewModelScope.launch {

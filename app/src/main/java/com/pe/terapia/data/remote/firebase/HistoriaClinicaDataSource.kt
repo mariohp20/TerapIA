@@ -8,6 +8,34 @@ import kotlinx.coroutines.tasks.await
 
 class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
 
+    suspend fun obtenerAtencionPorCita(citaId: String): Atencion? {
+        val snapshot = firestore.collection("atenciones")
+            .whereEqualTo("citaId", citaId)
+            .limit(1)
+            .get()
+            .await()
+
+        if (snapshot.isEmpty) return null
+
+        val doc = snapshot.documents.first()
+        val data = doc.data ?: return null
+
+        val timestamp = data["fechaAtencion"] as? com.google.firebase.Timestamp
+        val fechaInstant = timestamp?.let { java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong()) } ?: java.time.Instant.now()
+
+        return Atencion(
+            citaId = data["citaId"] as? String ?: "",
+            pacienteId = data["pacienteId"] as? String ?: "",
+            psicologoId = data["psicologoId"] as? String ?: "",
+            historiaClinicaId = data["historiaClinicaId"] as? String ?: "",
+            fechaAtencion = fechaInstant,
+            motivoConsulta = data["motivoConsulta"] as? String ?: "",
+            observaciones = data["observaciones"] as? String ?: "",
+            evaluacion = data["evaluacion"] as? String ?: "",
+            evolucion = data["evolucion"] as? String ?: "",
+            indicaciones = data["indicaciones"] as? String ?: ""
+        )
+    }
     suspend fun registrarAtencionYCrearHistoriaSiNoExiste(atencion: Atencion) {
         // 1. Buscamos si el paciente ya tiene una historia clínica
         val hcSnapshot = firestore.collection("historiasClinicas")
@@ -40,22 +68,38 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
             batch.update(hcExistente.reference, "fechaActualizacion", FieldValue.serverTimestamp())
         }
 
-        // 3. Creamos el registro de la Atención Médica
-        val nuevaAtencionRef = firestore.collection("atenciones").document()
-        val atencionData = hashMapOf(
-            "id" to nuevaAtencionRef.id,
+        // 3. Buscamos si la cita ya tiene una atencion
+        val atencionSnapshot = firestore.collection("atenciones")
+            .whereEqualTo("citaId", atencion.citaId)
+            .limit(1)
+            .get()
+            .await()
+
+        val atencionRef = if (atencionSnapshot.isEmpty) {
+            firestore.collection("atenciones").document()
+        } else {
+            atencionSnapshot.documents.first().reference
+        }
+
+        val atencionData = mutableMapOf<String, Any>(
+            "id" to atencionRef.id,
             "citaId" to atencion.citaId,
             "pacienteId" to atencion.pacienteId,
             "psicologoId" to atencion.psicologoId,
             "historiaClinicaId" to historiaClinicaId,
-            "fechaAtencion" to FieldValue.serverTimestamp(),
             "motivoConsulta" to atencion.motivoConsulta,
             "observaciones" to atencion.observaciones,
             "evaluacion" to atencion.evaluacion,
             "evolucion" to atencion.evolucion,
             "indicaciones" to atencion.indicaciones
         )
-        batch.set(nuevaAtencionRef, atencionData)
+
+        if (atencionSnapshot.isEmpty) {
+            atencionData["fechaAtencion"] = FieldValue.serverTimestamp()
+            batch.set(atencionRef, atencionData)
+        } else {
+            batch.update(atencionRef, atencionData)
+        }
 
         // Ejecutamos todo de golpe
         batch.commit().await()
