@@ -5,10 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Especialidad
 import com.pe.terapia.domain.model.Psicologo
 import com.pe.terapia.domain.model.Sede
+import com.pe.terapia.domain.model.SlotDisponible
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -135,7 +139,7 @@ class ReservaCitaViewModel(
             fechasConsultadas = emptySet(),
             fechasConDisponibilidad = emptySet(),
             disponibilidadPorFecha = emptyMap(),
-            cargandoFechas = false,
+            cargandoFechas = true,
             horaSeleccionada = null,
             horariosDisponibles = emptyList(),
             slotsDisponibles = emptyList(),
@@ -146,28 +150,43 @@ class ReservaCitaViewModel(
         val sedeId = sede.id
         val hoy = LocalDate.now(ZoneId.of("America/Lima"))
         val fechas = (0..13).map { hoy.plusDays(it.toLong()).toString() }
-        _uiState.value = _uiState.value.copy(cargandoFechas = true)
+
+        // PARALELIZACION DE CONSULTAS
         cargarFechasJob = viewModelScope.launch {
-            val disponibles = mutableSetOf<String>()
-            val consultadas = mutableSetOf<String>()
-            val slotsPorFecha = mutableMapOf<String, List<com.pe.terapia.domain.model.SlotDisponible>>()
-            var errorDisponibilidad: String? = null
-            fechas.forEach { fecha ->
-                if (_uiState.value.psicologoSeleccionado?.id != psicologoId || _uiState.value.sedeSeleccionada?.id != sedeId) return@launch
-                val result = obtenerDisponibilidadUseCase.horariosDisponibles(psicologoId, sedeId, fecha)
-                result.onSuccess { slots ->
-                    slotsPorFecha[fecha] = slots
-                    if (slots.isNotEmpty()) disponibles += fecha
-                }.onFailure { errorDisponibilidad = errorDisponibilidad ?: it.message }
-                consultadas += fecha
-                _uiState.value = _uiState.value.copy(
-                    fechasConsultadas = consultadas.toSet(),
-                    fechasConDisponibilidad = disponibles.toSet(),
-                    disponibilidadPorFecha = slotsPorFecha.toMap(),
-                    error = errorDisponibilidad
-                )
+            try {
+                val resultados = coroutineScope {
+                    fechas.map { fecha ->
+                        async {
+                            fecha to obtenerDisponibilidadUseCase.horariosDisponibles(psicologoId, sedeId, fecha)
+                        }
+                    }.awaitAll()
+                }
+
+                val disponibles = mutableSetOf<String>()
+                val slotsPorFecha = mutableMapOf<String, List<SlotDisponible>>()
+                var errorDisponibilidad: String? = null
+
+                resultados.forEach { (fecha, result) ->
+                    result.onSuccess { slots ->
+                        slotsPorFecha[fecha] = slots
+                        if (slots.isNotEmpty()) disponibles += fecha
+                    }.onFailure { err ->
+                        if (errorDisponibilidad == null) errorDisponibilidad = err.message
+                    }
+                }
+
+                if (_uiState.value.psicologoSeleccionado?.id == psicologoId && _uiState.value.sedeSeleccionada?.id == sedeId) {
+                    _uiState.value = _uiState.value.copy(
+                        fechasConsultadas = fechas.toSet(),
+                        fechasConDisponibilidad = disponibles,
+                        disponibilidadPorFecha = slotsPorFecha,
+                        cargandoFechas = false,
+                        error = errorDisponibilidad
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(cargandoFechas = false, error = e.message)
             }
-            _uiState.value = _uiState.value.copy(cargandoFechas = false)
         }
     }
 

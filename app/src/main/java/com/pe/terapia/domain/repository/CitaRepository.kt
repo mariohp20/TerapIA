@@ -15,6 +15,7 @@ interface CitaRepository {
     suspend fun obtenerSedes(psicologoId: String): Result<List<Sede>>
     suspend fun obtenerDisponibilidad(psicologoId: String, sedeId: String, fecha: String): Result<List<SlotDisponible>>
     suspend fun obtenerProximaCita(pacienteId: String): Result<ProximaCita?>
+    suspend fun obtenerCitasPaciente(pacienteId: String): Result<List<ProximaCita>>
     suspend fun reservarYConfirmar(reserva: Reserva): Result<Cita>
 
     suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>>

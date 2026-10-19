@@ -34,6 +34,6 @@ val authModule = module {
     factory { VerificarSesionUseCase(get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { CompletarPerfilViewModel(get(), get(), get()) }
-    viewModel { SplashViewModel(get()) }
+    viewModel { SplashViewModel(get(), get()) }
     viewModel { (rol: Rol) -> HomeAccessViewModel(get(), rol) }
 }

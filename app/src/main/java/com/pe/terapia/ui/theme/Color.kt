@@ -31,3 +31,5 @@ val TerapiaGrisTexto = Color(0xFF3D3D3A)
 val TerapiaGrisSuave = Color(0xFFE8E6E1)
 
 val TerapiaError = Color(0xFFD9534F)
+val TerapiaTealProfundo = Color(0xFF087F88)
+val TerapiaTealSombra = Color(0xFF0D6864)

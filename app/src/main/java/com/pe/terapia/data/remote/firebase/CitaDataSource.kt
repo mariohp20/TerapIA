@@ -1,6 +1,7 @@
 package com.pe.terapia.data.remote.firebase
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.BloqueHorario
@@ -8,10 +9,8 @@ import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
-import com.pe.terapia.domain.model.EstadoPago
 import com.pe.terapia.domain.model.EstadoReserva
 import com.pe.terapia.domain.model.Especialidad
-import com.pe.terapia.domain.model.PRECIO_ESTANDAR_CITA
 import com.pe.terapia.domain.model.ExcepcionHorario
 import com.pe.terapia.domain.model.HorarioLaboral
 import com.pe.terapia.domain.model.Reserva
@@ -24,88 +23,88 @@ import com.pe.terapia.domain.model.ProximaCita
 import com.pe.terapia.domain.usecase.citas.GenerarSlotsDisponibles
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.tasks.await
+
+private data class SedeInfo(val nombre: String, val direccion: String, val latitud: Double, val longitud: Double)
+
+private class CacheRelaciones {
+    val psicologos = ConcurrentHashMap<String, Pair<String, String>>()
+    val especialidades = ConcurrentHashMap<String, String>()
+    val sedes = ConcurrentHashMap<String, SedeInfo>()
+}
 
 class CitaDataSource(private val firestore: FirebaseFirestore) {
+
     suspend fun obtenerProximaCita(pacienteId: String): ProximaCita? {
-        require(pacienteId.isNotBlank()) {
-            "No se pudo identificar al paciente."
+        val ahora = System.currentTimeMillis()
+        return obtenerCitasPaciente(pacienteId).firstOrNull {
+            it.estado == EstadoCita.PROGRAMADA.name && it.inicioEpochMillis > ahora
         }
+    }
 
-        val now = System.currentTimeMillis()
-        val appointment = firestore.collection("citas")
+    suspend fun obtenerCitasPaciente(pacienteId: String): List<ProximaCita> = coroutineScope {
+        require(pacienteId.isNotBlank()) { "No se pudo identificar al paciente." }
+
+        val cache = CacheRelaciones()
+
+        val documentosCitas = firestore.collection("citas")
             .whereEqualTo("pacienteId", pacienteId)
-            .whereEqualTo("estado", EstadoCita.PROGRAMADA.name)
-            .get()
-            .await()
+            .get().await()
             .documents
-            .mapNotNull { document ->
-                val epoch = document.getLong("inicioEpochMillis")
-                    ?: return@mapNotNull null
 
-                if (epoch <= now) return@mapNotNull null
-                document to epoch
+        documentosCitas.map { doc ->
+            async { doc.aProximaCita(cache) }
+        }.awaitAll().sortedBy { it.inicioEpochMillis }
+    }
+
+    private suspend fun DocumentSnapshot.aProximaCita(cache: CacheRelaciones): ProximaCita {
+        val psicologoId = getString("psicologoId").orEmpty()
+        val especialidadId = getString("especialidadId").orEmpty()
+        val sedeId = getString("sedeId").orEmpty()
+
+        val (nombrePsicologo, descripcion) = cache.psicologos.getOrPut(psicologoId) {
+            readOrDefault("Profesional" to "") {
+                val doc = firestore.collection("psicologos").document(psicologoId).get().await()
+                val nombre = listOf(doc.getString("nombres"), doc.getString("apellidos"))
+                    .filterNotNull().filter(String::isNotBlank).joinToString(" ").ifBlank { "Profesional" }
+                nombre to doc.getString("descripcionProfesional").orEmpty()
             }
-            .minByOrNull { it.second }
-            ?.first
-            ?: return null
-
-        val psychologistName = readOrDefault("Profesional") {
-            val psychologist = firestore.collection("psicologos")
-                .document(appointment.getString("psicologoId").orEmpty())
-                .get()
-                .await()
-
-            listOf(
-                psychologist.getString("nombres"),
-                psychologist.getString("apellidos")
-            )
-                .filterNotNull()
-                .filter(String::isNotBlank)
-                .joinToString(" ")
-                .ifBlank { "Profesional" }
         }
-
-        val specialtyName = readOrDefault("Especialidad") {
-            firestore.collection("especialidades")
-                .document(appointment.getString("especialidadId").orEmpty())
-                .get()
-                .await()
-                .getString("nombre")
-                ?: "Especialidad"
+        val nombreEspecialidad = cache.especialidades.getOrPut(especialidadId) {
+            readOrDefault("Especialidad") {
+                firestore.collection("especialidades").document(especialidadId).get().await().getString("nombre") ?: "Especialidad"
+            }
         }
-
-        val (siteName, siteAddress) = readOrDefault("Sede" to "") {
-            val site = firestore.collection("sedes")
-                .document(appointment.getString("sedeId").orEmpty())
-                .get()
-                .await()
-
-            val address = listOf(
-                site.getString("direccion"),
-                site.getString("distrito"),
-                site.getString("ciudad")
-            )
-                .filterNotNull()
-                .filter(String::isNotBlank)
-                .distinct()
-                .joinToString(", ")
-
-            (site.getString("nombre") ?: "Sede") to address
+        val sede = cache.sedes.getOrPut(sedeId) {
+            readOrDefault(SedeInfo("Sede", "", 0.0, 0.0)) {
+                val doc = firestore.collection("sedes").document(sedeId).get().await()
+                val direccion = listOf(doc.getString("direccion"), doc.getString("distrito"), doc.getString("ciudad"))
+                    .filterNotNull().filter(String::isNotBlank).distinct().joinToString(", ")
+                SedeInfo(doc.getString("nombre") ?: "Sede", direccion, doc.getDouble("latitud") ?: 0.0, doc.getDouble("longitud") ?: 0.0)
+            }
         }
-
         return ProximaCita(
-            psicologoNombre = psychologistName,
-            especialidadNombre = specialtyName,
-            fecha = appointment.getString("fecha").orEmpty(),
-            hora = appointment.getString("hora").orEmpty(),
-            sedeNombre = siteName,
-            sedeDireccion = siteAddress
+            psicologoNombre = nombrePsicologo,
+            especialidadNombre = nombreEspecialidad,
+            fecha = getString("fecha").orEmpty(),
+            hora = getString("hora").orEmpty(),
+            sedeNombre = sede.nombre,
+            sedeDireccion = sede.direccion,
+            estadoPago = getString("estadoPago") ?: "PENDIENTE",
+            id = id,
+            estado = getString("estado").orEmpty(),
+            inicioEpochMillis = getLong("inicioEpochMillis") ?: 0L,
+            psicologoDescripcion = descripcion,
+            sedeLatitud = sede.latitud,
+            sedeLongitud = sede.longitud
         )
     }
 
@@ -260,17 +259,17 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 "Solo un paciente activo puede reservar una cita."
             }
             check(psychologist.getBoolean("activo") == true &&
-                (psychologist.get("especialidadIds") as? List<*>)?.contains(reserva.especialidadId) == true &&
-                (psychologist.get("sedeIds") as? List<*>)?.contains(reserva.sedeId) == true
+                    (psychologist.get("especialidadIds") as? List<*>)?.contains(reserva.especialidadId) == true &&
+                    (psychologist.get("sedeIds") as? List<*>)?.contains(reserva.sedeId) == true
             ) { "El profesional no atiende en la sede o especialidad seleccionada." }
             check(specialty.getBoolean("activa") == true && site.getBoolean("activa") == true) {
                 "La especialidad o sede seleccionada ya no está disponible."
             }
             check(schedule.getBoolean("activo") == true &&
-                schedule.getString("psicologoId") == reserva.psicologoId &&
-                schedule.getString("sedeId") == reserva.sedeId &&
-                schedule.getString("zonaHoraria") == "America/Lima" &&
-                schedule.getLong("duracionMinutos")?.toInt() == DURACION_CITA_MINUTOS
+                    schedule.getString("psicologoId") == reserva.psicologoId &&
+                    schedule.getString("sedeId") == reserva.sedeId &&
+                    schedule.getString("zonaHoraria") == "America/Lima" &&
+                    schedule.getLong("duracionMinutos")?.toInt() == DURACION_CITA_MINUTOS
             ) { "El horario ya no está disponible." }
             check(!lock.exists()) { "Ese turno acaba de ser reservado por otra persona." }
             if (exception.exists()) {
@@ -282,12 +281,13 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 }
             } else {
                 check(block?.getBoolean("activo") == true) { "El bloque de horario ya no está disponible." }
+                // Corrección del error de tipeo en esta línea:
                 val startMinute = localStart.hour * 60 + localStart.minute
                 val duration = schedule.getLong("duracionMinutos")?.toInt() ?: 60
                 check(block?.getLong("diaSemana")?.toInt() == localStart.dayOfWeek.value &&
-                    startMinute >= (block.getLong("inicioMinuto")?.toInt() ?: Int.MAX_VALUE) &&
-                    startMinute + duration <= (block.getLong("finMinuto")?.toInt() ?: Int.MIN_VALUE) &&
-                    (startMinute - (block.getLong("inicioMinuto")?.toInt() ?: startMinute)) % duration == 0
+                        startMinute >= (block.getLong("inicioMinuto")?.toInt() ?: Int.MAX_VALUE) &&
+                        startMinute + duration <= (block.getLong("finMinuto")?.toInt() ?: Int.MIN_VALUE) &&
+                        (startMinute - (block.getLong("inicioMinuto")?.toInt() ?: startMinute)) % duration == 0
                 ) { "El turno ya no pertenece al horario laboral vigente." }
             }
             val duration = schedule.getLong("duracionMinutos")?.toInt() ?: 60
@@ -324,7 +324,6 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
     }
 
     suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): List<CitaPacienteDetalle> {
-        // 1. Buscamos las citas programadas para este psicólogo en la fecha indicada
         val snapshot = firestore.collection("citas")
             .whereEqualTo("psicologoId", psicologoId)
             .whereEqualTo("fecha", fechaText)
@@ -332,11 +331,8 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
             .get()
             .await()
 
-        // 2. Mapeamos los resultados y buscamos el nombre de cada paciente
         return snapshot.documents.mapNotNull { doc ->
             val pacienteId = doc.getString("pacienteId") ?: return@mapNotNull null
-
-            // Consultamos la colección usuarios para obtener el nombre
             val pacienteSnapshot = firestore.collection("usuarios").document(pacienteId).get().await()
             val nombres = pacienteSnapshot.getString("nombres") ?: ""
             val apellidos = pacienteSnapshot.getString("apellidos") ?: ""
@@ -348,7 +344,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 hora = doc.getString("hora").orEmpty(),
                 nombrePaciente = nombreCompleto.ifBlank { "Paciente sin registrar" }
             )
-        }.sortedBy { it.hora } // Las ordenamos por hora de atención
+        }.sortedBy { it.hora }
     }
 
     private fun Reserva.toFirestore(startAt: Timestamp, citaId: String): Map<String, Any> = mapOf(

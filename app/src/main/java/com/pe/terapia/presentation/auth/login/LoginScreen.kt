@@ -28,7 +28,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.R
@@ -36,8 +35,9 @@ import com.pe.terapia.domain.model.Usuario
 import com.pe.terapia.presentation.auth.AuthUiState
 import com.pe.terapia.presentation.auth.AuthViewModel
 import com.pe.terapia.presentation.auth.utils.GoogleAuthClient
-import com.pe.terapia.ui.theme.TerapiaTheme
 import org.koin.androidx.compose.koinViewModel
+import com.pe.terapia.ui.components.BiometricoInvitacionHost
+import com.pe.terapia.ui.components.debeMostrarInvitacionBiometrica
 
 // SCREEN
 @Composable
@@ -52,11 +52,17 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val googleAuthClient = remember(context) { GoogleAuthClient(context) }
+    var usuarioPendiente by remember { mutableStateOf<Usuario?>(null) }
+
 
     LaunchedEffect(uiState) {
         val currentState = uiState
         if (currentState is AuthUiState.Success) {
-            onLoginExitoso(currentState.usuario)
+            if (debeMostrarInvitacionBiometrica(context)) {
+                usuarioPendiente = currentState.usuario   // primero la invitación
+            } else {
+                onLoginExitoso(currentState.usuario)      // directo al Home
+            }
         }
         if (currentState is AuthUiState.ProfileCompletionRequired) onPerfilPendiente(currentState.mensaje)
     }
@@ -74,6 +80,15 @@ fun LoginScreen(
         onIrARegistro = onIrARegistro,
         onIrARecuperar = onIrARecuperar
     )
+
+    usuarioPendiente?.let { usuario ->
+        BiometricoInvitacionHost(
+            onFinalizar = {
+                usuarioPendiente = null
+                onLoginExitoso(usuario)
+            }
+        )
+    }
 }
 
 // CONTENT

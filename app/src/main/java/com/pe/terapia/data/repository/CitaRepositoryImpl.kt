@@ -37,6 +37,10 @@ class CitaRepositoryImpl(private val dataSource: CitaDataSource) : CitaRepositor
         dataSource.obtenerProximaCita(pacienteId)
     }
 
+    override suspend fun obtenerCitasPaciente(pacienteId: String): Result<List<ProximaCita>> = capture {
+        dataSource.obtenerCitasPaciente(pacienteId)
+    }
+
     override suspend fun reservarYConfirmar(reserva: Reserva): Result<Cita> = capture {
         dataSource.reservarYConfirmar(reserva)
     }

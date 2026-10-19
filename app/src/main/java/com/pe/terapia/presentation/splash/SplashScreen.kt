@@ -6,7 +6,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
@@ -35,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +41,9 @@ import com.pe.terapia.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.ui.platform.LocalContext
+import com.pe.terapia.core.biometric.BiometricoPreferences
+import com.pe.terapia.ui.components.BiometricoGate
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -59,6 +60,9 @@ fun SplashScreen(
     val animacionesLetras = remember {
         titulo.map { Animatable(0f) }
     }
+
+    val context = LocalContext.current
+    var mostrarGate by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         mostrarContenido = true
@@ -81,57 +85,81 @@ fun SplashScreen(
     LaunchedEffect(uiState, animacionTerminada) {
         if (uiState !is SplashUiState.Loading && animacionTerminada) {
             delay(600)
-            onSessionResolved(uiState)
+            val hayUsuario = (uiState as? SplashUiState.SessionResolved)?.usuario != null
+            if (hayUsuario && BiometricoPreferences(context).isBiometricoActivo()) {
+                mostrarGate = true          // pide huella antes de entrar
+            } else {
+                onSessionResolved(uiState)  // flujo normal
+            }
         }
     }
-    Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        AnimatedVisibility(
-            visible = mostrarContenido,
-            enter = fadeIn(animationSpec = tween(600)) + scaleIn(initialScale = 0.90f, animationSpec = tween(600)),
+
+    Box (modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+            AnimatedVisibility(
+                visible = mostrarContenido,
+                enter = fadeIn(animationSpec = tween(600)) + scaleIn(
+                    initialScale = 0.90f,
+                    animationSpec = tween(600)
+                ),
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_terapia_logo),
-                    contentDescription = stringResource(R.string.splash_logo_content_description),
-                    modifier = Modifier.size(160.dp)
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(horizontal = 32.dp)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    titulo.forEachIndexed { index, caracter ->
-                        if (caracter == ' ') {Spacer(modifier = Modifier.size(8.dp))}
-                        else {
-                            val progreso = animacionesLetras[index].value
-                            Text(
-                                text = caracter.toString(),
-                                style = MaterialTheme.typography.titleLarge,                                letterSpacing = (-0.5).sp,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.graphicsLayer {
-                                    this.alpha = progreso.coerceIn(0f, 1f)
-                                    this.translationY = 60f * (1f - progreso)
-                                }
-                            )
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_terapia_logo),
+                        contentDescription = stringResource(R.string.splash_logo_content_description),
+                        modifier = Modifier.size(160.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    ) {
+                        titulo.forEachIndexed { index, caracter ->
+                            if (caracter == ' ') {
+                                Spacer(modifier = Modifier.size(8.dp))
+                            } else {
+                                val progreso = animacionesLetras[index].value
+                                Text(
+                                    text = caracter.toString(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    letterSpacing = (-0.5).sp,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.graphicsLayer {
+                                        this.alpha = progreso.coerceIn(0f, 1f)
+                                        this.translationY = 60f * (1f - progreso)
+                                    }
+                                )
+                            }
                         }
                     }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier.height(26.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    SubtituloSplash(visible = mostrarSubtitulo)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier.height(26.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SubtituloSplash(visible = mostrarSubtitulo)
+                    }
                 }
             }
+        }
+
+        if (mostrarGate) {
+            BiometricoGate(
+                onDesbloqueado = { onSessionResolved(uiState) },
+                onCerrarSesion = {
+                    viewModel.cerrarSesion {
+                        onSessionResolved(SplashUiState.SessionResolved(null))
+                    }
+                }
+            )
         }
     }
 }
