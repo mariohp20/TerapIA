@@ -31,6 +31,9 @@ sealed class Route {
     data object ReservaCita : Route()
 
     @Serializable
+    data class DetalleCita(val citaId: String) : Route()
+
+    @Serializable
     data class ConfirmacionCita(
         val psicologoId: String,
         val psicologoNombre: String,
@@ -76,8 +79,6 @@ sealed class Route {
 
     @Serializable
     data object BuscadorPacientes : Route()
-
-
 
 
 }

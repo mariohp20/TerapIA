@@ -34,7 +34,7 @@ import com.pe.terapia.presentation.citas.reserva.ReservaCitaScreen
 import com.pe.terapia.presentation.home.admin.HomeAdminScreen
 import com.pe.terapia.presentation.admin.promover.PromoverUsuarioScreen
 import com.pe.terapia.presentation.home.paciente.PacienteShell
-import com.pe.terapia.presentation.home.psicologo.HomePsicologoScreen
+import com.pe.terapia.presentation.home.psicologo.PsicologoShell
 import com.pe.terapia.presentation.pagos.GestionPagosPsicologoScreen
 import com.pe.terapia.presentation.pagos.HistorialPagosScreen
 import com.pe.terapia.presentation.pagos.PasarelaPagoScreen
@@ -125,6 +125,15 @@ fun NavGraph(
             )
         }
 
+        composable<Route.DetalleCita> { entry ->
+            val ruta = entry.toRoute<Route.DetalleCita>()
+            com.pe.terapia.presentation.citas.detalle.DetalleCitaScreen(
+                citaId = ruta.citaId,
+                onVolver = { navController.popBackStack() },
+                onVerPagos = { navController.navigate(Route.HistorialPagos) }
+            )
+        }
+
         composable<Route.HomePaciente>(
             enterTransition = {
                 slideInVertically(
@@ -143,7 +152,8 @@ fun NavGraph(
                     onVerHistorial = { pacienteId, pacienteNombre ->
                         navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre))
                     },
-                    mensajeError = error
+                    mensajeError = error,
+                    onVerDetalleCita = { idCita -> navController.navigate(Route.DetalleCita(idCita)) }
                 )
             }
         }
@@ -251,7 +261,7 @@ fun NavGraph(
             exitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
             ProtectedHomeRoute(Rol.PSICOLOGO, navController) { authViewModel, _ ->
-                HomePsicologoScreen(
+                PsicologoShell(
                     onGestionarPagos = { navController.navigate(Route.GestionPagosPsicologo) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     onRegistrarAtencion = { citaId, pacienteId ->
@@ -453,4 +463,3 @@ private fun NavHostController.navigateReplacingCurrent(destination: Route) {
 private fun NavHostController.navigateHome(usuario: Usuario) {
     navigateReplacingCurrent(homeRoute(usuario))
 }
-
