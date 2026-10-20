@@ -28,7 +28,7 @@ import org.koin.androidx.compose.koinViewModel
 fun HomePsicologoScreen(
     onGestionarPagos: () -> Unit,
     onCerrarSesion: () -> Unit,
-    onRegistrarAtencion: (citaId: String, pacienteId: String) -> Unit,
+    onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
     onIrAHistorialClinico: () -> Unit,
     viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
@@ -75,9 +75,10 @@ fun HomePsicologoScreen(
                     Text("No tienes citas programadas para hoy.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
+                val proxima = uiState.proximasCitas.first()
                 PsicologoProximaCitaCard(
-                    cita = uiState.proximasCitas.first(),
-                    onClick = { onRegistrarAtencion(uiState.proximasCitas.first().citaId, uiState.proximasCitas.first().pacienteId) }
+                    cita = proxima,
+                    onClick = { onAbrirSalaConsulta(proxima.citaId, proxima.pacienteId, proxima.nombrePaciente) }
                 )
             }
 

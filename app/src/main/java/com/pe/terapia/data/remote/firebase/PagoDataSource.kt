@@ -228,7 +228,7 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 "actualizadaEn" to ahora
             ))
 
-            // Actualizar cita (TASK-48)
+            // Actualizar cita
             if (citaId.isNotBlank()) {
                 val citaRef = firestore.collection("citas").document(citaId)
                 transaction.update(citaRef, mapOf(
@@ -237,7 +237,7 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 ))
             }
 
-            // Crear comprobante (TASK-46)
+            // Crear comprobante
             val comprobante = Comprobante(
                 id = comprobanteRef.id,
                 pagoId = pagoId,

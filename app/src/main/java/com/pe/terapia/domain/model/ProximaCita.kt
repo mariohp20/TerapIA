@@ -1,6 +1,7 @@
 package com.pe.terapia.domain.model
 
 data class ProximaCita(
+    val id: String = "",
     val psicologoNombre: String,
     val especialidadNombre: String,
     val fecha: String,
@@ -8,7 +9,6 @@ data class ProximaCita(
     val sedeNombre: String,
     val sedeDireccion: String,
     val estadoPago: String = "PENDIENTE",
-    val id: String = "",
     val estado: String = "",
     val inicioEpochMillis: Long = 0L,
     val psicologoDescripcion: String = "",

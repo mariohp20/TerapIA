@@ -66,7 +66,7 @@ private val tabsPsicologo = listOf(
 fun PsicologoShell(
     onGestionarPagos: () -> Unit,
     onCerrarSesion: () -> Unit,
-    onRegistrarAtencion: (citaId: String, pacienteId: String) -> Unit,
+    onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
     onIrAHistorialClinico: () -> Unit
 ) {
     val tabNavController = rememberNavController()
@@ -117,7 +117,7 @@ fun PsicologoShell(
                 HomePsicologoScreen(
                     onGestionarPagos = onGestionarPagos,
                     onCerrarSesion = onCerrarSesion,
-                    onRegistrarAtencion = onRegistrarAtencion,
+                    onAbrirSalaConsulta = onAbrirSalaConsulta,
                     onIrAHistorialClinico = onIrAHistorialClinico
                 )
             }

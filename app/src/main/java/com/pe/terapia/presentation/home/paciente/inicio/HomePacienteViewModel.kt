@@ -10,13 +10,15 @@ import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class HomePacienteUiState(
     val nombrePaciente: String = "",
     val proximaCita: ProximaCita? = null,
     val cargando: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val mostrarQr: Boolean = false
 )
 
 class HomePacienteViewModel(
@@ -33,11 +35,11 @@ class HomePacienteViewModel(
 
     private fun cargarHome() {
         viewModelScope.launch {
-            _uiState.value = HomePacienteUiState(cargando = true)
+            _uiState.update { it.copy(cargando = true) }
             obtenerUsuarioActual().fold(
                 onSuccess = { usuario ->
                     if (usuario == null) {
-                        _uiState.value = HomePacienteUiState(cargando = false, error = "No se pudo identificar la sesión del paciente.")
+                        _uiState.update { it.copy(cargando = false, error = "No se pudo identificar la sesión del paciente.") }
                         return@fold
                     }
                     val currentName = usuario.nombres.ifBlank { "" }
@@ -46,7 +48,7 @@ class HomePacienteViewModel(
                             if (cita != null) {
                                 runCatching {
                                     val entity = CitaEntity(
-                                        id = "${usuario.uid}_${cita.fecha}_${cita.hora}",
+                                        id = cita.id.ifBlank { "${usuario.uid}_${cita.fecha}_${cita.hora}" },
                                         pacienteId = usuario.uid,
                                         psicologoNombre = cita.psicologoNombre,
                                         especialidadNombre = cita.especialidadNombre,
@@ -59,13 +61,14 @@ class HomePacienteViewModel(
                                     citaDao.insertarCita(entity)
                                 }
                             }
-                            _uiState.value = HomePacienteUiState(nombrePaciente = currentName, proximaCita = cita, cargando = false)
+                            _uiState.update { it.copy(nombrePaciente = currentName, proximaCita = cita, cargando = false) }
                         },
                         onFailure = { _ ->
                             // Fallback a Room (Caché local) cuando no hay internet
                             val local = runCatching { citaDao.obtenerProximaCitaLocal(usuario.uid, 0L) }.getOrNull()
                             val proximaLocal = local?.let {
                                 ProximaCita(
+                                    id = it.id,
                                     psicologoNombre = it.psicologoNombre,
                                     especialidadNombre = it.especialidadNombre,
                                     fecha = it.fecha,
@@ -74,20 +77,26 @@ class HomePacienteViewModel(
                                     sedeDireccion = it.sedeDireccion
                                 )
                             }
-                            _uiState.value = HomePacienteUiState(
-                                nombrePaciente = currentName,
-                                proximaCita = proximaLocal,
-                                cargando = false,
-                                error = if (proximaLocal == null) "Sin conexión a internet y sin citas en caché local." else "Modo sin conexión (Datos de caché local Room)"
-                            )
+                            _uiState.update {
+                                it.copy(
+                                    nombrePaciente = currentName,
+                                    proximaCita = proximaLocal,
+                                    cargando = false,
+                                    error = if (proximaLocal == null) "Sin conexión a internet y sin citas en caché local." else "Modo sin conexión (Datos de caché local Room)"
+                                )
+                            }
                         }
                     )
                 },
                 onFailure = { error ->
-                    _uiState.value = HomePacienteUiState(cargando = false, error = error.message)
+                    _uiState.update { it.copy(cargando = false, error = error.message) }
                 }
             )
         }
+    }
+
+    fun setMostrarQr(mostrar: Boolean) {
+        _uiState.update { it.copy(mostrarQr = mostrar) }
     }
 
     fun verHistorial(onNavegarAHistorial: (String, String) -> Unit) {

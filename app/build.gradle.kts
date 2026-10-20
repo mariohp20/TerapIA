@@ -35,13 +35,14 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
     // Firebase usando el BoM desde el catálogo
     implementation(platform(libs.firebase.bom))
-    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.koin.android)
@@ -53,8 +54,6 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
-
-    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -73,6 +72,15 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.material.icons.extended)
+
+    implementation("com.google.firebase:firebase-ai")
+    implementation("com.google.firebase:firebase-appcheck-debug")
+
+
+    implementation("com.google.zxing:core:3.5.4")
+    implementation( "com.google.android.gms:play-services-code-scanner:16.1.0")
+
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
     // Room Database (Caché local)
     val roomVersion = "2.8.5"

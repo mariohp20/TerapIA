@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,7 +22,12 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-internal fun ProximaCitaCard(cita: ProximaCita, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ProximaCitaCard(
+    cita: ProximaCita,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onVerQr: (() -> Unit)? = null
+) {
     val parsedDate = try { LocalDate.parse(cita.fecha) } catch (_: Exception) { LocalDate.now() }
     val formatterDiaSemana = DateTimeFormatter.ofPattern("EEE", Locale.forLanguageTag("es"))
     val formatterMes = DateTimeFormatter.ofPattern("MMM", Locale.forLanguageTag("es"))
@@ -59,7 +65,18 @@ internal fun ProximaCitaCard(cita: ProximaCita, onClick: () -> Unit, modifier: M
                 Text("Ps. ${cita.psicologoNombre.split(" ").take(2).joinToString(" ")}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(cita.especialidadNombre, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(modifier = Modifier.width(8.dp))
+            // Botón de QR (opcional)
+            if (onVerQr != null) {
+                IconButton(onClick = onVerQr) {
+                    Icon(
+                        Icons.Outlined.QrCode2,
+                        contentDescription = "Ver código QR de la cita",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Ver detalle", tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

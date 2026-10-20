@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.R
 import com.pe.terapia.presentation.home.paciente.inicio.components.AccionesRapidas
 import com.pe.terapia.presentation.home.paciente.inicio.components.BienvenidaHeader
+import com.pe.terapia.presentation.home.paciente.inicio.components.CitaQrDialog
 import com.pe.terapia.presentation.home.paciente.inicio.components.HeroReservaCard
 import com.pe.terapia.presentation.home.paciente.inicio.components.ProximaCitaCard
 import com.pe.terapia.presentation.home.paciente.inicio.components.SinProximaCitaCard
@@ -52,7 +53,8 @@ fun HomePacienteScreen(
         onCerrarSesion = onCerrarSesion,
         onVerHistorial = { viewModel.verHistorial(onVerHistorial) },
         onVerTodas = onVerTodas,
-        onVerDetalle = onVerDetalle
+        onVerDetalle = onVerDetalle,
+        onToggleQr = viewModel::setMostrarQr
     )
 }
 
@@ -65,7 +67,8 @@ private fun HomePacienteContent(
     onCerrarSesion: () -> Unit,
     onVerHistorial: () -> Unit,
     onVerTodas: () -> Unit,
-    onVerDetalle: (String) -> Unit
+    onVerDetalle: (String) -> Unit,
+    onToggleQr: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -112,10 +115,19 @@ private fun HomePacienteContent(
                 uiState.cargando -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 uiState.proximaCita != null -> ProximaCitaCard(
                     cita = uiState.proximaCita,
-                    onClick = { onVerDetalle(uiState.proximaCita.id) }
+                    onClick = { onVerDetalle(uiState.proximaCita.id) },
+                    onVerQr = { onToggleQr(true) }
                 )
                 else -> SinProximaCitaCard()
             }
         }
+    }
+
+    // Diálogo con el QR de la próxima cita (aporte de main, integrado al rediseño)
+    if (uiState.mostrarQr) {
+        CitaQrDialog(
+            token = uiState.proximaCita?.id.orEmpty(),
+            onDismiss = { onToggleQr(false) }
+        )
     }
 }

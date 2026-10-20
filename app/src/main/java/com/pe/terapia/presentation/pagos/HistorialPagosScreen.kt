@@ -1,5 +1,8 @@
 package com.pe.terapia.presentation.pagos
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,7 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Receipt
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,7 +24,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.domain.model.EstadoPago
 import com.pe.terapia.domain.model.Pago
 import com.pe.terapia.domain.model.Comprobante
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +36,18 @@ fun HistorialPagosScreen(
     viewModel: HistorialPagosViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    var fileParaGuardar by remember { mutableStateOf<File?>(null) }
+    var fileNameParaGuardar by remember { mutableStateOf("comprobante.pdf") }
+
+    val saveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri: Uri? ->
+        if (uri != null && fileParaGuardar != null) {
+            viewModel.guardarPdfEnUri(fileParaGuardar!!, uri)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -72,7 +91,22 @@ fun HistorialPagosScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(state.pagosConComprobante) { (pago, comprobante) ->
-                                PagoItemCard(pago = pago, comprobante = comprobante, onPagarOnline = { onPagarOnline(pago.id) })
+                                PagoItemCard(
+                                    pago = pago,
+                                    comprobante = comprobante,
+                                    onPagarOnline = { onPagarOnline(pago.id) },
+                                    onDescargarPdf = { comp ->
+                                        scope.launch {
+                                            val file = viewModel.generarArchivoPdf(comp, pago)
+                                            fileParaGuardar = file
+                                            fileNameParaGuardar = "comprobante_${comp.numeroComprobante.replace(Regex("[^a-zA-Z0-9_-]"), "_")}.pdf"
+                                            saveLauncher.launch(fileNameParaGuardar)
+                                        }
+                                    },
+                                    onCompartirPdf = { comp ->
+                                        viewModel.compartirPdf(comp, pago)
+                                    }
+                                )
                             }
                         }
                     }
@@ -86,7 +120,9 @@ fun HistorialPagosScreen(
 fun PagoItemCard(
     pago: Pago,
     comprobante: Comprobante?,
-    onPagarOnline: () -> Unit
+    onPagarOnline: () -> Unit,
+    onDescargarPdf: (Comprobante) -> Unit,
+    onCompartirPdf: (Comprobante) -> Unit
 ) {
     val esPagado = pago.estado == EstadoPago.PAGADO
 
@@ -103,7 +139,7 @@ fun PagoItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Monto: S/ ${String.format("%.2f", pago.monto)} ${pago.moneda}",
+                    text = "Monto: S/ ${String.format(java.util.Locale.US, "%.2f", pago.monto)} ${pago.moneda}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -138,16 +174,46 @@ fun PagoItemCard(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Outlined.Receipt, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(text = "Comprobante: ${comprobante.numeroComprobante}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                            Text(text = "Emisión: ${comprobante.fechaEmision}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(text = comprobante.detalles, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Outlined.Receipt, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(text = "Comprobante: ${comprobante.numeroComprobante}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Emisión: ${comprobante.fechaEmision}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = comprobante.detalles, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        if (esPagado) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { onDescargarPdf(comprobante) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Descargar")
+                                }
+
+                                Button(
+                                    onClick = { onCompartirPdf(comprobante) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Compartir")
+                                }
+                            }
                         }
                     }
                 }

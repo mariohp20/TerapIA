@@ -13,5 +13,7 @@ data class Atencion(
     val observaciones: String = "",
     val evaluacion: String = "",
     val evolucion: String = "",
-    val indicaciones: String = ""
+    val indicaciones: String = "",
+    val procesoTerapeuticoId: String = "",
+    val etapaClinicaId: String = ""
 )

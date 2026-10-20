@@ -16,7 +16,13 @@ data class RegistrarAtencionUiState(
     val cargandoInicial: Boolean = true,
     val guardando: Boolean = false,
     val exito: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    // Campos del formulario
+    val motivoConsulta: String = "",
+    val observaciones: String = "",
+    val evaluacion: String = "",
+    val evolucion: String = "",
+    val indicaciones: String = ""
 )
 
 class RegistrarAtencionViewModel(
@@ -28,13 +34,12 @@ class RegistrarAtencionViewModel(
     private val _uiState = MutableStateFlow(RegistrarAtencionUiState())
     val uiState: StateFlow<RegistrarAtencionUiState> = _uiState.asStateFlow()
 
-    // Variables de estado para los campos del formulario
-    var motivoConsulta = MutableStateFlow("")
-    var observaciones = MutableStateFlow("")
-    var evaluacion = MutableStateFlow("")
-    var evolucion = MutableStateFlow("")
-    var indicaciones = MutableStateFlow("")
-
+    // Funciones para actualizar los campos del formulario
+    fun onMotivoConsultaChange(valor: String) { _uiState.value = _uiState.value.copy(motivoConsulta = valor) }
+    fun onObservacionesChange(valor: String) { _uiState.value = _uiState.value.copy(observaciones = valor) }
+    fun onEvaluacionChange(valor: String) { _uiState.value = _uiState.value.copy(evaluacion = valor) }
+    fun onEvolucionChange(valor: String) { _uiState.value = _uiState.value.copy(evolucion = valor) }
+    fun onIndicacionesChange(valor: String) { _uiState.value = _uiState.value.copy(indicaciones = valor) }
     fun cargarDatosPrevios(citaId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cargandoInicial = true)
@@ -43,11 +48,13 @@ class RegistrarAtencionViewModel(
 
             result.onSuccess { atencionPrevia ->
                 if (atencionPrevia != null) {
-                    motivoConsulta.value = atencionPrevia.motivoConsulta
-                    observaciones.value = atencionPrevia.observaciones
-                    evaluacion.value = atencionPrevia.evaluacion
-                    evolucion.value = atencionPrevia.evolucion
-                    indicaciones.value = atencionPrevia.indicaciones
+                    _uiState.value = _uiState.value.copy(
+                        motivoConsulta = atencionPrevia.motivoConsulta,
+                        observaciones = atencionPrevia.observaciones,
+                        evaluacion = atencionPrevia.evaluacion,
+                        evolucion = atencionPrevia.evolucion,
+                        indicaciones = atencionPrevia.indicaciones
+                    )
                 }
             }
 
@@ -65,17 +72,18 @@ class RegistrarAtencionViewModel(
                 return@launch
             }
 
+            val estadoActual = _uiState.value
             val nuevaAtencion = Atencion(
                 citaId = citaId,
                 pacienteId = pacienteId,
                 psicologoId = usuarioActual.uid,
-                historiaClinicaId = "", // Se generará o buscará en el DataSource
+                historiaClinicaId = "",
                 fechaAtencion = Instant.now(),
-                motivoConsulta = motivoConsulta.value,
-                observaciones = observaciones.value,
-                evaluacion = evaluacion.value,
-                evolucion = evolucion.value,
-                indicaciones = indicaciones.value
+                motivoConsulta = estadoActual.motivoConsulta,
+                observaciones = estadoActual.observaciones,
+                evaluacion = estadoActual.evaluacion,
+                evolucion = estadoActual.evolucion,
+                indicaciones = estadoActual.indicaciones
             )
 
             val result = registrarAtencionUseCase(nuevaAtencion)

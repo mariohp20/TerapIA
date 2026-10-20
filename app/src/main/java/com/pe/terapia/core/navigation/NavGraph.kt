@@ -23,6 +23,7 @@ import androidx.navigation.navOptions
 import androidx.navigation.toRoute
 import com.pe.terapia.domain.model.Rol
 import com.pe.terapia.domain.model.Usuario
+import com.pe.terapia.presentation.admin.horario.AsignarHorarioScreen
 import com.pe.terapia.presentation.auth.AuthUiState
 import com.pe.terapia.presentation.auth.AuthViewModel
 import com.pe.terapia.presentation.auth.login.LoginScreen
@@ -35,11 +36,16 @@ import com.pe.terapia.presentation.home.admin.HomeAdminScreen
 import com.pe.terapia.presentation.admin.promover.PromoverUsuarioScreen
 import com.pe.terapia.presentation.home.paciente.PacienteShell
 import com.pe.terapia.presentation.home.psicologo.PsicologoShell
+import com.pe.terapia.presentation.atencion.RegistrarAtencionScreen
+import com.pe.terapia.presentation.buscadorPacientes.BuscadorPacientesScreen
+import com.pe.terapia.presentation.etapas.GestionEtapasScreen
+import com.pe.terapia.presentation.historial.HistorialClinicoScreen
 import com.pe.terapia.presentation.pagos.GestionPagosPsicologoScreen
 import com.pe.terapia.presentation.pagos.HistorialPagosScreen
 import com.pe.terapia.presentation.pagos.PasarelaPagoScreen
 import com.pe.terapia.presentation.navigation.HomeAccessUiState
 import com.pe.terapia.presentation.navigation.HomeAccessViewModel
+import com.pe.terapia.presentation.salaconsulta.SalaConsultaScreen
 import com.pe.terapia.presentation.splash.SplashScreen
 import com.pe.terapia.presentation.splash.SplashUiState
 import org.koin.androidx.compose.koinViewModel
@@ -188,7 +194,7 @@ fun NavGraph(
         ) {
             RoleProtectedRoute(Rol.PACIENTE, navController) {
                 ReservaCitaScreen(
-                    onContinuar = { psicologo, especialidadId, especialidadNombre, sede, slot ->
+                    onContinuar = { psicologo, especialidadId, especialidadNombre, sede ,costoCita,slot ->
                         navController.navigate(
                             Route.ConfirmacionCita(
                                 psicologoId = psicologo.id,
@@ -203,6 +209,7 @@ fun NavGraph(
                                 hora = slot.hora,
                                 horarioId = slot.horarioId,
                                 bloqueId = slot.bloqueId,
+                                costoCita = costoCita,
                                 inicioEpochMillis = slot.inicioEpochMillis
                             )
                         )
@@ -230,6 +237,7 @@ fun NavGraph(
                     hora = args.hora,
                     horarioId = args.horarioId,
                     bloqueId = args.bloqueId,
+                    costo_cita = args.costoCita.toDouble(),
                     inicioEpochMillis = args.inicioEpochMillis,
                     onPagarOnline = { pagoId ->
                         navController.navigate(Route.PasarelaPago(pagoId)) {
@@ -264,11 +272,36 @@ fun NavGraph(
                 PsicologoShell(
                     onGestionarPagos = { navController.navigate(Route.GestionPagosPsicologo) },
                     onCerrarSesion = authViewModel::cerrarSesion,
-                    onRegistrarAtencion = { citaId, pacienteId ->
-                        navController.navigate(Route.RegistrarAtencion(citaId, pacienteId))
+                    onAbrirSalaConsulta = { citaId, pacienteId, pacienteNombre ->
+                        navController.navigate(Route.SalaConsulta(citaId, pacienteId, pacienteNombre))
                     },
                     onIrAHistorialClinico = {
                         navController.navigate(Route.BuscadorPacientes)
+                    }
+                )
+            }
+        }
+
+        composable<Route.SalaConsulta>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) { entry ->
+            val args = entry.toRoute<Route.SalaConsulta>()
+
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                SalaConsultaScreen(
+                    citaId = args.citaId,
+                    pacienteId = args.pacienteId,
+                    pacienteNombre = args.pacienteNombre,
+                    onVolver = { navController.popBackStack() },
+                    onNavegarAtencion = { cId, pId ->
+                        navController.navigate(Route.RegistrarAtencion(cId, pId))
+                    },
+                    onNavegarHistorial = { pId, pNombre ->
+                        navController.navigate(Route.HistorialClinico(pId, pNombre))
+                    },
+                    onNavegarEtapas = { procesoId ->
+                        navController.navigate(Route.GestionEtapas(procesoId))
                     }
                 )
             }
@@ -281,11 +314,25 @@ fun NavGraph(
             val args = entry.toRoute<Route.RegistrarAtencion>()
 
             RoleProtectedRoute(Rol.PSICOLOGO, navController) {
-                com.pe.terapia.presentation.atencion.RegistrarAtencionScreen(
+                RegistrarAtencionScreen(
                     citaId = args.citaId,
                     pacienteId = args.pacienteId,
                     onVolver = { navController.popBackStack() },
                     onGuardadoExitoso = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable<Route.GestionEtapas>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) { entry ->
+            val args = entry.toRoute<Route.GestionEtapas>()
+
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                GestionEtapasScreen(
+                    procesoId = args.procesoId,
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }
@@ -295,7 +342,7 @@ fun NavGraph(
             exitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
             RoleProtectedRoute(Rol.PSICOLOGO, navController) {
-                com.pe.terapia.presentation.buscadorPacientes.BuscadorPacientesScreen(
+                BuscadorPacientesScreen(
                     onVolver = { navController.popBackStack() },
                     onPacienteSeleccionado = { pacienteId, pacienteNombre ->
                         navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre))
@@ -314,7 +361,7 @@ fun NavGraph(
             val authState by authViewModel.uiState.collectAsStateWithLifecycle()
 
             if (authState !is AuthUiState.Loading && authState !is AuthUiState.SignedOut) {
-                com.pe.terapia.presentation.historial.HistorialClinicoScreen(
+                HistorialClinicoScreen(
                     pacienteId = args.pacienteId,
                     pacienteNombre = args.pacienteNombre,
                     onVolver = { navController.popBackStack() }
@@ -372,7 +419,7 @@ fun NavGraph(
             exitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
             RoleProtectedRoute(Rol.ADMIN, navController) {
-                com.pe.terapia.presentation.admin.horario.AsignarHorarioScreen(
+                AsignarHorarioScreen(
                     onVolver = { navController.popBackStack() }
                 )
             }
