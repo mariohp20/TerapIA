@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,6 +27,9 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,11 +45,11 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun MisCitasScreen(
-    onGestionarCita: () -> Unit,
     onVerDetalleCita: (String) -> Unit,
     viewModel: MisCitasViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var mostrarPoliticaGestion by remember { mutableStateOf(false) }
     val tabs = listOf("Próximas", "Pasadas", "Canceladas")
 
     // 1. Reemplazamos la variable simple por un PagerState
@@ -195,7 +199,7 @@ fun MisCitasScreen(
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     OutlinedButton(
-                                        onClick = onGestionarCita,
+                                        onClick = { mostrarPoliticaGestion = true },
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(14.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
@@ -209,5 +213,17 @@ fun MisCitasScreen(
                 }
             }
         }
+    }
+    if (mostrarPoliticaGestion) {
+        AlertDialog(
+            onDismissRequest = { mostrarPoliticaGestion = false },
+            title = { Text("Reprogramar o cancelar") },
+            text = { Text("La gestión directa desde la app aún no está habilitada. Como política provisional, los cambios se solicitan hasta 24 horas antes. Después de ese plazo, o si la cita ya está pagada, contacta a la clínica para que revise tu caso. No se aplica ninguna pérdida o devolución automática.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { mostrarPoliticaGestion = false }) {
+                    Text("Entendido")
+                }
+            }
+        )
     }
 }

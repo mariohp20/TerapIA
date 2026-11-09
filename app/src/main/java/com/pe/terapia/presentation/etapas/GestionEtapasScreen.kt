@@ -32,6 +32,12 @@ fun GestionEtapasScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var mostrarDialogoTransicion by remember { mutableStateOf(false) }
+    val tipoActual = uiState.tiposEtapasCatalogo.find { it.id == uiState.etapaEnProgreso?.tipoEtapaId }
+    val siguienteEtapa = tipoActual?.let { actual ->
+        uiState.tiposEtapasCatalogo
+            .filter { it.activo && it.orden > actual.orden }
+            .minByOrNull { it.orden }
+    }
 
     LaunchedEffect(procesoId) {
         viewModel.cargarDatos(procesoId)
@@ -49,7 +55,7 @@ fun GestionEtapasScreen(
             )
         },
         floatingActionButton = {
-            if (uiState.etapaEnProgreso != null && !uiState.cargando) {
+            if (siguienteEtapa != null && !uiState.cargando) {
                 ExtendedFloatingActionButton(
                     onClick = { mostrarDialogoTransicion = true },
                     icon = { Icon(Icons.Default.Timeline, contentDescription = null) },
@@ -122,7 +128,7 @@ fun GestionEtapasScreen(
         // Dialogo para cambiar de etapa
         if (mostrarDialogoTransicion) {
             DialogoTransicionEtapa(
-                tiposDisponibles = uiState.tiposEtapasCatalogo,
+                tiposDisponibles = listOfNotNull(siguienteEtapa),
                 guardando = uiState.guardando,
                 onDismiss = { mostrarDialogoTransicion = false },
                 onConfirmar = { nuevoId, observaciones ->

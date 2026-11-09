@@ -51,10 +51,23 @@ class DashboardPsicologoViewModel(
 
             val psicologoId = usuario.uid
 
-            val atenciones = obtenerAtencionesPsicologoUseCase(psicologoId).getOrNull() ?: emptyList()
-            val etapas = obtenerEtapasActivasPsicologoUseCase(psicologoId).getOrNull() ?: emptyList()
-            val citas = obtenerCitasPsicologoUseCase(psicologoId).getOrNull() ?: emptyList()
-            val tiposEtapas = obtenerTiposEtapasUseCase().getOrNull() ?: emptyList()
+            val atencionesResult = obtenerAtencionesPsicologoUseCase(psicologoId)
+            val etapasResult = obtenerEtapasActivasPsicologoUseCase(psicologoId)
+            val citasResult = obtenerCitasPsicologoUseCase(psicologoId)
+            val tiposEtapasResult = obtenerTiposEtapasUseCase()
+            val errorConsulta = listOf(atencionesResult, etapasResult, citasResult, tiposEtapasResult)
+                .firstNotNullOfOrNull { it.exceptionOrNull() }
+            if (errorConsulta != null) {
+                _uiState.value = _uiState.value.copy(
+                    cargando = false,
+                    error = "No se pudieron leer los datos del dashboard. Revisa las reglas de Firestore: ${errorConsulta.message ?: "permiso denegado"}"
+                )
+                return@launch
+            }
+            val atenciones = atencionesResult.getOrThrow()
+            val etapas = etapasResult.getOrThrow()
+            val citas = citasResult.getOrThrow()
+            val tiposEtapas = tiposEtapasResult.getOrThrow()
 
             // PieChart
             val mapaNombresEtapas = tiposEtapas.associate { it.id to it.nombre }

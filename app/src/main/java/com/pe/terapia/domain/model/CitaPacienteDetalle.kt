@@ -4,5 +4,7 @@ data class CitaPacienteDetalle(
     val citaId: String,
     val pacienteId: String,
     val hora: String,
-    val nombrePaciente: String
+    val nombrePaciente: String,
+    val fecha: String = "",
+    val inicioEpochMillis: Long = 0L
 )

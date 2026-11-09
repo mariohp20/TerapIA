@@ -10,8 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.outlined.Assignment
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.MenuBook
@@ -34,6 +33,7 @@ internal fun AccionesRapidas(
     onReservar: () -> Unit,
     onPagos: () -> Unit,
     onHistorial: () -> Unit,
+    onProgreso: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -41,7 +41,7 @@ internal fun AccionesRapidas(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         AccionCircular(Icons.Outlined.CalendarMonth, "Reservar cita", onReservar)
-        AccionCircular(Icons.Outlined.Assignment, "Tests", { /* TODO: Navegar a evaluaciones */ })
+        AccionCircular(Icons.Outlined.BarChart, "Progreso", onProgreso)
         AccionCircular(Icons.Outlined.ReceiptLong, "Pagos", onPagos)
         AccionCircular(Icons.Outlined.MenuBook, "Historial", onHistorial)
     }

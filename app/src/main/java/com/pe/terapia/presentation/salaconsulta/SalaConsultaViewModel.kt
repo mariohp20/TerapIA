@@ -7,6 +7,8 @@ import com.pe.terapia.domain.model.EstadoProceso
 import com.pe.terapia.domain.usecase.historiaclinica.ObtenerTiposEtapasUseCase
 import com.pe.terapia.domain.usecase.historiaclinica.ObtenerProcesoActivoUseCase
 import com.pe.terapia.domain.usecase.historiaclinica.ObtenerEtapasPorProcesoUseCase
+import com.pe.terapia.domain.usecase.citas.MarcarCitaNoAsistioUseCase
+import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,13 +21,17 @@ data class SalaConsultaUiState(
     val etapaActualNombre: String = "Evaluación y orientación",
     val etapaOrden: Int = 1,
     val totalEtapas: Int = 4,
-    val error: String? = null
+    val error: String? = null,
+    val marcandoInasistencia: Boolean = false,
+    val inasistenciaRegistrada: Boolean = false
 )
 
 class SalaConsultaViewModel(
     private val obtenerProcesoActivoUseCase: ObtenerProcesoActivoUseCase,
     private val obtenerEtapasPorProcesoUseCase: ObtenerEtapasPorProcesoUseCase,
-    private val obtenerTiposEtapasUseCase: ObtenerTiposEtapasUseCase
+    private val obtenerTiposEtapasUseCase: ObtenerTiposEtapasUseCase,
+    private val marcarCitaNoAsistioUseCase: MarcarCitaNoAsistioUseCase,
+    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SalaConsultaUiState())
@@ -74,6 +80,21 @@ class SalaConsultaViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(cargando = false, error = "Error al cargar el contexto clínico")
             }
+        }
+    }
+
+    fun marcarNoAsistio(citaId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(marcandoInasistencia = true, error = null)
+            val usuario = obtenerUsuarioActualUseCase().getOrNull()
+            if (usuario == null) {
+                _uiState.value = _uiState.value.copy(marcandoInasistencia = false, error = "No se pudo validar la sesión del profesional.")
+                return@launch
+            }
+            marcarCitaNoAsistioUseCase(citaId, usuario.uid).fold(
+                onSuccess = { _uiState.value = _uiState.value.copy(marcandoInasistencia = false, inasistenciaRegistrada = true) },
+                onFailure = { error -> _uiState.value = _uiState.value.copy(marcandoInasistencia = false, error = error.message ?: "No se pudo registrar la inasistencia.") }
+            )
         }
     }
 }

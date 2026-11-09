@@ -19,6 +19,7 @@ data class Cita(
     val hora: String = "",
     val inicioEpochMillis: Long = 0,
     val duracionMinutos: Int = DURACION_CITA_MINUTOS,
+    val pacienteNombre: String = "",
     val estado: EstadoCita = EstadoCita.PROGRAMADA
 )
 

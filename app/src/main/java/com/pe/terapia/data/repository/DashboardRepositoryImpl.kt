@@ -5,6 +5,8 @@ import com.pe.terapia.domain.model.Atencion
 import com.pe.terapia.domain.model.EtapaClinica
 import com.pe.terapia.domain.repository.DashboardRepository
 import com.pe.terapia.domain.model.Cita
+import com.pe.terapia.domain.model.AtencionResumenDashboard
+import com.pe.terapia.domain.model.DashboardAdminData
 
 class DashboardRepositoryImpl(
     private val dataSource: DashboardDataSource
@@ -19,5 +21,17 @@ class DashboardRepositoryImpl(
     }
     override suspend fun obtenerCitasPorPsicologo(psicologoId: String): Result<List<Cita>> = runCatching {
         dataSource.obtenerCitasPorPsicologo(psicologoId)
+    }
+
+    override suspend fun obtenerAtencionesPaciente(pacienteId: String): Result<List<AtencionResumenDashboard>> = runCatching {
+        dataSource.obtenerAtencionesPorPaciente(pacienteId)
+    }
+
+    override suspend fun obtenerCitasPorPaciente(pacienteId: String): Result<List<Cita>> = runCatching {
+        dataSource.obtenerCitasPorPaciente(pacienteId)
+    }
+
+    override suspend fun obtenerDatosAdmin(desdeEpochMillis: Long, hastaEpochMillis: Long): Result<DashboardAdminData> = runCatching {
+        dataSource.obtenerDatosAdmin(desdeEpochMillis, hastaEpochMillis)
     }
 }

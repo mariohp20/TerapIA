@@ -388,6 +388,14 @@ fun NavGraph(
             }
         }
 
+        composable<Route.DashboardAdmin> {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                com.pe.terapia.presentation.dashboard.DashboardAdminScreen(
+                    onVolver = { navController.popBackStack() }
+                )
+            }
+        }
+
         composable<Route.HomeAdmin> (
             enterTransition = {
                 slideInVertically(
@@ -401,6 +409,7 @@ fun NavGraph(
                 HomeAdminScreen(
                     onPromoverUsuario = { navController.navigate(Route.PromoverUsuario) },
                     onAsignarHorario = { navController.navigate(Route.AsignarHorario) },
+                    onDashboard = { navController.navigate(Route.DashboardAdmin) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     mensajeError = error
                 )

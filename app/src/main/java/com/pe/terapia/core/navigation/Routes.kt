@@ -95,4 +95,7 @@ sealed class Route {
     @Serializable
     data object DashboardPsicologo : Route()
 
+    @Serializable
+    data object DashboardAdmin : Route()
+
 }

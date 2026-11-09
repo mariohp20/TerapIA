@@ -43,8 +43,12 @@ class RegistrarAtencionViewModel(
     fun cargarDatosPrevios(citaId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cargandoInicial = true)
-
-            val result = obtenerAtencionPorCitaUseCase(citaId)
+            val psicologoId = obtenerUsuarioActualUseCase().getOrNull()?.uid
+            if (psicologoId == null) {
+                _uiState.value = _uiState.value.copy(cargandoInicial = false, error = "Sesión inválida")
+                return@launch
+            }
+            val result = obtenerAtencionPorCitaUseCase(citaId, psicologoId)
 
             result.onSuccess { atencionPrevia ->
                 if (atencionPrevia != null) {

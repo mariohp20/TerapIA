@@ -345,9 +345,56 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 citaId = doc.id,
                 pacienteId = pacienteId,
                 hora = doc.getString("hora").orEmpty(),
-                nombrePaciente = nombreCompleto.ifBlank { "Paciente sin registrar" }
+                nombrePaciente = nombreCompleto.ifBlank { "Paciente sin registrar" },
+                fecha = doc.getString("fecha").orEmpty(),
+                inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L
             )
         }.sortedBy { it.hora }
+    }
+
+    suspend fun obtenerCitasPendientesResultado(psicologoId: String, ahoraEpochMillis: Long): List<CitaPacienteDetalle> = coroutineScope {
+        require(psicologoId.isNotBlank()) { "No se pudo identificar al psicólogo." }
+        val citas = firestore.collection("citas")
+            .whereEqualTo("psicologoId", psicologoId)
+            .get().await().documents
+            .filter { doc ->
+                if (doc.getString("estado") != EstadoCita.PROGRAMADA.name) return@filter false
+                val inicio = doc.getLong("inicioEpochMillis") ?: return@filter false
+                val duracion = (doc.getLong("duracionMinutos") ?: DURACION_CITA_MINUTOS).toInt()
+                inicio + duracion * 60_000L <= ahoraEpochMillis
+            }
+
+        citas.map { doc ->
+            async {
+                val pacienteId = doc.getString("pacienteId").orEmpty()
+                val profile = firestore.collection("usuarios").document(pacienteId).get().await()
+                val nombre = listOf(profile.getString("nombres"), profile.getString("apellidos"))
+                    .filterNotNull().filter(String::isNotBlank).joinToString(" ").ifBlank { "Paciente sin registrar" }
+                CitaPacienteDetalle(
+                    citaId = doc.id,
+                    pacienteId = pacienteId,
+                    hora = doc.getString("hora").orEmpty(),
+                    nombrePaciente = nombre,
+                    fecha = doc.getString("fecha").orEmpty(),
+                    inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L
+                )
+            }
+        }.awaitAll().sortedBy { it.inicioEpochMillis }
+    }
+
+    suspend fun marcarCitaNoAsistio(citaId: String, psicologoId: String, ahoraEpochMillis: Long) {
+        require(citaId.isNotBlank() && psicologoId.isNotBlank()) { "Faltan datos de la cita." }
+        val citaRef = firestore.collection("citas").document(citaId)
+        firestore.runTransaction { transaction ->
+            val cita = transaction.get(citaRef)
+            check(cita.exists()) { "La cita ya no existe." }
+            check(cita.getString("psicologoId") == psicologoId) { "No puedes actualizar una cita de otro profesional." }
+            check(cita.getString("estado") == EstadoCita.PROGRAMADA.name) { "Esta cita ya tiene un resultado registrado." }
+            val inicio = cita.getLong("inicioEpochMillis") ?: error("La cita no tiene una hora de inicio válida.")
+            val duracion = (cita.getLong("duracionMinutos") ?: DURACION_CITA_MINUTOS).toInt()
+            check(ahoraEpochMillis >= inicio + duracion * 60_000L) { "Solo puedes marcar la inasistencia después de que termine el turno." }
+            transaction.update(citaRef, "estado", EstadoCita.NO_ASISTIO.name)
+        }.await()
     }
 
     private fun Reserva.toFirestore(startAt: Timestamp, citaId: String): Map<String, Any> = mapOf(

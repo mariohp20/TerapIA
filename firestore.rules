@@ -6,6 +6,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return signedIn()
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin'
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.activo == true;
+    }
+
+    function isPsychologist(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && get(/databases/$(database)/documents/usuarios/$(uid)).data.rol == 'psicologo'
+        && get(/databases/$(database)/documents/usuarios/$(uid)).data.activo == true;
+    }
+
     function isActivePatient(uid) {
       return signedIn()
         && request.auth.uid == uid
@@ -121,8 +134,8 @@ service cloud.firestore {
     }
 
     match /usuarios/{uid} {
-      allow get: if ownsProfile(uid);
-      allow list: if false;
+      allow get: if ownsProfile(uid) || isAdmin();
+      allow list: if isAdmin();
       allow create: if ownsProfile(uid)
         && request.resource.data.keys().hasOnly([
           'nombres', 'apellidos', 'correo', 'telefono', 'rol', 'activo',
@@ -141,7 +154,11 @@ service cloud.firestore {
         && request.resource.data.rol == 'paciente'
         && request.resource.data.activo == true
         && request.resource.data.fechaRegistro == request.time;
-      allow update: if ownsProfile(uid)
+      allow update: if (isAdmin()
+          && resource.data.rol == 'paciente'
+          && request.resource.data.rol == 'psicologo'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rol']))
+        || (ownsProfile(uid)
         && allowedPatientProfileKeys(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'nombres', 'apellidos', 'correo', 'telefono', 'fotoUrl', 'fechaRegistro', 'dni', 'rol', 'activo'
@@ -167,13 +184,14 @@ service cloud.firestore {
           || request.resource.data.fechaRegistro == resource.data.fechaRegistro)
         && (!resource.data.keys().hasAny(['dni']) || resource.data.dni == null || request.resource.data.dni == resource.data.dni)
         && ((resource.data.keys().hasAny(['fechaRegistro']) && resource.data.fechaRegistro is timestamp)
-          || request.resource.data.fechaRegistro == request.time);
+          || request.resource.data.fechaRegistro == request.time));
       allow delete: if false;
     }
 
     match /psicologos/{psicologoId} {
       allow get, list: if signedIn() && resource.data.activo == true;
-      allow write: if false;
+      allow create, update: if isAdmin();
+      allow delete: if false;
     }
 
     match /especialidades/{especialidadId} {
@@ -188,11 +206,25 @@ service cloud.firestore {
 
     match /horariosLaborales/{horarioId} {
       allow get, list: if signedIn() && resource.data.activo == true;
-      allow create, update, delete: if false;
+      allow create, update: if isAdmin()
+        && request.resource.data.psicologoId is string
+        && request.resource.data.sedeId is string
+        && horarioId == request.resource.data.psicologoId + '~' + request.resource.data.sedeId;
+      allow delete: if false;
 
       match /bloques/{bloqueId} {
         allow get, list: if signedIn() && resource.data.activo == true;
-        allow write: if false;
+        allow create, update: if isAdmin()
+          && request.resource.data.activo is bool
+          && request.resource.data.diaSemana is int
+          && request.resource.data.diaSemana >= 1
+          && request.resource.data.diaSemana <= 7
+          && request.resource.data.inicioMinuto is int
+          && request.resource.data.finMinuto is int
+          && request.resource.data.inicioMinuto >= 0
+          && request.resource.data.finMinuto <= 1440
+          && request.resource.data.inicioMinuto < request.resource.data.finMinuto;
+        allow delete: if isAdmin();
       }
 
       match /turnos/{slotId} {
@@ -211,7 +243,8 @@ service cloud.firestore {
 
     match /excepcionesHorario/{exceptionId} {
       allow get, list: if signedIn();
-      allow write: if false;
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /reservas/{reservaId} {
@@ -221,7 +254,11 @@ service cloud.firestore {
     }
 
     match /citas/{citaId} {
-      allow get, list: if signedIn() && resource.data.pacienteId == request.auth.uid;
+      allow get, list: if signedIn() && (
+        resource.data.pacienteId == request.auth.uid
+        || resource.data.psicologoId == request.auth.uid
+        || isAdmin()
+      );
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
           'id', 'reservaId', 'pacienteId', 'psicologoId', 'sedeId', 'especialidadId',
@@ -242,18 +279,176 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioEpochMillis == request.resource.data.inicioEpochMillis
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioAt == request.resource.data.inicioAt
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.duracionMinutos == request.resource.data.duracionMinutos;
-      allow update: if signedIn();
+      allow update: if (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'estadoPago', 'pagado']))
+        || (isPsychologist(resource.data.psicologoId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+          && request.resource.data.estado == 'COMPLETADA'
+          && resource.data.estado in ['PROGRAMADA', 'COMPLETADA']
+          && resource.data.inicioAt <= request.time)
+        || (isPsychologist(resource.data.psicologoId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+          && request.resource.data.estado == 'NO_ASISTIO'
+          && resource.data.estado == 'PROGRAMADA'
+          && resource.data.inicioAt + duration.value(resource.data.duracionMinutos, 'm') <= request.time)
+        || (isPsychologist(resource.data.psicologoId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estadoPago', 'pagado'])
+          && request.resource.data.estadoPago == 'PAGADO'
+          && request.resource.data.pagado == true)
+        || (signedIn()
+          && resource.data.pacienteId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estadoPago', 'pagado'])
+          && (!resource.data.keys().hasAny(['estadoPago']) || resource.data.estadoPago == 'PENDIENTE')
+          && request.resource.data.estadoPago == 'PAGADO'
+          && request.resource.data.pagado == true);
       allow delete: if false;
     }
 
     match /pagos/{pagoId} {
-      allow get, list, create, update: if signedIn();
+      allow get, list: if signedIn() && (
+        resource.data.pacienteId == request.auth.uid
+        || resource.data.psicologoId == request.auth.uid
+        || isAdmin()
+      );
+      allow create: if isActivePatient(request.resource.data.pacienteId)
+        && request.resource.data.id == pagoId
+        && request.resource.data.estado == 'PENDIENTE'
+        && request.resource.data.keys().hasOnly([
+          'id', 'citaId', 'pacienteId', 'psicologoId', 'monto', 'moneda', 'estado', 'creadaEn'
+        ])
+        && request.resource.data.creadaEn == request.time
+        && exists(/databases/$(database)/documents/citas/$(request.resource.data.citaId))
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.pacienteId == request.resource.data.pacienteId
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.psicologoId == request.resource.data.psicologoId;
+      allow update: if isAdmin()
+        || (isPsychologist(resource.data.psicologoId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'estado', 'metodoPago', 'referenciaTransaccion', 'actualizadaEn'
+          ])
+          && resource.data.estado == 'PENDIENTE'
+          && request.resource.data.estado == 'PAGADO')
+        || (signedIn()
+          && resource.data.pacienteId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'estado', 'metodoPago', 'referenciaTransaccion', 'actualizadaEn'
+          ])
+          && resource.data.estado == 'PENDIENTE'
+          && (request.resource.data.estado == 'PENDIENTE'
+            || (request.resource.data.estado == 'PAGADO'
+              && request.resource.data.metodoPago == 'ONLINE_MERCADOPAGO'
+              && request.resource.data.referenciaTransaccion is string)));
       allow delete: if false;
     }
 
     match /comprobantes/{comprobanteId} {
-      allow get, list, create: if signedIn();
+      allow get, list: if signedIn() && (
+        resource.data.pacienteId == request.auth.uid
+        || get(/databases/$(database)/documents/pagos/$(resource.data.pagoId)).data.psicologoId == request.auth.uid
+        || isAdmin()
+      );
+      allow create: if signedIn()
+        && request.resource.data.id == comprobanteId
+        && request.resource.data.keys().hasOnly([
+          'id', 'pagoId', 'citaId', 'pacienteId', 'psicologoId', 'monto', 'moneda',
+          'fechaEmision', 'tipo', 'numeroComprobante', 'detalles', 'creadaEn'
+        ])
+        && request.resource.data.creadaEn == request.time
+        && existsAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId))
+        && getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.estado == 'PAGADO'
+        && getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.pacienteId == request.resource.data.pacienteId
+        && getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.citaId == request.resource.data.citaId
+        && (isAdmin() || isPsychologist(getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.psicologoId)
+          || request.resource.data.pacienteId == request.auth.uid);
       allow update, delete: if false;
+    }
+
+    // Clinical records: patients can see their own; psychologists only the
+    // records linked to their UID. Administrators receive operational data,
+    // never clinical notes.
+    match /atenciones/{atencionId} {
+      function citaVinculada(data) {
+        let citaPath = /databases/$(database)/documents/citas/$(data.citaId);
+        return exists(citaPath)
+          && get(citaPath).data.pacienteId == data.pacienteId
+          && get(citaPath).data.psicologoId == data.psicologoId;
+      }
+
+      allow get, list: if signedIn() && (
+        resource.data.pacienteId == request.auth.uid
+        || isPsychologist(resource.data.psicologoId)
+      );
+      allow create: if isPsychologist(request.resource.data.psicologoId)
+        && request.resource.data.id == atencionId
+        && citaVinculada(request.resource.data)
+        && getAfter(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.estado == 'COMPLETADA';
+      allow update: if isPsychologist(resource.data.psicologoId)
+        && request.resource.data.psicologoId == resource.data.psicologoId
+        && request.resource.data.pacienteId == resource.data.pacienteId
+        && request.resource.data.citaId == resource.data.citaId
+        && citaVinculada(request.resource.data)
+        && getAfter(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.estado == 'COMPLETADA';
+      allow delete: if false;
+    }
+
+    match /historiasClinicas/{historiaId} {
+      allow get, list: if signedIn() && (
+        resource.data.pacienteId == request.auth.uid
+        || (isPsychologist(request.auth.uid)
+          && request.auth.uid in resource.data.psicologoIds)
+      );
+      allow create: if isPsychologist(request.resource.data.psicologoIds[0])
+        && request.resource.data.psicologoIds.size() == 1
+        && request.resource.data.pacienteId is string
+        && exists(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId))
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId)).data.pacienteId == request.resource.data.pacienteId
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId)).data.psicologoId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId)).data.estado == 'COMPLETADA';
+      allow update: if isPsychologist(request.auth.uid)
+        && resource.data.pacienteId == request.resource.data.pacienteId
+        && request.auth.uid in request.resource.data.psicologoIds
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'fechaActualizacion', 'psicologoIds', 'ultimaCitaId'
+        ])
+        && (!resource.data.keys().hasAny(['psicologoIds'])
+          || request.resource.data.psicologoIds.hasAll(resource.data.psicologoIds))
+        && exists(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId))
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId)).data.pacienteId == resource.data.pacienteId
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId)).data.psicologoId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/citas/$(request.resource.data.ultimaCitaId)).data.estado == 'COMPLETADA';
+      allow delete: if false;
+    }
+
+    match /procesosTerapeuticos/{procesoId} {
+      allow get, list: if signedIn() && (
+        resource.data.pacienteId == request.auth.uid
+        || isPsychologist(resource.data.psicologoId)
+      );
+      allow create: if isPsychologist(request.resource.data.psicologoId)
+        && request.resource.data.id == procesoId;
+      allow update: if isPsychologist(resource.data.psicologoId)
+        && request.resource.data.psicologoId == resource.data.psicologoId
+        && request.resource.data.pacienteId == resource.data.pacienteId;
+      allow delete: if false;
+    }
+
+    match /etapasClinicas/{etapaId} {
+      function procesoPadre(procesoId) {
+        return get(/databases/$(database)/documents/procesosTerapeuticos/$(procesoId)).data;
+      }
+      allow get, list: if signedIn() && (
+        procesoPadre(resource.data.procesoTerapeuticoId).pacienteId == request.auth.uid
+        || isPsychologist(procesoPadre(resource.data.procesoTerapeuticoId).psicologoId)
+      );
+      allow create: if isPsychologist(getAfter(/databases/$(database)/documents/procesosTerapeuticos/$(request.resource.data.procesoTerapeuticoId)).data.psicologoId)
+        && request.resource.data.id == etapaId;
+      allow update: if isPsychologist(procesoPadre(resource.data.procesoTerapeuticoId).psicologoId)
+        && request.resource.data.procesoTerapeuticoId == resource.data.procesoTerapeuticoId;
+      allow delete: if false;
+    }
+
+    match /tiposEtapas/{tipoId} {
+      allow get, list: if signedIn();
+      allow write: if isAdmin();
     }
 
     match /{document=**} {

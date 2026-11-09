@@ -9,6 +9,8 @@ import com.pe.terapia.domain.usecase.citas.ObtenerCitasHoyPsicologoUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
+import com.pe.terapia.domain.usecase.citas.MarcarCitaNoAsistioUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerCitasPendientesResultadoUseCase
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaViewModel
 import com.pe.terapia.presentation.citas.detalle.DetalleCitaViewModel
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaViewModel
@@ -28,13 +30,15 @@ val citaModule = module {
     factory { ObtenerProximaCitaUseCase(get()) }
     factory { ReservarCitaUseCase(get()) }
     factory { ObtenerCitasHoyPsicologoUseCase(get()) }
+    factory { MarcarCitaNoAsistioUseCase(get()) }
+    factory { ObtenerCitasPendientesResultadoUseCase(get()) }
     // IMPORTANTE: Se eliminó ObtenerUsuarioActualUseCase porque Koin ya lo toma del AuthModule automáticamente.
 
     // 3. ViewModels simples
     viewModel { ReservaCitaViewModel(get()) }
     viewModel { HomePacienteViewModel(get(), get(), get()) }
     viewModel { MisCitasViewModel(get(), get()) }
-    viewModel { HomePsicologoViewModel(get(), get()) }
+    viewModel { HomePsicologoViewModel(get(), get(), get()) }
 
     // 4. ViewModels con parámetros dinámicos
     viewModel { parameters ->
