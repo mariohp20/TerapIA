@@ -30,6 +30,7 @@ fun HomePsicologoScreen(
     onCerrarSesion: () -> Unit,
     onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
     onIrAHistorialClinico: () -> Unit,
+    onDashboardPsicologo: () -> Unit,
     viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -83,6 +84,7 @@ fun HomePsicologoScreen(
             }
 
             PsicologoAccionesRapidas(
+                onDashboardPsicologo = onDashboardPsicologo,
                 onIrAHistorialClinico = onIrAHistorialClinico,
                 onGestionarPagos = onGestionarPagos
             )

@@ -277,7 +277,11 @@ fun NavGraph(
                     },
                     onIrAHistorialClinico = {
                         navController.navigate(Route.BuscadorPacientes)
+                    },
+                    onDashboardPsicologo = {
+                        navController.navigate(Route.DashboardPsicologo)
                     }
+
                 )
             }
         }
@@ -370,6 +374,17 @@ fun NavGraph(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
+            }
+        }
+
+        composable<Route.DashboardPsicologo>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                com.pe.terapia.presentation.dashboard.DashboardPsicologoScreen(
+                    onVolver = { navController.popBackStack() } // Vuelve al HomePsicologo
+                )
             }
         }
 

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.PeopleAlt
 import androidx.compose.material3.Icon
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun PsicologoAccionesRapidas(
+    onDashboardPsicologo: () -> Unit,
     onIrAHistorialClinico: () -> Unit,
     onGestionarPagos: () -> Unit,
     modifier: Modifier = Modifier
@@ -28,6 +30,7 @@ internal fun PsicologoAccionesRapidas(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        AccionBoton(icon = Icons.Outlined.Dashboard, texto = "Dashboard", onClick = onDashboardPsicologo)
         AccionBoton(icon = Icons.Outlined.CalendarMonth, texto = "Mi agenda", onClick = { /* TODO: Navegar a agenda (HU futura) */ })
         AccionBoton(icon = Icons.Outlined.PeopleAlt, texto = "Historiales", onClick = onIrAHistorialClinico)
         AccionBoton(icon = Icons.Outlined.Payments, texto = "Pagos", onClick = onGestionarPagos)
