@@ -30,6 +30,7 @@ fun PerfilScreen(
     onCerrarSesion: () -> Unit,
     onVerHistorialClinico: (String, String) -> Unit,
     onVerPagos: () -> Unit,
+    onVerProgreso: () -> Unit,
     viewModel: PerfilViewModel = koinViewModel()
 ) {
     val usuario by viewModel.usuario.collectAsStateWithLifecycle()
@@ -70,6 +71,7 @@ fun PerfilScreen(
                 PerfilOpcionItem(Icons.Outlined.PersonOutline, "Mis datos", onClick = {})
                 PerfilOpcionItem(Icons.Outlined.Description, "Mi historial clínico", onClick = { usuario?.let { onVerHistorialClinico(it.uid, "${it.nombres} ${it.apellidos}") } })
                 PerfilOpcionItem(Icons.Outlined.ReceiptLong, "Mis pagos y comprobantes", onClick = onVerPagos)
+                PerfilOpcionItem(Icons.Outlined.BarChart, "Mi progreso", onClick = onVerProgreso)
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
 

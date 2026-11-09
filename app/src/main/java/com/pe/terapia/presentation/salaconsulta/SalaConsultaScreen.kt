@@ -3,6 +3,8 @@ package com.pe.terapia.presentation.salaconsulta
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,6 +44,14 @@ fun SalaConsultaScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    var confirmarInasistencia by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.inasistenciaRegistrada) {
+        if (uiState.inasistenciaRegistrada) {
+            Toast.makeText(context, "Inasistencia registrada", Toast.LENGTH_SHORT).show()
+            onVolver()
+        }
+    }
 
     LaunchedEffect(pacienteId) {
         viewModel.cargarContexto(pacienteId)
@@ -71,8 +81,10 @@ fun SalaConsultaScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(16.dp))
+            uiState.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
             // IDENTIFICACIÓN DEL PACIENTE Y FASE ACTUAL
             Card(
@@ -124,6 +136,21 @@ fun SalaConsultaScreen(
                 onClick = { onNavegarAtencion(citaId, pacienteId) }
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = { confirmarInasistencia = true },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.marcandoInasistencia
+            ) {
+                if (uiState.marcandoInasistencia) CircularProgressIndicator(Modifier.size(20.dp))
+                else Text("Marcar paciente como No asistió")
+            }
+            Text(
+                "Solo se permite después de que termine el horario de la cita.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // ACCIÓN SECUNDARIA: Ver el expediente previo
@@ -158,6 +185,21 @@ fun SalaConsultaScreen(
                 }
             )
         }
+    }
+
+    if (confirmarInasistencia) {
+        AlertDialog(
+            onDismissRequest = { confirmarInasistencia = false },
+            title = { Text("Registrar inasistencia") },
+            text = { Text("Confirma que el paciente no asistió. Esta acción quedará registrada en su cita y en los indicadores de asistencia.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmarInasistencia = false
+                    viewModel.marcarNoAsistio(citaId)
+                }) { Text("Confirmar") }
+            },
+            dismissButton = { TextButton(onClick = { confirmarInasistencia = false }) { Text("Volver") } }
+        )
     }
 }
 

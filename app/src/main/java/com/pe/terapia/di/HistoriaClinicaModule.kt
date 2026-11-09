@@ -36,5 +36,5 @@ val historiaClinicaModule = module {
     viewModel { HistorialClinicoViewModel(get(),get(),get(), get(), get()) }
     viewModel { BuscadorPacientesViewModel(get(), get()) }
     viewModel { GestionEtapasViewModel(get(),get(),get()) }
-    viewModel { SalaConsultaViewModel(get(),get(),get()) }
+    viewModel { SalaConsultaViewModel(get(),get(),get(),get(),get()) }
 }

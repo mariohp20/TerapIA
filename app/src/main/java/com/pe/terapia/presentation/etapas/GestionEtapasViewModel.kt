@@ -69,12 +69,21 @@ class GestionEtapasViewModel(
     }
 
     fun avanzarEtapa(procesoId: String, nuevoTipoEtapaId: String, observaciones: String) {
-        val etapaActualId = _uiState.value.etapaEnProgreso?.id ?: return
+        val state = _uiState.value
+        val etapaActual = state.etapaEnProgreso ?: return
+        val tipoActual = state.tiposEtapasCatalogo.find { it.id == etapaActual.tipoEtapaId }
+        val siguienteTipo = tipoActual?.let { actual ->
+            state.tiposEtapasCatalogo.filter { it.activo && it.orden > actual.orden }.minByOrNull { it.orden }
+        }
+        if (siguienteTipo?.id != nuevoTipoEtapaId) {
+            _uiState.value = state.copy(error = "Solo se puede avanzar a la siguiente etapa del proceso.")
+            return
+        }
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(guardando = true)
 
-            val result = transicionarEtapaUseCase(procesoId, etapaActualId, nuevoTipoEtapaId, observaciones)
+            val result = transicionarEtapaUseCase(procesoId, etapaActual.id, nuevoTipoEtapaId, observaciones)
 
             result.onSuccess {
                 _uiState.value = _uiState.value.copy(guardando = false)

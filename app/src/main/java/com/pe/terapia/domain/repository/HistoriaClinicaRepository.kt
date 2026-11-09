@@ -6,7 +6,7 @@ import com.pe.terapia.domain.model.ProcesoTerapeutico
 import com.pe.terapia.domain.model.TipoEtapa
 
 interface HistoriaClinicaRepository {
-    suspend fun obtenerAtencionPorCita(citaId: String):Result<Atencion?>
+    suspend fun obtenerAtencionPorCita(citaId: String, psicologoId: String):Result<Atencion?>
 
     suspend fun registrarAtencion(atencion: Atencion): Result<Unit>
 

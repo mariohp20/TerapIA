@@ -277,7 +277,11 @@ fun NavGraph(
                     },
                     onIrAHistorialClinico = {
                         navController.navigate(Route.BuscadorPacientes)
+                    },
+                    onDashboardPsicologo = {
+                        navController.navigate(Route.DashboardPsicologo)
                     }
+
                 )
             }
         }
@@ -373,6 +377,25 @@ fun NavGraph(
             }
         }
 
+        composable<Route.DashboardPsicologo>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.PSICOLOGO, navController) {
+                com.pe.terapia.presentation.dashboard.DashboardPsicologoScreen(
+                    onVolver = { navController.popBackStack() } // Vuelve al HomePsicologo
+                )
+            }
+        }
+
+        composable<Route.DashboardAdmin> {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                com.pe.terapia.presentation.dashboard.DashboardAdminScreen(
+                    onVolver = { navController.popBackStack() }
+                )
+            }
+        }
+
         composable<Route.HomeAdmin> (
             enterTransition = {
                 slideInVertically(
@@ -386,6 +409,7 @@ fun NavGraph(
                 HomeAdminScreen(
                     onPromoverUsuario = { navController.navigate(Route.PromoverUsuario) },
                     onAsignarHorario = { navController.navigate(Route.AsignarHorario) },
+                    onDashboard = { navController.navigate(Route.DashboardAdmin) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     mensajeError = error
                 )

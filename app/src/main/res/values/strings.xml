@@ -95,6 +95,7 @@
     <string name="home_paciente_titulo">Home Paciente</string>
     <string name="paciente_tab_inicio">Inicio</string>
     <string name="paciente_tab_mis_citas">Mis citas</string>
+    <string name="paciente_tab_progreso">Progreso</string>
     <string name="paciente_tab_asistente">TerapIA chat</string>
     <string name="paciente_tab_perfil">Perfil</string>
     <string name="paciente_tab_proximamente">Próximamente</string>

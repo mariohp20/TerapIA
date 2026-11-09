@@ -23,6 +23,30 @@
         { "fieldPath": "horarioId", "order": "ASCENDING" },
         { "fieldPath": "fecha", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "historiasClinicas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteId", "order": "ASCENDING" },
+        { "fieldPath": "psicologoIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "etapasClinicas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "procesoTerapeuticoId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pagos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "creadaEn", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

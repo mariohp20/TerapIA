@@ -49,6 +49,14 @@ class CitaRepositoryImpl(private val dataSource: CitaDataSource) : CitaRepositor
         dataSource.obtenerCitasPsicologoHoy(psicologoId, fechaText)
     }
 
+    override suspend fun marcarCitaNoAsistio(citaId: String, psicologoId: String, ahoraEpochMillis: Long): Result<Unit> = capture {
+        dataSource.marcarCitaNoAsistio(citaId, psicologoId, ahoraEpochMillis)
+    }
+
+    override suspend fun obtenerCitasPendientesResultado(psicologoId: String, ahoraEpochMillis: Long): Result<List<CitaPacienteDetalle>> = capture {
+        dataSource.obtenerCitasPendientesResultado(psicologoId, ahoraEpochMillis)
+    }
+
     private suspend fun <T> capture(action: suspend () -> T): Result<T> = try {
         Result.success(action())
     } catch (exception: CancellationException) {
