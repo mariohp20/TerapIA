@@ -25,6 +25,8 @@ import ir.ehsannarmani.compose_charts.PieChart
 import ir.ehsannarmani.compose_charts.models.Bars
 import ir.ehsannarmani.compose_charts.models.Pie
 import org.koin.androidx.compose.koinViewModel
+import ir.ehsannarmani.compose_charts.LineChart
+import ir.ehsannarmani.compose_charts.models.Line
 
 @Composable
 fun DashboardPsicologoScreen(
@@ -204,6 +206,71 @@ fun DashboardPsicologoContent(
                     }
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+
+                // LineChart: Adherencia y Ausentismo
+                Column {
+                    Text(
+                        text = "Adherencia y Ausentismo",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Citas programadas vs. Atenciones realizadas",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    val colorAtenciones = MaterialTheme.colorScheme.primary
+                    val colorCitas = MaterialTheme.colorScheme.outline
+
+                    if (uiState.comparativaAsistencia.all { it.second == 0 }) {
+                        SinDatosPlaceholder("Faltan datos de citas para generar la comparativa")
+                    } else {
+                        LineChart(
+                            modifier = Modifier.fillMaxWidth().height(220.dp),
+                            data = remember(uiState.comparativaAsistencia, colorAtenciones, colorCitas) {
+                                listOf(
+                                    Line(
+                                        label = "Programadas",
+                                        values = uiState.comparativaAsistencia.map { it.second.toDouble() },
+                                        color = SolidColor(colorCitas)
+                                    ),
+                                    Line(
+                                        label = "Realizadas",
+                                        values = uiState.comparativaAsistencia.map { it.third.toDouble() },
+                                        color = SolidColor(colorAtenciones)
+                                    )
+                                )
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Leyenda Manual Desacoplada
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(14.dp).clip(CircleShape).background(colorCitas))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Programadas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Spacer(modifier = Modifier.width(24.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(14.dp).clip(CircleShape).background(colorAtenciones))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Realizadas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
@@ -266,7 +333,15 @@ fun DashboardPsicologoPreview() {
             uiState = DashboardPsicologoUiState(
                 cargando = false,
                 atencionesPorMes = mapOf("Jul" to 15, "Ago" to 30, "Sep" to 22, "Oct" to 40),
-                pacientesPorEtapa = mapOf("Evaluación" to 10, "Intervención" to 25, "Cierre" to 5)
+                pacientesPorEtapa = mapOf("Evaluación" to 10, "Intervención" to 25, "Cierre" to 5),
+                comparativaAsistencia = listOf(
+                    Triple("Jul", 20, 15),
+                    Triple("Ago", 35, 30),
+                    Triple("Sep", 30, 22),
+                    Triple("Oct", 45, 40),
+                    Triple("Nov", 15, 15),
+                    Triple("Dic", 5, 2)
+                )
             ),
             onVolver = {}
         )

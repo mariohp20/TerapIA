@@ -4,6 +4,7 @@ import com.pe.terapia.data.remote.firebase.DashboardDataSource
 import com.pe.terapia.data.repository.DashboardRepositoryImpl
 import com.pe.terapia.domain.repository.DashboardRepository
 import com.pe.terapia.domain.usecase.dashboard.ObtenerAtencionesPsicologoUseCase
+import com.pe.terapia.domain.usecase.dashboard.ObtenerCitasPsicologoUseCase
 import com.pe.terapia.domain.usecase.dashboard.ObtenerEtapasActivasPsicologoUseCase
 import com.pe.terapia.presentation.dashboard.DashboardPsicologoViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -17,8 +18,8 @@ val dashboardModule = module {
     // Psicologo
     factory { ObtenerAtencionesPsicologoUseCase(get()) }
     factory { ObtenerEtapasActivasPsicologoUseCase(get()) }
-
+    factory { ObtenerCitasPsicologoUseCase(get()) }
 
     // Psicologo
-    viewModel {DashboardPsicologoViewModel(get(),get(),get(),get()) }
+    viewModel {DashboardPsicologoViewModel(get(),get(),get(),get(),get()) }
 }

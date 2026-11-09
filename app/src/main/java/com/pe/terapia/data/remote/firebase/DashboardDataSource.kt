@@ -1,8 +1,11 @@
 package com.pe.terapia.data.remote.firebase
 
-import com.google.firebase.firestore.FieldPath
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.Atencion
+import com.pe.terapia.domain.model.Cita
+import com.pe.terapia.domain.model.EstadoCita
+import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoEtapa
 import com.pe.terapia.domain.model.EstadoProceso
 import com.pe.terapia.domain.model.EtapaClinica
@@ -14,7 +17,7 @@ class DashboardDataSource(
 
     // 1. PSICOLOGO
 
-    // ColumnChar: Volumen de Atenciones
+    // 1.1 ColumnChar: Volumen de Atenciones
     suspend fun obtenerAtencionesPorPsicologo(psicologoId: String): List<Atencion> {
         val snapshot = firestore.collection("atenciones")
             .whereEqualTo("psicologoId", psicologoId)
@@ -44,7 +47,7 @@ class DashboardDataSource(
         }
     }
 
-    // PieChart: Estado de Pacientes Activos
+    // 1.2 PieChart: Estado de Pacientes Activos
     suspend fun obtenerEtapasActivasPorPsicologo(psicologoId: String): List<EtapaClinica> {
         val procesosSnapshot = firestore.collection("procesosTerapeuticos")
             .whereEqualTo("psicologoId", psicologoId)
@@ -90,4 +93,35 @@ class DashboardDataSource(
 
         return etapasActivas
     }
+    // 1.3 LineChart: Adherencia y Ausentismo
+    suspend fun obtenerCitasPorPsicologo(psicologoId: String): List<Cita> {
+        val snapshot = firestore.collection("citas")
+            .whereEqualTo("psicologoId", psicologoId)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            val data = doc.data ?: return@mapNotNull null
+
+            Cita(
+                id = doc.id,
+                reservaId = data["reservaId"] as? String ?: "",
+                pacienteId = data["pacienteId"] as? String ?: "",
+                psicologoId = data["psicologoId"] as? String ?: "",
+                sedeId = data["sedeId"] as? String ?: "",
+                especialidadId = data["especialidadId"] as? String ?: "",
+                fecha = data["fecha"] as? String ?: "",
+                hora = data["hora"] as? String ?: "",
+                inicioEpochMillis = data["inicioEpochMillis"] as? Long ?: 0L,
+                duracionMinutos = (data["duracionMinutos"] as? Number)?.toInt() ?: DURACION_CITA_MINUTOS,
+                estado = runCatching { EstadoCita.valueOf(data["estado"] as? String ?: "") }
+                    .getOrDefault(EstadoCita.PROGRAMADA)
+            )
+        }
+    }
+
+    // 2. PACIENTE
+
+    // 3. ADMIN
+
 }
