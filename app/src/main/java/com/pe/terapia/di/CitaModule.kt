@@ -12,6 +12,7 @@ import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaViewModel
 import com.pe.terapia.presentation.citas.detalle.DetalleCitaViewModel
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaViewModel
+import com.pe.terapia.presentation.escanner.EscannerViewModel
 import com.pe.terapia.presentation.home.paciente.inicio.HomePacienteViewModel
 import com.pe.terapia.presentation.home.paciente.miscitas.MisCitasViewModel
 import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoViewModel
@@ -35,6 +36,7 @@ val citaModule = module {
     viewModel { HomePacienteViewModel(get(), get(), get()) }
     viewModel { MisCitasViewModel(get(), get()) }
     viewModel { HomePsicologoViewModel(get(), get()) }
+    viewModel { EscannerViewModel(get()) }
 
     // 4. ViewModels con parámetros dinámicos
     viewModel { parameters ->
