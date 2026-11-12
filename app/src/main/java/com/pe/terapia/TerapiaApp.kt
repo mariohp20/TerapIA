@@ -15,6 +15,7 @@ import com.pe.terapia.di.perfilModule
 import com.pe.terapia.di.tiempoModule
 import com.pe.terapia.di.roomModule
 import com.pe.terapia.di.pdfModule
+import com.pe.terapia.di.chatModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -37,7 +38,7 @@ class TerapiaApp : Application(){
             androidLogger(Level.ERROR)
             androidContext(this@TerapiaApp)
             modules(listOf(firebaseModule, authModule, citaModule, perfilModule, pagoModule, adminModule,
-                historiaClinicaModule, tiempoModule, roomModule, pdfModule,
+                historiaClinicaModule, tiempoModule, roomModule, pdfModule, chatModule
                 dashboardModule
             ))
         }

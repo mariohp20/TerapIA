@@ -14,6 +14,7 @@ import com.pe.terapia.domain.usecase.citas.ObtenerCitasPendientesResultadoUseCas
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaViewModel
 import com.pe.terapia.presentation.citas.detalle.DetalleCitaViewModel
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaViewModel
+import com.pe.terapia.presentation.escanner.EscannerViewModel
 import com.pe.terapia.presentation.home.paciente.inicio.HomePacienteViewModel
 import com.pe.terapia.presentation.home.paciente.miscitas.MisCitasViewModel
 import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoViewModel

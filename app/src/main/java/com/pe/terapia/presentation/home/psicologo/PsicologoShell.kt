@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CameraEnhance
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
@@ -46,6 +47,7 @@ sealed class PsicologoTab {
     @Serializable data object Agenda : PsicologoTab()
     @Serializable data object Disponibilidad : PsicologoTab()
     @Serializable data object Perfil : PsicologoTab()
+    @Serializable data object Escanear : PsicologoTab()
 }
 
 private data class TabPsicologoItem(
@@ -59,7 +61,8 @@ private val tabsPsicologo = listOf(
     TabPsicologoItem(PsicologoTab.Inicio, "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
     TabPsicologoItem(PsicologoTab.Agenda, "Agenda", Icons.Outlined.CalendarMonth, Icons.Filled.CalendarMonth),
     TabPsicologoItem(PsicologoTab.Disponibilidad, "Disponibilidad", Icons.Outlined.AccessTime, Icons.Filled.AccessTime),
-    TabPsicologoItem(PsicologoTab.Perfil, "Perfil", Icons.Outlined.Person, Icons.Filled.Person)
+    TabPsicologoItem(PsicologoTab.Perfil, "Perfil", Icons.Outlined.Person, Icons.Filled.Person),
+    TabPsicologoItem(PsicologoTab.Escanear,"Escanear QR", Icons.Outlined.CameraEnhance, Icons.Outlined.CameraEnhance)
 )
 
 @Composable
