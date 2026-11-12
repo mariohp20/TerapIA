@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.SupervisedUserCircle
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +34,7 @@ fun HomeAdminScreen(
     onPromoverUsuario: () -> Unit,
     onCerrarSesion: () -> Unit,
     onAsignarHorario: () -> Unit,
+    onDashboard: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomeAdminViewModel = koinViewModel()
 ) {
@@ -42,6 +44,7 @@ fun HomeAdminScreen(
         mensajeError = mensajeError,
         onPromoverUsuario = onPromoverUsuario,
         onAsignarHorario = onAsignarHorario,
+        onDashboard = onDashboard,
         onCerrarSesion = onCerrarSesion
     )
 }
@@ -52,6 +55,7 @@ private fun HomeAdminContent(
     mensajeError: String?,
     onPromoverUsuario: () -> Unit,
     onAsignarHorario: () -> Unit,
+    onDashboard: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
@@ -137,6 +141,18 @@ private fun HomeAdminContent(
 
                 Spacer(Modifier.height(30.dp))
 
+                OutlinedButton(
+                    onClick = onDashboard,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Outlined.BarChart, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Dashboard de la clínica", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Spacer(Modifier.height(24.dp))
+
                 // Otras herramientas (Ahora con un Botón simple)
                 Text("Otras herramientas", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(14.dp))
@@ -164,6 +180,7 @@ private fun HomeAdminPreview() {
             mensajeError = null,
             onPromoverUsuario = {},
             onAsignarHorario = {},
+            onDashboard = {},
             onCerrarSesion = {}
         )
     }

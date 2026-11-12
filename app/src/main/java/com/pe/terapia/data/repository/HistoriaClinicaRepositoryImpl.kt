@@ -11,8 +11,8 @@ class HistoriaClinicaRepositoryImpl(
     private val dataSource: HistoriaClinicaDataSource
 ) : HistoriaClinicaRepository {
 
-    override suspend fun obtenerAtencionPorCita(citaId: String):Result<Atencion?> = runCatching {
-        dataSource.obtenerAtencionPorCita(citaId)
+    override suspend fun obtenerAtencionPorCita(citaId: String, psicologoId: String):Result<Atencion?> = runCatching {
+        dataSource.obtenerAtencionPorCita(citaId, psicologoId)
     }
 
     override suspend fun registrarAtencion(atencion: Atencion): Result<Unit> = runCatching {

@@ -70,7 +70,8 @@ fun PsicologoShell(
     onGestionarPagos: () -> Unit,
     onCerrarSesion: () -> Unit,
     onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
-    onIrAHistorialClinico: () -> Unit
+    onIrAHistorialClinico: () -> Unit,
+    onDashboardPsicologo: () -> Unit
 ) {
     val tabNavController = rememberNavController()
     val entradaActual by tabNavController.currentBackStackEntryAsState()
@@ -121,7 +122,8 @@ fun PsicologoShell(
                     onGestionarPagos = onGestionarPagos,
                     onCerrarSesion = onCerrarSesion,
                     onAbrirSalaConsulta = onAbrirSalaConsulta,
-                    onIrAHistorialClinico = onIrAHistorialClinico
+                    onIrAHistorialClinico = onIrAHistorialClinico,
+                    onDashboardPsicologo = onDashboardPsicologo
                 )
             }
             composable<PsicologoTab.Agenda> {

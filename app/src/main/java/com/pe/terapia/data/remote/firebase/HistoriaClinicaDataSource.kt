@@ -16,9 +16,10 @@ import com.pe.terapia.domain.model.ProcesoTerapeutico
 
 class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
 
-    suspend fun obtenerAtencionPorCita(citaId: String): Atencion? {
+    suspend fun obtenerAtencionPorCita(citaId: String, psicologoId: String): Atencion? {
         val snapshot = firestore.collection("atenciones")
             .whereEqualTo("citaId", citaId)
+            .whereEqualTo("psicologoId", psicologoId)
             .limit(1)
             .get()
             .await()
@@ -47,11 +48,12 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
 
 
     suspend fun registrarAtencionYProcesoSiNoExiste(atencion: Atencion) {
+        validarCitaParaRegistrarAtencion(atencion)
         val batch = firestore.batch()
 
         try {
             // 1. Obtener o crear Historia Clínica
-            val historiaClinicaId = gestionarHistoriaClinica(batch, atencion.pacienteId)
+            val historiaClinicaId = gestionarHistoriaClinica(batch, atencion.pacienteId, atencion.psicologoId, atencion.citaId)
             Log.d("FirebaseDebug", "Paso 1 Completado. ID: $historiaClinicaId")
 
             // 2. Obtener o crear Proceso Terapéutico
@@ -78,12 +80,40 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
             )
             Log.d("FirebaseDebug", "Paso 4 Completado.")
 
+            // El registro clínico y el resultado de asistencia se confirman juntos.
+            batch.update(
+                firestore.collection("citas").document(atencion.citaId),
+                "estado",
+                com.pe.terapia.domain.model.EstadoCita.COMPLETADA.name
+            )
+
             // 5. Ejecutar toda la transacción junta
             batch.commit().await()
             Log.d("FirebaseDebug", "Paso 5 Completado.")
         } catch (e: Exception) {
             Log.e("FirebaseDebug", "ERROR EN FIREBASE: ${e.message}", e)
             throw e
+        }
+    }
+
+    private suspend fun validarCitaParaRegistrarAtencion(atencion: Atencion) {
+        val cita = firestore.collection("citas").document(atencion.citaId).get().await()
+        check(cita.exists()) { "No se encontró la cita asociada a esta atención." }
+        check(cita.getString("pacienteId") == atencion.pacienteId) {
+            "La cita no corresponde a este paciente."
+        }
+        check(cita.getString("psicologoId") == atencion.psicologoId) {
+            "La cita pertenece a otro profesional."
+        }
+        val estado = cita.getString("estado")
+        check(estado == "PROGRAMADA" || estado == "COMPLETADA") {
+            "No se puede registrar una atención para una cita cancelada o marcada como inasistencia."
+        }
+        val inicioMillis = cita.getTimestamp("inicioAt")?.toDate()?.time
+            ?: cita.getLong("inicioEpochMillis")
+            ?: error("La cita no tiene una hora de inicio válida.")
+        check(System.currentTimeMillis() >= inicioMillis) {
+            "Solo puedes registrar la atención desde la hora programada de la cita."
         }
     }
 
@@ -270,9 +300,15 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
 
 
     // FUNCIONES AUXILIARES
-    private suspend fun gestionarHistoriaClinica(batch: WriteBatch, pacienteId: String): String {
+    private suspend fun gestionarHistoriaClinica(
+        batch: WriteBatch,
+        pacienteId: String,
+        psicologoId: String,
+        citaId: String
+    ): String {
         val hcSnapshot = firestore.collection("historiasClinicas")
             .whereEqualTo("pacienteId", pacienteId)
+            .whereArrayContains("psicologoIds", psicologoId)
             .limit(1)
             .get()
             .await()
@@ -284,13 +320,19 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
                 "pacienteId" to pacienteId,
                 "fechaCreacion" to FieldValue.serverTimestamp(),
                 "fechaActualizacion" to FieldValue.serverTimestamp(),
-                "activo" to true
+                "activo" to true,
+                "psicologoIds" to listOf(psicologoId),
+                "ultimaCitaId" to citaId
             )
             batch.set(nuevaHcRef, hcData)
             nuevaHcRef.id // Retorna el ID nuevo
         } else {
             val hcExistente = hcSnapshot.documents.first()
-            batch.update(hcExistente.reference, "fechaActualizacion", FieldValue.serverTimestamp())
+            batch.update(hcExistente.reference, mapOf(
+                "fechaActualizacion" to FieldValue.serverTimestamp(),
+                "psicologoIds" to FieldValue.arrayUnion(psicologoId),
+                "ultimaCitaId" to citaId
+            ))
             hcExistente.id // Retorna el ID existente
         }
     }
@@ -372,6 +414,7 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
     ) {
         val atencionSnapshot = firestore.collection("atenciones")
             .whereEqualTo("citaId", atencion.citaId)
+            .whereEqualTo("psicologoId", atencion.psicologoId)
             .limit(1)
             .get()
             .await()

@@ -87,4 +87,7 @@ dependencies {
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
+
+    // Dashboard
+    implementation ("io.github.ehsannarmani:compose-charts:0.0.16")
 }

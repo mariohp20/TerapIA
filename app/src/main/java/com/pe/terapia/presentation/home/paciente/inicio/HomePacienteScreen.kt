@@ -40,6 +40,7 @@ fun HomePacienteScreen(
     onVerHistorial: (String, String) -> Unit,
     onVerTodas: () -> Unit,
     onVerDetalle: (String) -> Unit,
+    onVerProgreso: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomePacienteViewModel = koinViewModel()
 ) {
@@ -54,6 +55,7 @@ fun HomePacienteScreen(
         onVerHistorial = { viewModel.verHistorial(onVerHistorial) },
         onVerTodas = onVerTodas,
         onVerDetalle = onVerDetalle,
+        onVerProgreso = onVerProgreso,
         onToggleQr = viewModel::setMostrarQr
     )
 }
@@ -68,6 +70,7 @@ private fun HomePacienteContent(
     onVerHistorial: () -> Unit,
     onVerTodas: () -> Unit,
     onVerDetalle: (String) -> Unit,
+    onVerProgreso: () -> Unit,
     onToggleQr: (Boolean) -> Unit
 ) {
     Column(
@@ -92,7 +95,8 @@ private fun HomePacienteContent(
             AccionesRapidas(
                 onReservar = onReservarCita,
                 onPagos = onVerHistorialPagos,
-                onHistorial = onVerHistorial
+                onHistorial = onVerHistorial,
+                onProgreso = onVerProgreso
             )
         }
 

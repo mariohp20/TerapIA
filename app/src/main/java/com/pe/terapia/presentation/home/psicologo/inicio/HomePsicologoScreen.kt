@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoViewModel
 import com.pe.terapia.presentation.home.psicologo.inicio.components.PsicologoAccionesRapidas
 import com.pe.terapia.presentation.home.psicologo.inicio.components.PsicologoHeader
@@ -30,9 +32,14 @@ fun HomePsicologoScreen(
     onCerrarSesion: () -> Unit,
     onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
     onIrAHistorialClinico: () -> Unit,
+    onDashboardPsicologo: () -> Unit,
     viewModel: HomePsicologoViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.cargarDatosHoy()
+    }
 
     Column(
         modifier = Modifier
@@ -67,6 +74,25 @@ fun HomePsicologoScreen(
                 PsicologoMetricaCard(modifier = Modifier.weight(1f), icon = Icons.Outlined.PeopleAlt, titulo = "Pacientes\nactivos", valor = uiState.pacientesActivos.toString())
             }
 
+            if (uiState.citasPendientesResultado.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Citas pendientes de registrar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    uiState.citasPendientesResultado.forEach { cita ->
+                        Card(
+                            onClick = { onAbrirSalaConsulta(cita.citaId, cita.pacienteId, cita.nombrePaciente) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.42f))
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text(cita.nombrePaciente, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                Text("${cita.fecha} · ${cita.hora}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Registra la atención o marca que no asistió", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+
             if (uiState.proximasCitas.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(20.dp)).padding(32.dp),
@@ -83,6 +109,7 @@ fun HomePsicologoScreen(
             }
 
             PsicologoAccionesRapidas(
+                onDashboardPsicologo = onDashboardPsicologo,
                 onIrAHistorialClinico = onIrAHistorialClinico,
                 onGestionarPagos = onGestionarPagos
             )

@@ -6,7 +6,7 @@ import com.pe.terapia.domain.repository.HistoriaClinicaRepository
 class ObtenerAtencionPorCitaUseCase (
     private val repository: HistoriaClinicaRepository
 ) {
-    suspend operator fun invoke (citaId: String): Result<Atencion?>{
-        return repository.obtenerAtencionPorCita(citaId)
+    suspend operator fun invoke (citaId: String, psicologoId: String): Result<Atencion?>{
+        return repository.obtenerAtencionPorCita(citaId, psicologoId)
     }
 }

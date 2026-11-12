@@ -7,6 +7,7 @@ import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderF
 import com.pe.terapia.di.adminModule
 import com.pe.terapia.di.authModule
 import com.pe.terapia.di.citaModule
+import com.pe.terapia.di.dashboardModule
 import com.pe.terapia.di.firebaseModule
 import com.pe.terapia.di.pagoModule
 import com.pe.terapia.di.historiaClinicaModule
@@ -37,7 +38,9 @@ class TerapiaApp : Application(){
             androidLogger(Level.ERROR)
             androidContext(this@TerapiaApp)
             modules(listOf(firebaseModule, authModule, citaModule, perfilModule, pagoModule, adminModule,
-                historiaClinicaModule, tiempoModule, roomModule, pdfModule, chatModule))
+                historiaClinicaModule, tiempoModule, roomModule, pdfModule, chatModule
+                dashboardModule
+            ))
         }
     }
 }

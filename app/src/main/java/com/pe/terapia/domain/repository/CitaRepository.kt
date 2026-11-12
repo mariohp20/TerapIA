@@ -19,4 +19,6 @@ interface CitaRepository {
     suspend fun reservarYConfirmar(reserva: Reserva): Result<Cita>
 
     suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>>
+    suspend fun marcarCitaNoAsistio(citaId: String, psicologoId: String, ahoraEpochMillis: Long): Result<Unit>
+    suspend fun obtenerCitasPendientesResultado(psicologoId: String, ahoraEpochMillis: Long): Result<List<CitaPacienteDetalle>>
 }

@@ -42,11 +42,13 @@ import com.pe.terapia.presentation.home.paciente.chat.TerapiaChatScreen
 import com.pe.terapia.presentation.home.paciente.inicio.HomePacienteScreen
 import com.pe.terapia.presentation.home.paciente.miscitas.MisCitasScreen
 import com.pe.terapia.presentation.home.paciente.perfil.PerfilScreen
+import com.pe.terapia.presentation.dashboard.DashboardPacienteScreen
 import kotlinx.serialization.Serializable
 
 sealed class PacienteTab {
     @Serializable data object Inicio : PacienteTab()
     @Serializable data object MisCitas : PacienteTab()
+    @Serializable data object Progreso : PacienteTab()
     @Serializable data object Asistente : PacienteTab()
     @Serializable data object Perfil : PacienteTab()
 }
@@ -77,6 +79,7 @@ fun PacienteShell(
     val tabNavController = rememberNavController()
     val entradaActual by tabNavController.currentBackStackEntryAsState()
     val destinoActual = entradaActual?.destination
+    val mostrarBarra = destinoActual?.hierarchy?.any { it.hasRoute(PacienteTab.Progreso::class) } != true
 
     val irATab: (PacienteTab) -> Unit = { tab ->
         tabNavController.navigate(tab) {
@@ -89,6 +92,7 @@ fun PacienteShell(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
+            if (mostrarBarra) {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
                 tabsPaciente.forEach { tab ->
                     val seleccionada = destinoActual?.hierarchy?.any { it.hasRoute(tab.ruta::class) } == true
@@ -106,6 +110,7 @@ fun PacienteShell(
                         )
                     )
                 }
+            }
             }
         }
     ) { innerPadding ->
@@ -126,14 +131,17 @@ fun PacienteShell(
                     onVerHistorial = onVerHistorial,
                     onVerTodas = { irATab(PacienteTab.MisCitas) }, // Conectamos Ver Todas -> Mis Citas
                     onVerDetalle = onVerDetalleCita, // Conectamos el clic en la tarjeta
+                    onVerProgreso = { irATab(PacienteTab.Progreso) },
                     mensajeError = mensajeError
                 )
             }
             composable<PacienteTab.MisCitas> {
                 MisCitasScreen(
-                    onGestionarCita = onReservarCita,
                     onVerDetalleCita = onVerDetalleCita
                 )
+            }
+            composable<PacienteTab.Progreso> {
+                DashboardPacienteScreen(onVolver = { irATab(PacienteTab.Inicio) })
             }
             composable<PacienteTab.Asistente> {
                 TerapiaChatScreen()
@@ -142,7 +150,8 @@ fun PacienteShell(
                 PerfilScreen(
                     onCerrarSesion = onCerrarSesion,
                     onVerHistorialClinico = onVerHistorial,
-                    onVerPagos = onVerHistorialPagos
+                    onVerPagos = onVerHistorialPagos,
+                    onVerProgreso = { irATab(PacienteTab.Progreso) }
                 )
             }
         }
