@@ -411,6 +411,7 @@ fun NavGraph(
                     onAsignarHorario = { navController.navigate(Route.AsignarHorario) },
                     onDashboard = { navController.navigate(Route.DashboardAdmin) },
                     onCerrarSesion = authViewModel::cerrarSesion,
+                    onGestionarPsicologo = { navController.navigate(Route.GestionarPsicologo) },
                     mensajeError = error
                 )
             }
@@ -434,6 +435,17 @@ fun NavGraph(
                     onPromocionExitosa = {
                         navController.popBackStack()
                     }
+                )
+            }
+        }
+
+        composable<Route.GestionarPsicologo>(
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                com.pe.terapia.presentation.admin.gestionar.GestionarPsicologoScreen(
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }

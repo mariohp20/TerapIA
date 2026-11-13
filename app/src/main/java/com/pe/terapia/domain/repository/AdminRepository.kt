@@ -25,4 +25,10 @@ interface AdminRepository {
         inicioMinuto: Int,
         finMinuto: Int
     ): Result<Unit>
+    suspend fun actualizarPsicologo(
+        psicologoId: String,
+        descripcionProfesional: String,
+        especialidadIds: List<String>,
+        sedeIds: List<String>
+    ): Result<Unit>
 }

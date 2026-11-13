@@ -64,6 +64,9 @@ sealed class Route {
     data object PromoverUsuario : Route()
 
     @Serializable
+    data object GestionarPsicologo : Route()
+
+    @Serializable
     data object AsignarHorario : Route()
 
     @Serializable

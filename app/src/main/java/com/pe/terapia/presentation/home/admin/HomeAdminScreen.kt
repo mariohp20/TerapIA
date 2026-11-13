@@ -35,6 +35,7 @@ fun HomeAdminScreen(
     onCerrarSesion: () -> Unit,
     onAsignarHorario: () -> Unit,
     onDashboard: () -> Unit,
+    onGestionarPsicologo: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomeAdminViewModel = koinViewModel()
 ) {
@@ -45,6 +46,7 @@ fun HomeAdminScreen(
         onPromoverUsuario = onPromoverUsuario,
         onAsignarHorario = onAsignarHorario,
         onDashboard = onDashboard,
+        onGestionarPsicologo = onGestionarPsicologo,
         onCerrarSesion = onCerrarSesion
     )
 }
@@ -56,6 +58,7 @@ private fun HomeAdminContent(
     onPromoverUsuario: () -> Unit,
     onAsignarHorario: () -> Unit,
     onDashboard: () -> Unit,
+    onGestionarPsicologo: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
@@ -166,6 +169,18 @@ private fun HomeAdminContent(
                     Spacer(Modifier.width(12.dp))
                     Text("Asignar Horarios a Psicólogos", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
+
+                Spacer(Modifier.height(14.dp))
+
+                Button(
+                    onClick = onGestionarPsicologo,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Outlined.SupervisedUserCircle, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Gestionar Perfiles de Psicólogos", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
@@ -181,6 +196,7 @@ private fun HomeAdminPreview() {
             onPromoverUsuario = {},
             onAsignarHorario = {},
             onDashboard = {},
+            onGestionarPsicologo = {},
             onCerrarSesion = {}
         )
     }

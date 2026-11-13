@@ -65,7 +65,9 @@ class AdminDataSource(
     }
 
     suspend fun obtenerPsicologos(): List<Psicologo> {
-        val snapshot = firestore.collection("psicologos").get().await()
+        val snapshot = firestore.collection("psicologos")
+            .get()
+            .await()
 
         return snapshot.documents.mapNotNull { doc ->
             val activo = doc.getBoolean("activo") ?: false
@@ -154,5 +156,21 @@ class AdminDataSource(
 
         // Subimos todo a Firebase al mismo tiempo
         batch.commit().await()
+    }
+    // Dentro de AdminDataSource.kt
+    suspend fun actualizarPsicologo(
+        psicologoId: String,
+        descripcionProfesional: String,
+        especialidadIds: List<String>,
+        sedeIds: List<String>
+    ): Result<Unit> = runCatching {
+        val psicologoRef = firestore.collection("psicologos").document(psicologoId)
+        psicologoRef.update(
+            mapOf(
+                "descripcionProfesional" to descripcionProfesional,
+                "especialidadIds" to especialidadIds,
+                "sedeIds" to sedeIds
+            )
+        ).await()
     }
 }

@@ -58,4 +58,18 @@ class AdminRepositoryImpl(
             finMinuto
         )
     }
+    override suspend fun actualizarPsicologo(
+        psicologoId: String,
+        descripcionProfesional: String,
+        especialidadIds: List<String>,
+        sedeIds: List<String>
+    ): Result<Unit> = runCatching {
+        adminDataSource.actualizarPsicologo(
+            psicologoId,
+            descripcionProfesional,
+            especialidadIds,
+            sedeIds
+        )
+    }
+
 }
