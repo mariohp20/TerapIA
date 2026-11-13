@@ -40,6 +40,7 @@ val citaModule = module {
     viewModel { HomePacienteViewModel(get(), get(), get()) }
     viewModel { MisCitasViewModel(get(), get()) }
     viewModel { HomePsicologoViewModel(get(), get(), get()) }
+    viewModel { EscannerViewModel(get()) }
 
     // 4. ViewModels con parámetros dinámicos
     viewModel { parameters ->

@@ -45,6 +45,7 @@ import com.pe.terapia.presentation.home.paciente.perfil.PerfilScreen
 import com.pe.terapia.presentation.dashboard.DashboardPacienteScreen
 import kotlinx.serialization.Serializable
 
+@Serializable
 sealed class PacienteTab {
     @Serializable data object Inicio : PacienteTab()
     @Serializable data object MisCitas : PacienteTab()

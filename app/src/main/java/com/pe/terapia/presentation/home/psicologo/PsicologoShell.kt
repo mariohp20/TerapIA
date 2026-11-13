@@ -38,10 +38,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.pe.terapia.presentation.escanner.EscannerScreen
 import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoScreen
 import kotlinx.serialization.Serializable
 import com.pe.terapia.presentation.home.psicologo.perfil.PerfilPsicologoScreen
 
+@Serializable
 sealed class PsicologoTab {
     @Serializable data object Inicio : PsicologoTab()
     @Serializable data object Agenda : PsicologoTab()
@@ -141,6 +143,11 @@ fun PsicologoShell(
                     onCerrarSesion = onCerrarSesion,
                     onGestionarPagos = onGestionarPagos,
                     onIrAHistorialClinico = onIrAHistorialClinico
+                )
+            }
+            composable<PsicologoTab.Escanear> {
+                EscannerScreen(
+                    onVolver = { irATab(PsicologoTab.Inicio) }
                 )
             }
         }

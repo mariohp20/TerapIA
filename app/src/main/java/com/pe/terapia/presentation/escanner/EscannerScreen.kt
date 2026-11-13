@@ -21,6 +21,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import org.koin.androidx.compose.koinViewModel
+import org.koin.androidx.viewmodel.factory.KoinViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
