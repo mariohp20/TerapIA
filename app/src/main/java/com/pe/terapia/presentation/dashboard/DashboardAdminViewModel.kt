@@ -23,9 +23,11 @@ data class DashboardAdminUiState(
     val citasCompletadas: Int = 0,
     val ingresosPen: Double = 0.0,
     val ingresosPorMes: List<DatoMensualAdmin> = emptyList(),
-    val citasPorMes: List<Pair<String, Pair<Int, Int>>> = emptyList(),
+    val citasPorMes: List<ComparativaMensualAdmin> = emptyList(),
     val cargaPorPsicologo: List<CargaPsicologoAdmin> = emptyList()
 )
+
+data class ComparativaMensualAdmin(val periodo: String, val etiqueta: String, val citasProgramadas: Int, val citasCompletadas: Int)
 
 class DashboardAdminViewModel(
     private val obtenerDashboardAdmin: ObtenerDashboardAdminUseCase
@@ -56,8 +58,15 @@ class DashboardAdminViewModel(
                     val months = (0 until cantidadMeses).map { primerMesGrafico.plusMonths(it.toLong()) }
                     val citasMonth = months.map { month ->
                         val rows = data.citas.filter { Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona).toLocalDate().let { d -> YearMonth.from(d) == month } }
-                        month.format(format).replaceFirstChar(Char::uppercase) to
-                            (rows.size to rows.count { it.estado == "COMPLETADA" })
+                        ComparativaMensualAdmin(
+                            periodo = month.toString(),
+                            etiqueta = month.format(format).replaceFirstChar(Char::uppercase),
+                            // La serie representa citas que fueron agendadas y llegaron a tener resultado.
+                            // CANCELADA se excluye del volumen de agenda; COMPLETADA y NO_ASISTIO
+                            // siguen contando como citas programadas para comparar adherencia.
+                            citasProgramadas = rows.count { it.estado != "CANCELADA" },
+                            citasCompletadas = rows.count { it.estado == "COMPLETADA" }
+                        )
                     }
                     val ingresosMonth = months.map { month ->
                         val amount = data.pagos.filter { it.moneda == "PEN" && Instant.ofEpochMilli(it.fechaMillis).atZone(zona).let { d -> YearMonth.from(d) == month } }.sumOf { it.monto }

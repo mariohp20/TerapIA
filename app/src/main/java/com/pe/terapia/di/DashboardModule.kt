@@ -10,6 +10,7 @@ import com.pe.terapia.presentation.dashboard.DashboardPsicologoViewModel
 import com.pe.terapia.domain.usecase.dashboard.ObtenerDashboardPacienteUseCase
 import com.pe.terapia.presentation.dashboard.DashboardPacienteViewModel
 import com.pe.terapia.domain.usecase.dashboard.ObtenerDashboardAdminUseCase
+import com.pe.terapia.domain.usecase.dashboard.ObtenerDashboardPsicologoUseCase
 import com.pe.terapia.presentation.dashboard.DashboardAdminViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
@@ -25,9 +26,10 @@ val dashboardModule = module {
     factory { ObtenerCitasPsicologoUseCase(get()) }
     factory { ObtenerDashboardPacienteUseCase(get()) }
     factory { ObtenerDashboardAdminUseCase(get()) }
+    factory { ObtenerDashboardPsicologoUseCase(get(), get()) }
 
     // Psicologo
-    viewModel {DashboardPsicologoViewModel(get(),get(),get(),get(),get()) }
+    viewModel { DashboardPsicologoViewModel(get(), get()) }
     viewModel { DashboardPacienteViewModel(get(), get()) }
     viewModel { DashboardAdminViewModel(get()) }
 }

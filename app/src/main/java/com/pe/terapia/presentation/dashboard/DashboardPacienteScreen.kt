@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -165,7 +166,10 @@ fun DashboardPacienteScreen(
                                 SinDatosPaciente("Aún no hay sesiones registradas para mostrar")
                             } else {
                                 val maximo = uiState.asistenciasPorMes.maxOfOrNull { it.cantidad }?.coerceAtLeast(1) ?: 1
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(
+                                    modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
                                     uiState.asistenciasPorMes.forEach { mes ->
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(mes.etiqueta, modifier = Modifier.width(48.dp), style = MaterialTheme.typography.bodyMedium)

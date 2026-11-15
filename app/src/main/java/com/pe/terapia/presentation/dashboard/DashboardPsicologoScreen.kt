@@ -1,6 +1,7 @@
 package com.pe.terapia.presentation.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -8,8 +9,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pe.terapia.domain.model.ComparativaMensualPsicologo
+import com.pe.terapia.domain.model.ConteoEtapaPsicologo
+import com.pe.terapia.domain.model.ConteoMensualPsicologo
 import com.pe.terapia.ui.theme.TerapiaTheme
 import ir.ehsannarmani.compose_charts.ColumnChart
 import ir.ehsannarmani.compose_charts.PieChart
@@ -41,15 +48,18 @@ fun DashboardPsicologoScreen(
 
     DashboardPsicologoContent(
         uiState = uiState,
-        onVolver = onVolver
+        onVolver = onVolver,
+        onCambiarPeriodo = viewModel::cargarDashboard
     )
 }
 
 @Composable
 fun DashboardPsicologoContent(
     uiState: DashboardPsicologoUiState,
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    onCambiarPeriodo: (Int) -> Unit = {}
 ) {
+    var filtroExpandido by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -74,7 +84,7 @@ fun DashboardPsicologoContent(
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = "Mi Rendimiento",
                     style = MaterialTheme.typography.headlineSmall,
@@ -87,6 +97,14 @@ fun DashboardPsicologoContent(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
                 )
+            }
+            Box {
+                TextButton(onClick = { filtroExpandido = true }) { Text(etiquetaPeriodoPsicologo(uiState.mesesFiltro)) }
+                DropdownMenu(expanded = filtroExpandido, onDismissRequest = { filtroExpandido = false }) {
+                    listOf(1 to "Este mes", 6 to "6 meses", 12 to "12 meses", 0 to "Todo").forEach { (meses, etiqueta) ->
+                        DropdownMenuItem(text = { Text(etiqueta) }, onClick = { filtroExpandido = false; onCambiarPeriodo(meses) })
+                    }
+                }
             }
         }
 
@@ -141,17 +159,23 @@ fun DashboardPsicologoContent(
                     if (uiState.atencionesPorMes.isEmpty()) {
                         SinDatosPlaceholder("Aún no tienes atenciones registradas")
                     } else {
+                        val scrollState = rememberScrollState()
+                        val requiereDesplazamiento = uiState.atencionesPorMes.size > 6
+                        LaunchedEffect(uiState.atencionesPorMes) { if (requiereDesplazamiento) scrollState.animateScrollTo(scrollState.maxValue) }
+                        Box(Modifier.fillMaxWidth().then(if (requiereDesplazamiento) Modifier.horizontalScroll(scrollState) else Modifier)) {
                         ColumnChart(
-                            modifier = Modifier.fillMaxWidth().height(250.dp),
+                            modifier = (if (requiereDesplazamiento) Modifier.width((uiState.atencionesPorMes.size * 72).dp) else Modifier.fillMaxWidth()).height(250.dp),
                             data = remember(uiState.atencionesPorMes, primaryColor) {
-                                uiState.atencionesPorMes.map { (mes, cantidad) ->
+                                uiState.atencionesPorMes.map { item ->
                                     Bars(
-                                        label = mes,
-                                        values = listOf(Bars.Data(value = cantidad.toDouble(), color = SolidColor(primaryColor)))
+                                        label = item.etiqueta,
+                                        values = listOf(Bars.Data(value = item.cantidad.toDouble(), color = SolidColor(primaryColor)))
                                     )
                                 }
                             }
                         )
+                        }
+                        DeslizadorMesesPsicologo(scrollState, requiereDesplazamiento)
                     }
                 }
 
@@ -185,10 +209,10 @@ fun DashboardPsicologoContent(
                         PieChart(
                             modifier = Modifier.fillMaxWidth().height(220.dp),
                             data = remember(uiState.pacientesPorEtapa, colorPrimario) {
-                                uiState.pacientesPorEtapa.entries.mapIndexed { index, (etapa, cantidad) ->
+                                uiState.pacientesPorEtapa.mapIndexed { index, item ->
                                     Pie(
-                                        label = etapa,
-                                        data = cantidad.toDouble(),
+                                        label = item.nombre,
+                                        data = item.cantidad.toDouble(),
                                         color = colores.getOrElse(index % colores.size) { Color.Gray },
                                         selectedColor = Color.DarkGray
                                     )
@@ -200,7 +224,7 @@ fun DashboardPsicologoContent(
 
                         // Componente de Leyenda Desacoplado
                         LeyendaPieChart(
-                            datos = uiState.pacientesPorEtapa,
+                            datos = uiState.pacientesPorEtapa.associate { it.nombre to it.cantidad },
                             colores = colores
                         )
                     }
@@ -228,7 +252,7 @@ fun DashboardPsicologoContent(
                     val colorAtenciones = MaterialTheme.colorScheme.primary
                     val colorCitas = MaterialTheme.colorScheme.outline
 
-                    if (uiState.comparativaAsistencia.all { it.second == 0 }) {
+                    if (uiState.comparativaAsistencia.all { it.citas == 0 }) {
                         SinDatosPlaceholder("Faltan datos de citas para generar la comparativa")
                     } else {
                         LineChart(
@@ -237,12 +261,12 @@ fun DashboardPsicologoContent(
                                 listOf(
                                     Line(
                                         label = "Programadas",
-                                        values = uiState.comparativaAsistencia.map { it.second.toDouble() },
+                                        values = uiState.comparativaAsistencia.map { it.citas.toDouble() },
                                         color = SolidColor(colorCitas)
                                     ),
                                     Line(
                                         label = "Realizadas",
-                                        values = uiState.comparativaAsistencia.map { it.third.toDouble() },
+                                        values = uiState.comparativaAsistencia.map { it.atenciones.toDouble() },
                                         color = SolidColor(colorAtenciones)
                                     )
                                 )
@@ -273,6 +297,31 @@ fun DashboardPsicologoContent(
                 }
                 Spacer(modifier = Modifier.height(40.dp))
             }
+        }
+    }
+}
+
+private fun etiquetaPeriodoPsicologo(meses: Int) = when (meses) {
+    0 -> "Todo ▾"
+    1 -> "Este mes ▾"
+    else -> "$meses meses ▾"
+}
+
+@Composable
+private fun DeslizadorMesesPsicologo(scrollState: androidx.compose.foundation.ScrollState, visible: Boolean) {
+    if (!visible) return
+    val scope = rememberCoroutineScope()
+    val maximo = scrollState.maxValue.coerceAtLeast(1)
+    Column {
+        Slider(
+            value = scrollState.value.toFloat().coerceIn(0f, maximo.toFloat()),
+            onValueChange = { valor -> scope.launch { scrollState.scrollTo(valor.roundToInt()) } },
+            valueRange = 0f..maximo.toFloat(),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Más antiguo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Más reciente", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -332,15 +381,11 @@ fun DashboardPsicologoPreview() {
         DashboardPsicologoContent(
             uiState = DashboardPsicologoUiState(
                 cargando = false,
-                atencionesPorMes = mapOf("Jul" to 15, "Ago" to 30, "Sep" to 22, "Oct" to 40),
-                pacientesPorEtapa = mapOf("Evaluación" to 10, "Intervención" to 25, "Cierre" to 5),
+                atencionesPorMes = listOf(ConteoMensualPsicologo("2026-07", "Jul 26", 15), ConteoMensualPsicologo("2026-08", "Ago 26", 30)),
+                pacientesPorEtapa = listOf(ConteoEtapaPsicologo("Evaluación", 10), ConteoEtapaPsicologo("Intervención", 25), ConteoEtapaPsicologo("Cierre", 5)),
                 comparativaAsistencia = listOf(
-                    Triple("Jul", 20, 15),
-                    Triple("Ago", 35, 30),
-                    Triple("Sep", 30, 22),
-                    Triple("Oct", 45, 40),
-                    Triple("Nov", 15, 15),
-                    Triple("Dic", 5, 2)
+                    ComparativaMensualPsicologo("2026-07", "Jul 26", 20, 15),
+                    ComparativaMensualPsicologo("2026-08", "Ago 26", 35, 30)
                 )
             ),
             onVolver = {}

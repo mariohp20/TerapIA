@@ -9,19 +9,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +49,9 @@ fun DashboardAdminScreen(
     var busqueda by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { viewModel.cargar() }
     val color = MaterialTheme.colorScheme.primary
+    val textoEjes = MaterialTheme.colorScheme.onSurface
+    val colorProgramadas = MaterialTheme.colorScheme.tertiary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
         Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp),
@@ -92,12 +102,23 @@ fun DashboardAdminScreen(
                         Text("Pagos registrados como pagados en soles", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(12.dp))
                         if (state.ingresosPorMes.all { it.cantidad == 0.0 }) TextoSinDatos("Aún no hay pagos pagados en este período.")
-                        else ColumnChart(
-                            Modifier.fillMaxWidth().height(220.dp),
-                            data = state.ingresosPorMes.map { item ->
-                                Bars(label = item.etiqueta, values = listOf(Bars.Data(value = item.cantidad, color = SolidColor(color))))
+                        else {
+                            val scrollState = rememberScrollState()
+                            val requiereDesplazamiento = state.ingresosPorMes.size > 6
+                            LaunchedEffect(state.ingresosPorMes) { if (requiereDesplazamiento) scrollState.animateScrollTo(scrollState.maxValue) }
+                            Box(Modifier.fillMaxWidth().then(if (requiereDesplazamiento) Modifier.horizontalScroll(scrollState) else Modifier)) {
+                            ColumnChart(
+                                (if (requiereDesplazamiento) Modifier.width((state.ingresosPorMes.size * 76).dp) else Modifier.fillMaxWidth()).height(250.dp),
+                                data = state.ingresosPorMes.map { item ->
+                                    Bars(label = item.etiqueta, values = listOf(Bars.Data(value = item.cantidad, color = SolidColor(color))))
+                                },
+                                labelProperties = ir.ehsannarmani.compose_charts.models.LabelProperties(enabled = true, textStyle = TextStyle(color = textoEjes, fontSize = 10.sp), rotationDegreeOnSizeConflict = 0f),
+                                indicatorProperties = ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties(textStyle = TextStyle(color = textoEjes, fontSize = 10.sp)),
+                                gridProperties = ir.ehsannarmani.compose_charts.models.GridProperties(xAxisProperties = ir.ehsannarmani.compose_charts.models.GridProperties.AxisProperties(color = SolidColor(gridColor)), yAxisProperties = ir.ehsannarmani.compose_charts.models.GridProperties.AxisProperties(color = SolidColor(gridColor)))
+                            )
                             }
-                        )
+                            DeslizadorGrafico(scrollState, requiereDesplazamiento)
+                        }
                     }
                 }
                 Card(Modifier.fillMaxWidth()) {
@@ -105,14 +126,52 @@ fun DashboardAdminScreen(
                         Text("Citas programadas y atendidas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("Comparación por mes · citas completadas cuentan como atendidas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(12.dp))
-                        if (state.citasPorMes.all { it.second.first == 0 }) TextoSinDatos("No hay citas en este período.")
-                        else LineChart(
-                            Modifier.fillMaxWidth().height(220.dp),
-                            data = listOf(
-                                Line("Programadas", state.citasPorMes.map { it.second.first.toDouble() }, SolidColor(MaterialTheme.colorScheme.outline)),
-                                Line("Atendidas", state.citasPorMes.map { it.second.second.toDouble() }, SolidColor(color))
-                            )
-                        )
+                        if (state.citasPorMes.all { it.citasProgramadas == 0 && it.citasCompletadas == 0 }) TextoSinDatos("No hay citas en este período.")
+                        else Column {
+                            val scrollState = rememberScrollState()
+                            val requiereDesplazamiento = state.citasPorMes.size > 6
+                            LaunchedEffect(state.citasPorMes) { if (requiereDesplazamiento) scrollState.animateScrollTo(scrollState.maxValue) }
+                            if (state.citasPorMes.size == 1) {
+                                val mes = state.citasPorMes.single()
+                                Text(mes.etiqueta, modifier = Modifier.align(Alignment.CenterHorizontally), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                ColumnChart(
+                                    Modifier.fillMaxWidth().height(230.dp),
+                                    data = buildList {
+                                        if (mes.citasProgramadas > 0) add(Bars("Programadas", listOf(Bars.Data(value = mes.citasProgramadas.toDouble(), color = SolidColor(colorProgramadas)))))
+                                        if (mes.citasCompletadas > 0) add(Bars("Atendidas", listOf(Bars.Data(value = mes.citasCompletadas.toDouble(), color = SolidColor(color)))))
+                                    },
+                                    labelProperties = ir.ehsannarmani.compose_charts.models.LabelProperties(enabled = true, textStyle = TextStyle(color = textoEjes, fontSize = 10.sp), rotationDegreeOnSizeConflict = 0f),
+                                    indicatorProperties = ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties(textStyle = TextStyle(color = textoEjes, fontSize = 10.sp)),
+                                    gridProperties = ir.ehsannarmani.compose_charts.models.GridProperties(xAxisProperties = ir.ehsannarmani.compose_charts.models.GridProperties.AxisProperties(color = SolidColor(gridColor)), yAxisProperties = ir.ehsannarmani.compose_charts.models.GridProperties.AxisProperties(color = SolidColor(gridColor)))
+                                )
+                                if (mes.citasCompletadas == 0) {
+                                    Text("Atendidas: 0 · sin atenciones registradas este mes", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            } else Box(Modifier.fillMaxWidth().then(if (requiereDesplazamiento) Modifier.horizontalScroll(scrollState) else Modifier)) {
+                                LineChart(
+                                    (if (requiereDesplazamiento) Modifier.width((state.citasPorMes.size * 76).dp) else Modifier.fillMaxWidth()).height(250.dp),
+                                    data = listOf(
+                                        Line("Programadas", state.citasPorMes.map { it.citasProgramadas.toDouble() }, SolidColor(colorProgramadas)),
+                                        Line("Atendidas", state.citasPorMes.map { it.citasCompletadas.toDouble() }, SolidColor(color))
+                                    ),
+                                    dotsProperties = ir.ehsannarmani.compose_charts.models.DotProperties(enabled = false),
+                                    labelHelperProperties = ir.ehsannarmani.compose_charts.models.LabelHelperProperties(enabled = false),
+                                    labelProperties = ir.ehsannarmani.compose_charts.models.LabelProperties(
+                                        enabled = true,
+                                        labels = state.citasPorMes.map { it.etiqueta },
+                                        textStyle = TextStyle(color = textoEjes, fontSize = 10.sp),
+                                        rotationDegreeOnSizeConflict = 0f
+                                    ),
+                                    indicatorProperties = ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties(textStyle = TextStyle(color = textoEjes, fontSize = 10.sp)),
+                                    gridProperties = ir.ehsannarmani.compose_charts.models.GridProperties(xAxisProperties = ir.ehsannarmani.compose_charts.models.GridProperties.AxisProperties(color = SolidColor(gridColor)), yAxisProperties = ir.ehsannarmani.compose_charts.models.GridProperties.AxisProperties(color = SolidColor(gridColor)))
+                                )
+                            }
+                            DeslizadorGrafico(scrollState, requiereDesplazamiento)
+                            Row(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(top = 8.dp)) {
+                                if (state.citasPorMes.any { it.citasProgramadas > 0 }) LeyendaSerie("Programadas", colorProgramadas)
+                                if (state.citasPorMes.any { it.citasCompletadas > 0 }) LeyendaSerie("Atendidas", color)
+                            }
+                        }
                     }
                 }
                 Card(Modifier.fillMaxWidth()) {
@@ -148,6 +207,34 @@ private fun etiquetaPeriodoAdmin(meses: Int): String = when (meses) {
     0 -> "Todo"
     1 -> "Este mes"
     else -> "$meses meses"
+}
+
+@Composable
+private fun DeslizadorGrafico(scrollState: androidx.compose.foundation.ScrollState, visible: Boolean) {
+    if (!visible) return
+    val scope = rememberCoroutineScope()
+    val maximo = scrollState.maxValue.coerceAtLeast(1)
+    Column {
+        Slider(
+            value = scrollState.value.toFloat().coerceIn(0f, maximo.toFloat()),
+            onValueChange = { valor -> scope.launch { scrollState.scrollTo(valor.roundToInt()) } },
+            valueRange = 0f..maximo.toFloat(),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Más antiguo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Más reciente", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun LeyendaSerie(texto: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(12.dp).height(12.dp).background(color, RoundedCornerShape(50)))
+        Spacer(Modifier.width(6.dp))
+        Text(texto, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelMedium)
+    }
 }
 
 @Composable
