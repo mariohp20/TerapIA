@@ -38,32 +38,49 @@ fun DashboardAdminScreen(
     viewModel: DashboardAdminViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var expanded by remember { mutableStateOf(false) }
+    var filtroExpandido by remember { mutableStateOf(false) }
     var busqueda by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        viewModel.cargar()
+        viewModel.cargarDashboard()
     }
 
     val color = MaterialTheme.colorScheme.primary
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primaryContainer)
+    ) {
         Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp),
+            Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
             Column(Modifier.weight(1f)) {
-                Text("Dashboard de la clínica", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("Indicadores administrativos", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Dashboard de la clínica",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Indicadores administrativos",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Box {
-                TextButton(onClick = { expanded = true }) { Text(etiquetaPeriodoAdmin(state.meses) + " ▾") }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    listOf(1, 3, 6, 0).forEach { months ->
-                        DropdownMenuItem(text = { Text(etiquetaPeriodoAdmin(months)) }, onClick = {
-                            expanded = false
-                            viewModel.cargar(months)
+                TextButton(onClick = {
+                    filtroExpandido = true
+                }) { Text(etiquetaPeriodoFiltro(state.meses) + " ▾") }
+                DropdownMenu(expanded = filtroExpandido, onDismissRequest = { filtroExpandido = false }) {
+                    listOf(1, 3, 6, 0).forEach { meses ->
+                        DropdownMenuItem(text = { Text(etiquetaPeriodoFiltro(meses)) }, onClick = {
+                            filtroExpandido = false
+                            viewModel.cargarDashboard(meses)
                         })
                     }
                 }
@@ -73,84 +90,177 @@ fun DashboardAdminScreen(
             modifier = Modifier.fillMaxSize(),
             shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
             color = MaterialTheme.colorScheme.background
-        ) { when {
-            state.cargando -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            state.error != null -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = { viewModel.cargar(state.meses) }) { Text("Reintentar") }
-                }
-            }
-            else -> Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    IndicadorAdmin("Citas", state.totalCitas.toString(), Modifier.weight(1f))
-                    IndicadorAdmin("Atendidas", state.citasCompletadas.toString(), Modifier.weight(1f))
-                }
-                IndicadorAdmin("Ingresos registrados · PEN", "S/ ${"%.2f".format(state.ingresosPen)}", Modifier.fillMaxWidth())
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(18.dp)) {
-                        Text("Ingresos por mes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text("Pagos registrados como pagados en soles", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(12.dp))
-                        if (state.ingresosPorMes.all { it.cantidad == 0.0 }) TextoSinDatos("Aún no hay pagos pagados en este período.")
-                        else TerapiaColumnChart(
-                            modifier = Modifier.fillMaxWidth().height(220.dp),
-                            data = state.ingresosPorMes.map { item ->
-                                Bars(label = item.etiqueta, values = listOf(Bars.Data(label = "Ingresos", value = item.cantidad, color = SolidColor(color))))
-                            }
-                        )
+        ) {
+            when {
+                state.cargando -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+
+                state.error != null -> Box(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(24.dp), contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { viewModel.cargarDashboard(state.meses) }) { Text("Reintentar") }
                     }
                 }
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(18.dp)) {
-                        Text("Citas programadas y atendidas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text("Comparación por mes · citas completadas cuentan como atendidas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(12.dp))
-                        if (state.citasPorMes.all { it.second.first == 0 }) TextoSinDatos("No hay citas en este período.")
-                        else TerapiaLineChart(
-                            modifier = Modifier.fillMaxWidth().height(220.dp),
-                            labels = state.citasPorMes.map { it.first },
-                            data = listOf(
-                                Line("Programadas", state.citasPorMes.map { it.second.first.toDouble() }, SolidColor(MaterialTheme.colorScheme.outline)),
-                                Line("Atendidas", state.citasPorMes.map { it.second.second.toDouble() }, SolidColor(color))
+
+                else -> Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 22.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        IndicadorAdmin("Citas", state.totalCitas.toString(), Modifier.weight(1f))
+                        IndicadorAdmin(
+                            "Atendidas",
+                            state.citasCompletadas.toString(),
+                            Modifier.weight(1f)
+                        )
+                    }
+                    IndicadorAdmin(
+                        "Ingresos registrados · PEN",
+                        "S/ ${"%.2f".format(state.ingresosPen)}",
+                        Modifier.fillMaxWidth()
+                    )
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text(
+                                "Ingresos por mes",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
                             )
-                        )
+                            Text(
+                                "Pagos registrados como pagados en soles",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            if (state.ingresosPorMes.all { it.cantidad == 0.0 }) TextoSinDatos("Aún no hay pagos pagados en este período.")
+                            else TerapiaColumnChart(
+                                modifier = Modifier.fillMaxWidth().height(220.dp),
+                                data = remember(state.ingresosPorMes, color) {
+                                    state.ingresosPorMes.map { item ->
+                                        Bars(
+                                            label = item.etiqueta,
+                                            values = listOf(
+                                                Bars.Data(
+                                                    label = "Ingresos",
+                                                    value = item.cantidad,
+                                                    color = SolidColor(color)
+                                                )
+                                            )
+                                        )
+                                    }
+                                }
+                            )
+                        }
                     }
-                }
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(18.dp)) {
-                        Text("Atenciones por psicólogo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text("Solo citas con estado COMPLETADA", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = busqueda,
-                            onValueChange = { busqueda = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            label = { Text("Buscar psicólogo") },
-                            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) }
-                        )
-                        val filtered = state.cargaPorPsicologo.filter { it.nombre.contains(busqueda, ignoreCase = true) }
-                        Spacer(Modifier.height(12.dp))
-                        if (filtered.isEmpty()) TextoSinDatos(if (busqueda.isBlank()) "Todavía no hay atenciones registradas." else "No hay resultados para esa búsqueda.")
-                        else TerapiaRowChart(
-                            modifier = Modifier.fillMaxWidth().height((filtered.size * 58).coerceIn(150, 360).dp),
-                            data = filtered.map { item ->
-                                Bars(label = item.nombre, values = listOf(Bars.Data(label = "Atenciones", value = item.atenciones.toDouble(), color = SolidColor(color))))
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text(
+                                "Citas programadas y atendidas",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Comparación por mes · citas completadas cuentan como atendidas",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            if (state.citasPorMes.all { it.second.first == 0 }) TextoSinDatos("No hay citas en este período.")
+                            else {
+                                val colorPrimario = MaterialTheme.colorScheme.primary
+                                val colorSecundario = MaterialTheme.colorScheme.outline
+                                TerapiaLineChart(
+                                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                                    labels = state.citasPorMes.map { it.first },
+                                    data = remember(state.citasPorMes, colorPrimario, colorSecundario) {
+                                        listOf(
+                                            Line(
+                                                label = "Programadas",
+                                                values = state.citasPorMes.map { it.second.first.toDouble() },
+                                                color = SolidColor(colorSecundario)
+                                            ),
+                                            Line(
+                                                label = "Atendidas",
+                                                values = state.citasPorMes.map { it.second.second.toDouble() },
+                                                color = SolidColor(colorPrimario)
+                                            )
+                                        )
+                                    }
+                                )
                             }
-                        )
+                        }
+                    }
+
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text(
+                                "Atenciones por psicólogo",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Solo citas con estado COMPLETADA",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = busqueda,
+                                onValueChange = { busqueda = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("Buscar psicólogo") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.Search,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            val filtered = state.cargaPorPsicologo.filter {
+                                it.nombre.contains(
+                                    busqueda,
+                                    ignoreCase = true
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            if (filtered.isEmpty()) TextoSinDatos(if (busqueda.isBlank()) "Todavía no hay atenciones registradas." else "No hay resultados para esa búsqueda.")
+                            else TerapiaRowChart(
+                                modifier = Modifier.fillMaxWidth().height((filtered.size * 58).coerceIn(150, 360).dp),
+                                data = remember(filtered, color) {
+                                    filtered.map { item ->
+                                        Bars(
+                                            label = item.nombre,
+                                            values = listOf(
+                                                Bars.Data(
+                                                    label = "Atenciones",
+                                                    value = item.atenciones.toDouble(),
+                                                    color = SolidColor(color)
+                                                )
+                                            )
+                                        )
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
-        } }
+        }
     }
 }
 
-private fun etiquetaPeriodoAdmin(meses: Int): String = when (meses) {
+private fun etiquetaPeriodoFiltro(meses: Int): String = when (meses) {
     0 -> "Todo"
     1 -> "Este mes"
     else -> "$meses meses"
@@ -158,16 +268,29 @@ private fun etiquetaPeriodoAdmin(meses: Int): String = when (meses) {
 
 @Composable
 private fun IndicadorAdmin(titulo: String, valor: String, modifier: Modifier = Modifier) {
-    Card(modifier) { Column(Modifier.padding(18.dp)) {
-        Text(titulo, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(4.dp))
-        Text(valor, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-    } }
+    Card(modifier) {
+        Column(Modifier.padding(18.dp)) {
+            Text(
+                titulo,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                valor,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
 }
 
 @Composable
 private fun TextoSinDatos(texto: String) {
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier
+        .fillMaxWidth()
+        .height(110.dp), contentAlignment = Alignment.Center) {
         Text(texto, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

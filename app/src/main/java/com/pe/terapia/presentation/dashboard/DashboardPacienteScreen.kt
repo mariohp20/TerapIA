@@ -61,49 +61,37 @@ fun DashboardPacienteScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.primaryContainer)
     ) {
-        Column(
-            modifier = Modifier
+        Row(
+            Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onVolver) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
+            IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
+            Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Mi progreso",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.SemiBold
+                    "Mi progreso",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Un resumen de tus sesiones y asistencia",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Un resumen de tus sesiones y asistencia",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Box {
-                    TextButton(onClick = { filtroExpandido = true }) {
-                        Text(when (uiState.mesesFiltro) {
-                            0 -> "Todo el historial ▾"
-                            1 -> "Este mes ▾"
-                            else -> "Últimos ${uiState.mesesFiltro} meses ▾"
+
+            Box {
+                TextButton(onClick = {
+                    filtroExpandido = true
+                }) { Text(etiquetaPeriodoFiltro(uiState.mesesFiltro) + " ▾") }
+                DropdownMenu(expanded = filtroExpandido, onDismissRequest = { filtroExpandido = false }) {
+                    listOf(1, 3, 6, 0).forEach { meses ->
+                        DropdownMenuItem(text = { Text(etiquetaPeriodoFiltro(meses)) }, onClick = {
+                            filtroExpandido = false
+                            viewModel.cargarDashboard(meses)
                         })
-                    }
-                    DropdownMenu(expanded = filtroExpandido, onDismissRequest = { filtroExpandido = false }) {
-                        listOf(1 to "Este mes", 3 to "Últimos 3 meses", 6 to "Últimos 6 meses", 0 to "Todo el historial")
-                            .forEach { (meses, etiqueta) ->
-                                DropdownMenuItem(
-                                    text = { Text(etiqueta) },
-                                    onClick = {
-                                        filtroExpandido = false
-                                        viewModel.cargarDashboard(meses)
-                                    }
-                                )
-                            }
                     }
                 }
             }
@@ -225,7 +213,11 @@ private fun textoPeriodo(meses: Int): String = when (meses) {
     1 -> "Este mes"
     else -> "Últimos $meses meses"
 }
-
+private fun etiquetaPeriodoFiltro(meses: Int): String = when (meses) {
+    0 -> "Todo"
+    1 -> "Este mes"
+    else -> "$meses meses"
+}
 @Composable
 private fun SinDatosPaciente(mensaje: String) {
     Box(

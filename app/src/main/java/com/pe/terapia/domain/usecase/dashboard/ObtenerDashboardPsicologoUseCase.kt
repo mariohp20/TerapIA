@@ -9,7 +9,6 @@ import com.pe.terapia.domain.usecase.historiaclinica.ObtenerTiposEtapasUseCase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
-// 1. EL MODELO CONSOLIDADO (Actualizado con clases ligeras)
 data class DatosDashboardPsicologo(
     val atenciones: List<AtencionPsicologoResumen>,
     val etapasActivas: List<EtapaPsicologoResumen>,
@@ -17,7 +16,6 @@ data class DatosDashboardPsicologo(
     val tiposEtapas: List<TipoEtapa>
 )
 
-// 2. EL CASO DE USO FACHADA
 class ObtenerDashboardPsicologoUseCase(
     private val repository: DashboardRepository,
     private val obtenerTiposEtapasUseCase: ObtenerTiposEtapasUseCase
