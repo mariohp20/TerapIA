@@ -1,25 +1,26 @@
 package com.pe.terapia.data.repository
 
 import com.pe.terapia.data.remote.firebase.DashboardDataSource
-import com.pe.terapia.domain.model.Atencion
-import com.pe.terapia.domain.model.EtapaClinica
+import com.pe.terapia.domain.model.AtencionPsicologoResumen
 import com.pe.terapia.domain.repository.DashboardRepository
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.AtencionResumenDashboard
+import com.pe.terapia.domain.model.CitaAdminResumen
 import com.pe.terapia.domain.model.DashboardAdminData
+import com.pe.terapia.domain.model.EtapaPsicologoResumen
 
 class DashboardRepositoryImpl(
     private val dataSource: DashboardDataSource
 ) : DashboardRepository {
 
-    override suspend fun obtenerAtencionesPsicologo(psicologoId: String): Result<List<Atencion>> = runCatching {
+    override suspend fun obtenerAtencionesPsicologo(psicologoId: String): Result<List<AtencionPsicologoResumen>> = runCatching {
         dataSource.obtenerAtencionesPorPsicologo(psicologoId)
     }
 
-    override suspend fun obtenerEtapasActivasPsicologo(psicologoId: String): Result<List<EtapaClinica>> = runCatching {
+    override suspend fun obtenerEtapasActivasPsicologo(psicologoId: String): Result<List<EtapaPsicologoResumen>> = runCatching {
         dataSource.obtenerEtapasActivasPorPsicologo(psicologoId)
     }
-    override suspend fun obtenerCitasPorPsicologo(psicologoId: String): Result<List<Cita>> = runCatching {
+    override suspend fun obtenerCitasPorPsicologo(psicologoId: String): Result<List<CitaAdminResumen>> = runCatching {
         dataSource.obtenerCitasPorPsicologo(psicologoId)
     }
 

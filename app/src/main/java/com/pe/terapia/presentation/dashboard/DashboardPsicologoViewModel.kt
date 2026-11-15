@@ -3,42 +3,43 @@ package com.pe.terapia.presentation.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
-import com.pe.terapia.domain.usecase.dashboard.ObtenerAtencionesPsicologoUseCase
-import com.pe.terapia.domain.usecase.dashboard.ObtenerCitasPsicologoUseCase
-import com.pe.terapia.domain.usecase.dashboard.ObtenerEtapasActivasPsicologoUseCase
-import com.pe.terapia.domain.usecase.historiaclinica.ObtenerTiposEtapasUseCase
+import com.pe.terapia.domain.usecase.dashboard.ObtenerDashboardPsicologoUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+data class ComparativaAsistenciaPsicologo(
+    val mes: String,
+    val programadas: Int,
+    val realizadas: Int
+)
 
 data class DashboardPsicologoUiState(
     val cargando: Boolean = true,
     val error: String? = null,
     val atencionesPorMes: Map<String, Int> = emptyMap(),
     val pacientesPorEtapa: Map<String, Int> = emptyMap(),
-    val comparativaAsistencia: List<Triple<String, Int, Int>> = emptyList()
+    val comparativaAsistencia: List<ComparativaAsistenciaPsicologo> = emptyList(),
+    val mesesFiltro: Int = 6
 )
 
 class DashboardPsicologoViewModel(
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
-    private val obtenerAtencionesPsicologoUseCase: ObtenerAtencionesPsicologoUseCase,
-    private val obtenerEtapasActivasPsicologoUseCase: ObtenerEtapasActivasPsicologoUseCase,
-    private val obtenerTiposEtapasUseCase: ObtenerTiposEtapasUseCase,
-    private val obtenerCitasPsicologoUseCase: ObtenerCitasPsicologoUseCase
+    private val obtenerDashboardPsicologoUseCase: ObtenerDashboardPsicologoUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardPsicologoUiState())
     val uiState: StateFlow<DashboardPsicologoUiState> = _uiState.asStateFlow()
 
-    fun cargarDashboard() {
+    fun cargarDashboard(meses: Int = _uiState.value.mesesFiltro) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(cargando = true, error = null)
+            _uiState.value = _uiState.value.copy(cargando = true, error = null, mesesFiltro = meses)
 
             val usuario = obtenerUsuarioActualUseCase().getOrNull()
             if (usuario == null) {
@@ -49,66 +50,77 @@ class DashboardPsicologoViewModel(
                 return@launch
             }
 
-            val psicologoId = usuario.uid
+            obtenerDashboardPsicologoUseCase(usuario.uid).fold(
+                onSuccess = { datos ->
+                    val zona = ZoneId.of("America/Lima")
+                    val mesActual = YearMonth.now(zona)
+                    val formateadorMes = DateTimeFormatter.ofPattern("MMM", Locale("es", "ES"))
 
-            val atencionesResult = obtenerAtencionesPsicologoUseCase(psicologoId)
-            val etapasResult = obtenerEtapasActivasPsicologoUseCase(psicologoId)
-            val citasResult = obtenerCitasPsicologoUseCase(psicologoId)
-            val tiposEtapasResult = obtenerTiposEtapasUseCase()
-            val errorConsulta = listOf(atencionesResult, etapasResult, citasResult, tiposEtapasResult)
-                .firstNotNullOfOrNull { it.exceptionOrNull() }
-            if (errorConsulta != null) {
-                _uiState.value = _uiState.value.copy(
-                    cargando = false,
-                    error = "No se pudieron leer los datos del dashboard. Revisa las reglas de Firestore: ${errorConsulta.message ?: "permiso denegado"}"
-                )
-                return@launch
-            }
-            val atenciones = atencionesResult.getOrThrow()
-            val etapas = etapasResult.getOrThrow()
-            val citas = citasResult.getOrThrow()
-            val tiposEtapas = tiposEtapasResult.getOrThrow()
+                    // PIE CHART: Pacientes por Etapa
+                    val mapaNombresEtapas = datos.tiposEtapas.associate { it.id to it.nombre }
+                    val agrupadoPorEtapa = datos.etapasActivas
+                        .groupBy { mapaNombresEtapas[it.tipoEtapaId] ?: "Desconocido" }
+                        .mapValues { it.value.size }
 
-            // PieChart
-            val mapaNombresEtapas = tiposEtapas.associate { it.id to it.nombre }
-            val agrupadoPorEtapa = etapas
-                .groupBy { mapaNombresEtapas[it.tipoEtapaId] ?: "Desconocido" }
-                .mapValues { it.value.size }
+                    val fechasDisponibles = datos.atenciones.map { YearMonth.from(Instant.ofEpochMilli(it.fechaAtencionEpochMillis).atZone(zona)) } +
+                            datos.citas.filter { it.inicioEpochMillis > 0 }.map { YearMonth.from(Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)) }
 
-            val formateadorMes = DateTimeFormatter.ofPattern("MMM", Locale("es", "ES"))
+                    val primerMesBase = when {
+                        meses == 0 -> fechasDisponibles.minOrNull() ?: mesActual
+                        else -> mesActual.minusMonths((meses - 1).coerceAtLeast(0).toLong())
+                    }
 
-            // ColumnChart
-            val agrupadoAtenciones = atenciones
-                .groupBy {
-                    it.fechaAtencion.atZone(ZoneId.systemDefault()).toLocalDate().format(formateadorMes).replaceFirstChar { c -> c.uppercase() }
+                    val mesesDeDatos = (mesActual.year - primerMesBase.year) * 12 + mesActual.monthValue - primerMesBase.monthValue + 1
+                    val primerMes = if (meses == 0 && mesesDeDatos > 60) mesActual.minusMonths(59) else primerMesBase
+
+                    val cantidadMeses = ((mesActual.year - primerMes.year) * 12 + mesActual.monthValue - primerMes.monthValue + 1).coerceIn(1, 60)
+
+                    val mesesGrafico = (0 until cantidadMeses).map { desplazamiento ->
+                        primerMes.plusMonths(desplazamiento.toLong())
+                    }
+
+                    // COLUMN CHART: Atenciones por Mes
+                    val atencionesFiltradas = datos.atenciones.filter { atencion ->
+                        YearMonth.from(Instant.ofEpochMilli(atencion.fechaAtencionEpochMillis).atZone(zona)) in primerMes..mesActual
+                    }
+                    val atencionesPorYearMonth = atencionesFiltradas
+                        .groupingBy { YearMonth.from(Instant.ofEpochMilli(it.fechaAtencionEpochMillis).atZone(zona)) }
+                        .eachCount()
+
+                    val agrupadoAtenciones = mesesGrafico.associate { mes ->
+                        mes.format(formateadorMes).replaceFirstChar { it.uppercase() } to (atencionesPorYearMonth[mes] ?: 0)
+                    }
+
+                    // LINE CHART: Comparativa
+                    val citasFiltradas = datos.citas.filter { cita ->
+                        cita.inicioEpochMillis > 0 && YearMonth.from(Instant.ofEpochMilli(cita.inicioEpochMillis).atZone(zona)) in primerMes..mesActual
+                    }
+                    val citasPorYearMonth = citasFiltradas
+                        .groupingBy { YearMonth.from(Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)) }
+                        .eachCount()
+
+                    val comparativaAlineada = mesesGrafico.map { mes ->
+                        val nombreMes = mes.format(formateadorMes).replaceFirstChar { it.uppercase() }
+                        ComparativaAsistenciaPsicologo(
+                            mes = nombreMes,
+                            programadas = citasPorYearMonth[mes] ?: 0,
+                            realizadas = atencionesPorYearMonth[mes] ?: 0
+                        )
+                    }
+
+                    _uiState.value = _uiState.value.copy(
+                        cargando = false,
+                        pacientesPorEtapa = agrupadoPorEtapa,
+                        atencionesPorMes = agrupadoAtenciones,
+                        comparativaAsistencia = comparativaAlineada
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        cargando = false,
+                        error = error.message ?: "No se pudo cargar el dashboard. Verifique su conexión."
+                    )
                 }
-                .mapValues { it.value.size }
-
-            // LineChart
-            val agrupadoCitas = citas
-                .groupBy { cita ->
-                    Instant.ofEpochMilli(cita.inicioEpochMillis).atZone(ZoneId.systemDefault()).toLocalDate().format(formateadorMes).replaceFirstChar { c -> c.uppercase() }
-                }
-                .mapValues { it.value.size }
-
-            val ultimos6Meses = (5 downTo 0).map { mesesAtras ->
-                LocalDate.now().minusMonths(mesesAtras.toLong())
-                    .format(formateadorMes).replaceFirstChar { it.uppercase() }
-            }
-
-            val comparativaAlineada = ultimos6Meses.map { mes ->
-                Triple(
-                    mes,
-                    agrupadoCitas[mes] ?: 0,
-                    agrupadoAtenciones[mes] ?: 0
-                )
-            }
-
-            _uiState.value = _uiState.value.copy(
-                cargando = false,
-                pacientesPorEtapa = agrupadoPorEtapa,
-                atencionesPorMes = agrupadoAtenciones,
-                comparativaAsistencia = comparativaAlineada
             )
         }
     }

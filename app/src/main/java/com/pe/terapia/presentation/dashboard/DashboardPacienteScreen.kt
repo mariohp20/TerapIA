@@ -96,7 +96,7 @@ fun DashboardPacienteScreen(
                         })
                     }
                     DropdownMenu(expanded = filtroExpandido, onDismissRequest = { filtroExpandido = false }) {
-                        listOf(1 to "Este mes", 6 to "Últimos 6 meses", 12 to "Últimos 12 meses", 0 to "Todo el historial")
+                        listOf(1 to "Este mes", 3 to "Últimos 3 meses", 6 to "Últimos 6 meses", 0 to "Todo el historial")
                             .forEach { (meses, etiqueta) ->
                                 DropdownMenuItem(
                                     text = { Text(etiqueta) },

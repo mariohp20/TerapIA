@@ -16,17 +16,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.pe.terapia.ui.theme.TerapiaTheme
 import ir.ehsannarmani.compose_charts.ColumnChart
+import ir.ehsannarmani.compose_charts.LineChart
 import ir.ehsannarmani.compose_charts.PieChart
 import ir.ehsannarmani.compose_charts.models.Bars
+import ir.ehsannarmani.compose_charts.models.Line
 import ir.ehsannarmani.compose_charts.models.Pie
 import org.koin.androidx.compose.koinViewModel
-import ir.ehsannarmani.compose_charts.LineChart
-import ir.ehsannarmani.compose_charts.models.Line
 
 @Composable
 fun DashboardPsicologoScreen(
@@ -34,244 +32,234 @@ fun DashboardPsicologoScreen(
     viewModel: DashboardPsicologoViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var filtroExpandido by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.cargarDashboard()
     }
 
-    DashboardPsicologoContent(
-        uiState = uiState,
-        onVolver = onVolver
-    )
-}
-
-@Composable
-fun DashboardPsicologoContent(
-    uiState: DashboardPsicologoUiState,
-    onVolver: () -> Unit
-) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.primaryContainer)
     ) {
-        Row(
+        // Cabecera Principal con Filtro
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 24.dp, vertical = 24.dp)
         ) {
-            IconButton(
-                onClick = onVolver,
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onVolver,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Volver",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = "Mi Rendimiento",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontWeight = FontWeight.SemiBold
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Métricas operativas del mes",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
-                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Métricas operativas de la clínica",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+                modifier = Modifier.padding(start = 64.dp)
+            )
+
+            // Selector de Filtro de Tiempo
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Box {
+                    TextButton(onClick = { filtroExpandido = true }) {
+                        Text(when (uiState.mesesFiltro) {
+                            0 -> "Todo el historial ▾"
+                            1 -> "Este mes ▾"
+                            else -> "Últimos ${uiState.mesesFiltro} meses ▾"
+                        })
+                    }
+                    DropdownMenu(expanded = filtroExpandido, onDismissRequest = { filtroExpandido = false }) {
+                        listOf(1 to "Este mes", 3 to "Últimos 3 meses", 6 to "Últimos 6 meses", 0 to "Todo el historial")
+                            .forEach { (meses, etiqueta) ->
+                                DropdownMenuItem(
+                                    text = { Text(etiqueta) },
+                                    onClick = {
+                                        filtroExpandido = false
+                                        viewModel.cargarDashboard(meses)
+                                    }
+                                )
+                            }
+                    }
+                }
             }
         }
 
         // Superficie de contenido
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
             color = MaterialTheme.colorScheme.background
         ) {
-            if (uiState.cargando) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when {
+                uiState.cargando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-                return@Surface
-            }
-
-            if (uiState.error != null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(uiState.error, color = MaterialTheme.colorScheme.error)
+                uiState.error != null -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(uiState.error.orEmpty(), color = MaterialTheme.colorScheme.error)
                 }
-                return@Surface
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(36.dp)
-            ) {
-                // ColumnChar: Volumen de Atenciones
-                Column {
-                    Text(
-                        text = "Volumen de Atenciones",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Sesiones realizadas históricamente",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    val primaryColor = MaterialTheme.colorScheme.primary
-
-                    if (uiState.atencionesPorMes.isEmpty()) {
-                        SinDatosPlaceholder("Aún no tienes atenciones registradas")
-                    } else {
-                        ColumnChart(
-                            modifier = Modifier.fillMaxWidth().height(250.dp),
-                            data = remember(uiState.atencionesPorMes, primaryColor) {
-                                uiState.atencionesPorMes.map { (mes, cantidad) ->
-                                    Bars(
-                                        label = mes,
-                                        values = listOf(Bars.Data(value = cantidad.toDouble(), color = SolidColor(primaryColor)))
-                                    )
-                                }
-                            }
-                        )
+                else -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 22.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // TARJETA 0: Resumen Global
+                    val totalAtenciones = uiState.atencionesPorMes.values.sum()
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Column(Modifier.padding(20.dp)) {
+                            Text("Atenciones realizadas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                totalAtenciones.toString(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(textoPeriodo(uiState.mesesFiltro), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    // TARJETA 1: ColumnChart (Volumen de Atenciones)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(22.dp)
+                    ) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text("Volumen de Atenciones", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Sesiones realizadas históricamente", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(24.dp))
 
-                // PieChart: Estado de Pacientes Activos
-                Column {
-                    Text(
-                        text = "Estado de Pacientes Activos",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Proporción por fase terapéutica",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                            val primaryColor = MaterialTheme.colorScheme.primary
 
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    val colorPrimario = MaterialTheme.colorScheme.primary
-                    val colorSecundario = MaterialTheme.colorScheme.tertiary
-                    val colorTerciario = MaterialTheme.colorScheme.secondary
-                    val colores = listOf(colorPrimario, colorSecundario, colorTerciario)
-
-                    if (uiState.pacientesPorEtapa.isEmpty()) {
-                        SinDatosPlaceholder("No hay pacientes en progreso actualmente")
-                    } else {
-                        PieChart(
-                            modifier = Modifier.fillMaxWidth().height(220.dp),
-                            data = remember(uiState.pacientesPorEtapa, colorPrimario) {
-                                uiState.pacientesPorEtapa.entries.mapIndexed { index, (etapa, cantidad) ->
-                                    Pie(
-                                        label = etapa,
-                                        data = cantidad.toDouble(),
-                                        color = colores.getOrElse(index % colores.size) { Color.Gray },
-                                        selectedColor = Color.DarkGray
-                                    )
-                                }
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Componente de Leyenda Desacoplado
-                        LeyendaPieChart(
-                            datos = uiState.pacientesPorEtapa,
-                            colores = colores
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-
-                // LineChart: Adherencia y Ausentismo
-                Column {
-                    Text(
-                        text = "Adherencia y Ausentismo",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Citas programadas vs. Atenciones realizadas",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    val colorAtenciones = MaterialTheme.colorScheme.primary
-                    val colorCitas = MaterialTheme.colorScheme.outline
-
-                    if (uiState.comparativaAsistencia.all { it.second == 0 }) {
-                        SinDatosPlaceholder("Faltan datos de citas para generar la comparativa")
-                    } else {
-                        LineChart(
-                            modifier = Modifier.fillMaxWidth().height(220.dp),
-                            data = remember(uiState.comparativaAsistencia, colorAtenciones, colorCitas) {
-                                listOf(
-                                    Line(
-                                        label = "Programadas",
-                                        values = uiState.comparativaAsistencia.map { it.second.toDouble() },
-                                        color = SolidColor(colorCitas)
-                                    ),
-                                    Line(
-                                        label = "Realizadas",
-                                        values = uiState.comparativaAsistencia.map { it.third.toDouble() },
-                                        color = SolidColor(colorAtenciones)
-                                    )
+                            if (uiState.atencionesPorMes.isEmpty() || totalAtenciones == 0) {
+                                SinDatosPlaceholder("Aún no tienes atenciones registradas")
+                            } else {
+                                ColumnChart(
+                                    modifier = Modifier.fillMaxWidth().height(250.dp),
+                                    data = remember(uiState.atencionesPorMes, primaryColor) {
+                                        uiState.atencionesPorMes.map { (mes, cantidad) ->
+                                            Bars(
+                                                label = mes,
+                                                values = listOf(
+                                                    Bars.Data(
+                                                        label = "Atenciones",
+                                                        value = cantidad.toDouble(),
+                                                        color = SolidColor(primaryColor)
+                                                    )
+                                                )
+                                            )
+                                        }
+                                    }
                                 )
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Leyenda Manual Desacoplada
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(14.dp).clip(CircleShape).background(colorCitas))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Programadas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                            Spacer(modifier = Modifier.width(24.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(14.dp).clip(CircleShape).background(colorAtenciones))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Realizadas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
+
+                    // TARJETA 2: PieChart (Estado de Pacientes)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(22.dp)
+                    ) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text("Estado de Pacientes Activos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Proporción por fase terapéutica", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            val colorPrimario = MaterialTheme.colorScheme.primary
+                            val colorSecundario = MaterialTheme.colorScheme.tertiary
+                            val colorTerciario = MaterialTheme.colorScheme.secondary
+                            val colores = listOf(colorPrimario, colorSecundario, colorTerciario)
+
+                            if (uiState.pacientesPorEtapa.isEmpty()) {
+                                SinDatosPlaceholder("No hay pacientes en progreso")
+                            } else {
+                                PieChart(
+                                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                                    data = remember(uiState.pacientesPorEtapa, colorPrimario) {
+                                        uiState.pacientesPorEtapa.entries.mapIndexed { index, (etapa, cantidad) ->
+                                            Pie(
+                                                label = etapa,
+                                                data = cantidad.toDouble(),
+                                                color = colores.getOrElse(index % colores.size) { Color.Gray },
+                                                selectedColor = Color.DarkGray
+                                            )
+                                        }
+                                    }
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                LeyendaPieChart(datos = uiState.pacientesPorEtapa, colores = colores)
+                            }
+                        }
+                    }
+
+                    // TARJETA 3: LineChart (Adherencia y Ausentismo)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(22.dp)
+                    ) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text("Adherencia y Ausentismo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Citas programadas vs. Atenciones realizadas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            val colorAtenciones = MaterialTheme.colorScheme.primary
+                            val colorCitas = MaterialTheme.colorScheme.outline
+
+                            if (uiState.comparativaAsistencia.all { it.programadas == 0 }) {
+                                SinDatosPlaceholder("Faltan datos de citas para generar la comparativa")
+                            } else {
+                                LineChart(
+                                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                                    data = remember(uiState.comparativaAsistencia, colorAtenciones, colorCitas) {
+                                        listOf(
+                                            Line(
+                                                label = "Programadas",
+                                                values = uiState.comparativaAsistencia.map { it.programadas.toDouble() },
+                                                color = SolidColor(colorCitas)
+                                            ),
+                                            Line(
+                                                label = "Realizadas",
+                                                values = uiState.comparativaAsistencia.map { it.realizadas.toDouble() },
+                                                color = SolidColor(colorAtenciones)
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
-                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
@@ -294,9 +282,7 @@ fun LeyendaPieChart(
                 modifier = Modifier.padding(horizontal = 8.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
+                    modifier = Modifier.size(14.dp).clip(CircleShape)
                         .background(colores.getOrElse(index % colores.size) { Color.Gray })
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -311,7 +297,12 @@ fun LeyendaPieChart(
     }
 }
 
-// Placeholder, cuando no se tienen datos
+private fun textoPeriodo(meses: Int): String = when (meses) {
+    0 -> "Todo el historial"
+    1 -> "Este mes"
+    else -> "Últimos $meses meses"
+}
+
 @Composable
 fun SinDatosPlaceholder(mensaje: String) {
     Box(
@@ -322,28 +313,5 @@ fun SinDatosPlaceholder(mensaje: String) {
         contentAlignment = Alignment.Center
     ) {
         Text(mensaje, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DashboardPsicologoPreview() {
-    TerapiaTheme {
-        DashboardPsicologoContent(
-            uiState = DashboardPsicologoUiState(
-                cargando = false,
-                atencionesPorMes = mapOf("Jul" to 15, "Ago" to 30, "Sep" to 22, "Oct" to 40),
-                pacientesPorEtapa = mapOf("Evaluación" to 10, "Intervención" to 25, "Cierre" to 5),
-                comparativaAsistencia = listOf(
-                    Triple("Jul", 20, 15),
-                    Triple("Ago", 35, 30),
-                    Triple("Sep", 30, 22),
-                    Triple("Oct", 45, 40),
-                    Triple("Nov", 15, 15),
-                    Triple("Dic", 5, 2)
-                )
-            ),
-            onVolver = {}
-        )
     }
 }
