@@ -44,8 +44,13 @@ fun CompletarPerfilScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val borrador by viewModel.borrador.collectAsStateWithLifecycle()
-    LaunchedEffect(state) {
-        if (state is CompletarPerfilUiState.Success) onCompletado((state as CompletarPerfilUiState.Success).usuario)
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                CompletarPerfilUiEvent.SesionCerrada -> onSalir()
+                is CompletarPerfilUiEvent.PerfilCompletado -> onCompletado(event.usuario)
+            }
+        }
     }
 
     var nombres by remember { mutableStateOf("") }
@@ -108,7 +113,7 @@ fun CompletarPerfilScreen(
             else Text(stringResource(R.string.perfil_completar_boton))
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = { viewModel.cerrarSesion(onSalir) }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = viewModel::cerrarSesion, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.home_cerrar_sesion))
         }
     }

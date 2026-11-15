@@ -42,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import com.pe.terapia.core.biometric.BiometricoPreferences
 import com.pe.terapia.ui.components.BiometricoGate
 
@@ -63,6 +64,15 @@ fun SplashScreen(
 
     val context = LocalContext.current
     var mostrarGate by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                SplashUiEvent.SesionCerrada -> onSessionResolved(SplashUiState.SessionResolved(null))
+                is SplashUiEvent.ErrorAlCerrarSesion -> Toast.makeText(context, event.mensaje, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         mostrarContenido = true
@@ -154,11 +164,7 @@ fun SplashScreen(
         if (mostrarGate) {
             BiometricoGate(
                 onDesbloqueado = { onSessionResolved(uiState) },
-                onCerrarSesion = {
-                    viewModel.cerrarSesion {
-                        onSessionResolved(SplashUiState.SessionResolved(null))
-                    }
-                }
+                onCerrarSesion = viewModel::cerrarSesion
             )
         }
     }

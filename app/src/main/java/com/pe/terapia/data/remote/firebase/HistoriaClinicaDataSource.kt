@@ -9,7 +9,6 @@ import com.pe.terapia.domain.model.EstadoEtapa
 import com.pe.terapia.domain.model.EstadoProceso
 import com.pe.terapia.domain.model.TipoEtapa
 import kotlinx.coroutines.tasks.await
-import android.util.Log
 import com.pe.terapia.domain.model.EtapaClinica
 import com.pe.terapia.domain.model.ProcesoTerapeutico
 
@@ -51,49 +50,31 @@ class HistoriaClinicaDataSource(private val firestore: FirebaseFirestore) {
         validarCitaParaRegistrarAtencion(atencion)
         val batch = firestore.batch()
 
-        try {
-            // 1. Obtener o crear Historia Clínica
-            val historiaClinicaId = gestionarHistoriaClinica(batch, atencion.pacienteId, atencion.psicologoId, atencion.citaId)
-            Log.d("FirebaseDebug", "Paso 1 Completado. ID: $historiaClinicaId")
+        val historiaClinicaId = gestionarHistoriaClinica(batch, atencion.pacienteId, atencion.psicologoId, atencion.citaId)
+        val procesoId = gestionarProcesoTerapeutico(
+            batch = batch,
+            pacienteId = atencion.pacienteId,
+            psicologoId = atencion.psicologoId,
+            historiaClinicaId = historiaClinicaId,
+            motivoConsulta = atencion.motivoConsulta
+        )
+        val etapaId = gestionarEtapaClinica(batch, procesoId)
+        hacerUpsertAtencion(
+            batch = batch,
+            atencion = atencion,
+            historiaClinicaId = historiaClinicaId,
+            procesoId = procesoId,
+            etapaId = etapaId
+        )
 
-            // 2. Obtener o crear Proceso Terapéutico
-            val procesoId = gestionarProcesoTerapeutico(
-                batch = batch,
-                pacienteId = atencion.pacienteId,
-                psicologoId = atencion.psicologoId,
-                historiaClinicaId = historiaClinicaId,
-                motivoConsulta = atencion.motivoConsulta
-            )
-            Log.d("FirebaseDebug", "Paso 2 Completado. ID: $procesoId")
+        // El registro clínico y el resultado de asistencia se confirman juntos.
+        batch.update(
+            firestore.collection("citas").document(atencion.citaId),
+            "estado",
+            com.pe.terapia.domain.model.EstadoCita.COMPLETADA.name
+        )
 
-            // 3. Obtener o crear Etapa Clínica Activa
-            val etapaId = gestionarEtapaClinica(batch, procesoId)
-            Log.d("FirebaseDebug", "Paso 3 Completado. ID: $etapaId")
-
-            // 4. Crear o actualizar  la Atención Médica
-            hacerUpsertAtencion(
-                batch = batch,
-                atencion = atencion,
-                historiaClinicaId = historiaClinicaId,
-                procesoId = procesoId,
-                etapaId = etapaId
-            )
-            Log.d("FirebaseDebug", "Paso 4 Completado.")
-
-            // El registro clínico y el resultado de asistencia se confirman juntos.
-            batch.update(
-                firestore.collection("citas").document(atencion.citaId),
-                "estado",
-                com.pe.terapia.domain.model.EstadoCita.COMPLETADA.name
-            )
-
-            // 5. Ejecutar toda la transacción junta
-            batch.commit().await()
-            Log.d("FirebaseDebug", "Paso 5 Completado.")
-        } catch (e: Exception) {
-            Log.e("FirebaseDebug", "ERROR EN FIREBASE: ${e.message}", e)
-            throw e
-        }
+        batch.commit().await()
     }
 
     private suspend fun validarCitaParaRegistrarAtencion(atencion: Atencion) {
