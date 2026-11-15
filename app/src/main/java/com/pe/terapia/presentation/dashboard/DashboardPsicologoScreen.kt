@@ -12,18 +12,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ir.ehsannarmani.compose_charts.ColumnChart
-import ir.ehsannarmani.compose_charts.LineChart
-import ir.ehsannarmani.compose_charts.PieChart
+import com.pe.terapia.presentation.dashboard.components.TerapiaColumnChart
+import com.pe.terapia.presentation.dashboard.components.TerapiaLineChart
+import com.pe.terapia.presentation.dashboard.components.TerapiaPieChart
 import ir.ehsannarmani.compose_charts.models.Bars
 import ir.ehsannarmani.compose_charts.models.Line
-import ir.ehsannarmani.compose_charts.models.Pie
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -160,7 +157,7 @@ fun DashboardPsicologoScreen(
                             if (uiState.atencionesPorMes.isEmpty() || totalAtenciones == 0) {
                                 SinDatosPlaceholder("Aún no tienes atenciones registradas")
                             } else {
-                                ColumnChart(
+                                TerapiaColumnChart(
                                     modifier = Modifier.fillMaxWidth().height(250.dp),
                                     data = remember(uiState.atencionesPorMes, primaryColor) {
                                         uiState.atencionesPorMes.map { (mes, cantidad) ->
@@ -181,7 +178,7 @@ fun DashboardPsicologoScreen(
                         }
                     }
 
-                    // TARJETA 2: PieChart (Estado de Pacientes)
+                    // TARJETA 2: PieChart (Estado de Pacientes) - ¡NUEVO COMPONENTE!
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -193,29 +190,13 @@ fun DashboardPsicologoScreen(
                             Text("Proporción por fase terapéutica", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            val colorPrimario = MaterialTheme.colorScheme.primary
-                            val colorSecundario = MaterialTheme.colorScheme.tertiary
-                            val colorTerciario = MaterialTheme.colorScheme.secondary
-                            val colores = listOf(colorPrimario, colorSecundario, colorTerciario)
-
                             if (uiState.pacientesPorEtapa.isEmpty()) {
                                 SinDatosPlaceholder("No hay pacientes en progreso")
                             } else {
-                                PieChart(
-                                    modifier = Modifier.fillMaxWidth().height(220.dp),
-                                    data = remember(uiState.pacientesPorEtapa, colorPrimario) {
-                                        uiState.pacientesPorEtapa.entries.mapIndexed { index, (etapa, cantidad) ->
-                                            Pie(
-                                                label = etapa,
-                                                data = cantidad.toDouble(),
-                                                color = colores.getOrElse(index % colores.size) { Color.Gray },
-                                                selectedColor = Color.DarkGray
-                                            )
-                                        }
-                                    }
+                                TerapiaPieChart(
+                                    modifier = Modifier.fillMaxWidth().height(260.dp),
+                                    datos = uiState.pacientesPorEtapa
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                LeyendaPieChart(datos = uiState.pacientesPorEtapa, colores = colores)
                             }
                         }
                     }
@@ -238,8 +219,9 @@ fun DashboardPsicologoScreen(
                             if (uiState.comparativaAsistencia.all { it.programadas == 0 }) {
                                 SinDatosPlaceholder("Faltan datos de citas para generar la comparativa")
                             } else {
-                                LineChart(
+                                TerapiaLineChart(
                                     modifier = Modifier.fillMaxWidth().height(220.dp),
+                                    labels = uiState.comparativaAsistencia.map { it.mes },
                                     data = remember(uiState.comparativaAsistencia, colorAtenciones, colorCitas) {
                                         listOf(
                                             Line(
@@ -260,38 +242,6 @@ fun DashboardPsicologoScreen(
                     }
                     Spacer(modifier = Modifier.height(20.dp))
                 }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun LeyendaPieChart(
-    datos: Map<String, Int>,
-    colores: List<Color>
-) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        datos.entries.mapIndexed { index, (etapa, cantidad) ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            ) {
-                Box(
-                    modifier = Modifier.size(14.dp).clip(CircleShape)
-                        .background(colores.getOrElse(index % colores.size) { Color.Gray })
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "$etapa ($cantidad)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
             }
         }
     }

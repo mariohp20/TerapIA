@@ -25,9 +25,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ir.ehsannarmani.compose_charts.ColumnChart
-import ir.ehsannarmani.compose_charts.LineChart
-import ir.ehsannarmani.compose_charts.RowChart
+import com.pe.terapia.presentation.dashboard.components.TerapiaColumnChart
+import com.pe.terapia.presentation.dashboard.components.TerapiaLineChart
+import com.pe.terapia.presentation.dashboard.components.TerapiaRowChart
 import ir.ehsannarmani.compose_charts.models.Bars
 import ir.ehsannarmani.compose_charts.models.Line
 import org.koin.androidx.compose.koinViewModel
@@ -40,8 +40,13 @@ fun DashboardAdminScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf(false) }
     var busqueda by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) { viewModel.cargar() }
+
+    LaunchedEffect(Unit) {
+        viewModel.cargar()
+    }
+
     val color = MaterialTheme.colorScheme.primary
+
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
         Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp),
@@ -55,7 +60,7 @@ fun DashboardAdminScreen(
             Box {
                 TextButton(onClick = { expanded = true }) { Text(etiquetaPeriodoAdmin(state.meses) + " ▾") }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    listOf(1, 6, 12, 0).forEach { months ->
+                    listOf(1, 3, 6, 0).forEach { months ->
                         DropdownMenuItem(text = { Text(etiquetaPeriodoAdmin(months)) }, onClick = {
                             expanded = false
                             viewModel.cargar(months)
@@ -92,10 +97,10 @@ fun DashboardAdminScreen(
                         Text("Pagos registrados como pagados en soles", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(12.dp))
                         if (state.ingresosPorMes.all { it.cantidad == 0.0 }) TextoSinDatos("Aún no hay pagos pagados en este período.")
-                        else ColumnChart(
-                            Modifier.fillMaxWidth().height(220.dp),
+                        else TerapiaColumnChart(
+                            modifier = Modifier.fillMaxWidth().height(220.dp),
                             data = state.ingresosPorMes.map { item ->
-                                Bars(label = item.etiqueta, values = listOf(Bars.Data(value = item.cantidad, color = SolidColor(color))))
+                                Bars(label = item.etiqueta, values = listOf(Bars.Data(label = "Ingresos", value = item.cantidad, color = SolidColor(color))))
                             }
                         )
                     }
@@ -106,8 +111,9 @@ fun DashboardAdminScreen(
                         Text("Comparación por mes · citas completadas cuentan como atendidas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(12.dp))
                         if (state.citasPorMes.all { it.second.first == 0 }) TextoSinDatos("No hay citas en este período.")
-                        else LineChart(
-                            Modifier.fillMaxWidth().height(220.dp),
+                        else TerapiaLineChart(
+                            modifier = Modifier.fillMaxWidth().height(220.dp),
+                            labels = state.citasPorMes.map { it.first },
                             data = listOf(
                                 Line("Programadas", state.citasPorMes.map { it.second.first.toDouble() }, SolidColor(MaterialTheme.colorScheme.outline)),
                                 Line("Atendidas", state.citasPorMes.map { it.second.second.toDouble() }, SolidColor(color))
@@ -131,10 +137,10 @@ fun DashboardAdminScreen(
                         val filtered = state.cargaPorPsicologo.filter { it.nombre.contains(busqueda, ignoreCase = true) }
                         Spacer(Modifier.height(12.dp))
                         if (filtered.isEmpty()) TextoSinDatos(if (busqueda.isBlank()) "Todavía no hay atenciones registradas." else "No hay resultados para esa búsqueda.")
-                        else RowChart(
-                            Modifier.fillMaxWidth().height((filtered.size * 58).coerceIn(150, 360).dp),
+                        else TerapiaRowChart(
+                            modifier = Modifier.fillMaxWidth().height((filtered.size * 58).coerceIn(150, 360).dp),
                             data = filtered.map { item ->
-                                Bars(label = item.nombre, values = listOf(Bars.Data(value = item.atenciones.toDouble(), color = SolidColor(color))))
+                                Bars(label = item.nombre, values = listOf(Bars.Data(label = "Atenciones", value = item.atenciones.toDouble(), color = SolidColor(color))))
                             }
                         )
                     }

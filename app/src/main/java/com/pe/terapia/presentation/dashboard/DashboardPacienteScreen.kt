@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -38,12 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ir.ehsannarmani.compose_charts.PieChart
-import ir.ehsannarmani.compose_charts.models.Pie
+import com.pe.terapia.presentation.dashboard.components.TerapiaPieChart
+import com.pe.terapia.presentation.dashboard.components.TerapiaRowChart
+import ir.ehsannarmani.compose_charts.models.Bars
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -74,10 +72,10 @@ fun DashboardPacienteScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Text(
-                text = "Mi progreso",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.SemiBold
+                    text = "Mi progreso",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -133,6 +131,7 @@ fun DashboardPacienteScreen(
                         .padding(horizontal = 22.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
+                    // TARJETA 1: Resumen General
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
@@ -151,6 +150,7 @@ fun DashboardPacienteScreen(
                         }
                     }
 
+                    // TARJETA 2: Row Chart (Atenciones por mes)
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -161,32 +161,34 @@ fun DashboardPacienteScreen(
                             Spacer(Modifier.height(4.dp))
                             Text("Registros clínicos · ${textoPeriodo(uiState.mesesFiltro).lowercase()}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(20.dp))
+
+                            val primaryColor = MaterialTheme.colorScheme.primary
+
                             if (uiState.totalAtenciones == 0) {
                                 SinDatosPaciente("Aún no hay sesiones registradas para mostrar")
                             } else {
-                                val maximo = uiState.asistenciasPorMes.maxOfOrNull { it.cantidad }?.coerceAtLeast(1) ?: 1
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    uiState.asistenciasPorMes.forEach { mes ->
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(mes.etiqueta, modifier = Modifier.width(48.dp), style = MaterialTheme.typography.bodyMedium)
-                                            Box(
-                                                Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(9.dp))
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
-                                            ) {
-                                                if (mes.cantidad > 0) Box(
-                                                    Modifier.fillMaxWidth(mes.cantidad.toFloat() / maximo)
-                                                        .height(18.dp).clip(RoundedCornerShape(9.dp))
-                                                        .background(MaterialTheme.colorScheme.primary)
+                                TerapiaRowChart(
+                                    modifier = Modifier.fillMaxWidth().height((uiState.asistenciasPorMes.size * 58).coerceIn(150, 360).dp),
+                                    data = remember(uiState.asistenciasPorMes, primaryColor) {
+                                        uiState.asistenciasPorMes.map { mes ->
+                                            Bars(
+                                                label = mes.etiqueta,
+                                                values = listOf(
+                                                    Bars.Data(
+                                                        label = "Atenciones",
+                                                        value = mes.cantidad.toDouble(),
+                                                        color = SolidColor(primaryColor)
+                                                    )
                                                 )
-                                            }
-                            Text("${mes.cantidad}", modifier = Modifier.width(32.dp).padding(start = 8.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                            )
                                         }
                                     }
-                                }
+                                )
                             }
                         }
                     }
 
+                    // TARJETA 3: Pie Chart (Estado de tus citas)
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -197,40 +199,18 @@ fun DashboardPacienteScreen(
                             Spacer(Modifier.height(4.dp))
                             Text("Las atenciones registradas cuentan como completadas; los demás resultados dependen del estado de la cita", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(20.dp))
-                            val colores = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary,
-                                MaterialTheme.colorScheme.error,
-                                MaterialTheme.colorScheme.secondary
-                            )
+
                             if (uiState.estadosHistoricos.all { it.cantidad == 0 }) {
                                 SinDatosPaciente("Todavía no hay resultados de citas para mostrar")
                             } else {
-                                val colorSeleccionado = MaterialTheme.colorScheme.secondary
-                                PieChart(
-                                    modifier = Modifier.fillMaxWidth().height(220.dp),
-                                    data = remember(uiState.estadosHistoricos, colores) {
-                                        uiState.estadosHistoricos.mapIndexedNotNull { index, estado ->
-                                            if (estado.cantidad <= 0) return@mapIndexedNotNull null
-                                            Pie(
-                                                label = estado.etiqueta,
-                                                data = estado.cantidad.toDouble(),
-                                                color = colores[index],
-                                                selectedColor = colorSeleccionado
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                            Spacer(Modifier.height(14.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                uiState.estadosHistoricos.forEachIndexed { index, estado ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(Modifier.size(12.dp).clip(CircleShape).background(colores[index % colores.size]))
-                                        Spacer(Modifier.size(8.dp))
-                                        Text("${estado.etiqueta}: ${estado.cantidad}", style = MaterialTheme.typography.bodyMedium)
-                                    }
+                                val datosMapa = remember(uiState.estadosHistoricos) {
+                                    uiState.estadosHistoricos.filter { it.cantidad > 0 }.associate { it.etiqueta to it.cantidad }
                                 }
+
+                                TerapiaPieChart(
+                                    modifier = Modifier.fillMaxWidth().height(260.dp),
+                                    datos = datosMapa
+                                )
                             }
                         }
                     }
