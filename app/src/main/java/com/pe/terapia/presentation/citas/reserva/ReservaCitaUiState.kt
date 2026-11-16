@@ -21,6 +21,8 @@ data class ReservaCitaUiState(
     val disponibilidadPorFecha: Map<String, List<SlotDisponible>> = emptyMap(),
     val cargandoFechas: Boolean = false,
     val cargandoHorarios: Boolean = false,
+    val consultandoFeriado: Boolean = false,
+    val feriados: List<com.pe.terapia.domain.model.Feriado> = emptyList(),
     val horariosDisponibles: List<String> = emptyList(),
     val slotsDisponibles: List<SlotDisponible> = emptyList(),
     val horaSeleccionada: String? = null,
