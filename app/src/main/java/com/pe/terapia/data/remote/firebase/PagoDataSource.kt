@@ -46,14 +46,18 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             .get()
             .await()
 
+        val pagosExistentes = firestore.collection("pagos")
+            .whereEqualTo("pacienteId", pacienteId)
+            .get()
+            .await()
+        val citasConPago = pagosExistentes.documents.mapNotNull { it.getString("citaId") }.toMutableSet()
+
         for (citaDoc in citasSnapshot.documents) {
             val citaId = citaDoc.id
             val psicologoId = citaDoc.getString("psicologoId").orEmpty()
-            val pagoExistente = firestore.collection("pagos")
-                .whereEqualTo("citaId", citaId)
-                .get()
-                .await()
-            if (pagoExistente.isEmpty) {
+            val sigueProgramada = citaDoc.getString("estado") == "PROGRAMADA"
+            val yaPagada = citaDoc.getString("estadoPago") == EstadoPago.PAGADO.name || citaDoc.getBoolean("pagado") == true
+            if (sigueProgramada && !yaPagada && psicologoId.isNotBlank() && citaId !in citasConPago) {
                 val nuevoPagoRef = firestore.collection("pagos").document()
                 val pagoMap = mapOf(
                     "id" to nuevoPagoRef.id,
@@ -65,7 +69,8 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                     "estado" to EstadoPago.PENDIENTE.name,
                     "creadaEn" to FieldValue.serverTimestamp()
                 )
-                runCatching { nuevoPagoRef.set(pagoMap).await() }
+                nuevoPagoRef.set(pagoMap).await()
+                citasConPago += citaId
             }
         }
 
@@ -73,6 +78,11 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             .whereEqualTo("pacienteId", pacienteId)
             .get()
             .await()
+        val comprobantesSnapshot = firestore.collection("comprobantes")
+            .whereEqualTo("pacienteId", pacienteId)
+            .get()
+            .await()
+        val comprobantesPorPago = comprobantesSnapshot.documents.associateBy { it.getString("pagoId").orEmpty() }
 
         val resultado = mutableListOf<Pair<Pago, Comprobante?>>()
         for (doc in pagosSnapshot.documents) {
@@ -90,13 +100,9 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 actualizadaEn = doc.getSafeLongOrNull("actualizadaEn")
             )
 
-            // Buscar comprobante asociado
-            val comprobanteSnapshot = firestore.collection("comprobantes")
-                .whereEqualTo("pagoId", pago.id)
-                .get()
-                .await()
-
-            val comprobante = comprobanteSnapshot.documents.firstOrNull()?.let { cDoc ->
+            // La consulta se acota por paciente para cumplir las reglas de
+            // Firestore; el vínculo por pago se resuelve localmente.
+            val comprobante = comprobantesPorPago[pago.id]?.let { cDoc ->
                 Comprobante(
                     id = cDoc.getString("id") ?: cDoc.id,
                     pagoId = cDoc.getString("pagoId").orEmpty(),
@@ -154,6 +160,11 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             val ahora = System.currentTimeMillis()
             val fechaEmision = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
             val numeroComprobante = "B001-" + (100000..999999).random()
+            val citaRef = citaId.takeIf(String::isNotBlank)?.let { firestore.collection("citas").document(it) }
+            val citaSnapshot = citaRef?.let(transaction::get)
+            if (citaRef != null) check(citaSnapshot?.exists() == true && citaSnapshot.getString("estado") == "PROGRAMADA") {
+                "La cita ya no está activa."
+            }
 
             // Actualizar pago
             transaction.update(pagoRef, mapOf(
@@ -163,8 +174,7 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             ))
 
             // Actualizar cita (TASK-48: Integración de estados de pago con la cita)
-            if (citaId.isNotBlank()) {
-                val citaRef = firestore.collection("citas").document(citaId)
+            if (citaRef != null) {
                 transaction.update(citaRef, mapOf(
                     "estadoPago" to EstadoPago.PAGADO.name,
                     "pagado" to true
@@ -199,6 +209,32 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 "creadaEn" to FieldValue.serverTimestamp()
             ))
 
+            val notificationRef = firestore.collection("notificaciones").document("pago_confirmado_$pagoId")
+            transaction.set(notificationRef, mapOf(
+                "id" to notificationRef.id,
+                "usuarioId" to pacienteId,
+                "destinatarioRol" to "paciente",
+                "titulo" to "Pago confirmado",
+                "mensaje" to "Registramos el pago de tu cita. Tu comprobante está disponible en Mis pagos.",
+                "tipo" to "PAGO_CONFIRMADO",
+                "citaId" to citaId,
+                "pagoId" to pagoId,
+                "fechaCreacion" to FieldValue.serverTimestamp(),
+                "leida" to false
+            ))
+            val adminNotificationRef = firestore.collection("notificaciones").document("admin_pago_confirmado_$pagoId")
+            transaction.set(adminNotificationRef, mapOf(
+                "id" to adminNotificationRef.id,
+                "destinatarioRol" to "admin",
+                "titulo" to "Pago confirmado",
+                "mensaje" to "Se confirmó el pago de una cita por ${monto} ${pagoSnapshot.getString("moneda") ?: "PEN"}.",
+                "tipo" to "PAGO_CONFIRMADO_ADMIN",
+                "citaId" to citaId,
+                "pagoId" to pagoId,
+                "fechaCreacion" to FieldValue.serverTimestamp(),
+                "leida" to false
+            ))
+
             comprobante
         }.await()
     }
@@ -219,6 +255,11 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             val ahora = System.currentTimeMillis()
             val fechaEmision = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
             val numeroComprobante = "B001-" + (100000..999999).random()
+            val citaRef = citaId.takeIf(String::isNotBlank)?.let { firestore.collection("citas").document(it) }
+            val citaSnapshot = citaRef?.let(transaction::get)
+            if (citaRef != null) check(citaSnapshot?.exists() == true && citaSnapshot.getString("estado") == "PROGRAMADA") {
+                "La cita ya no está activa."
+            }
 
             // Actualizar pago
             transaction.update(pagoRef, mapOf(
@@ -229,8 +270,7 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             ))
 
             // Actualizar cita
-            if (citaId.isNotBlank()) {
-                val citaRef = firestore.collection("citas").document(citaId)
+            if (citaRef != null) {
                 transaction.update(citaRef, mapOf(
                     "estadoPago" to EstadoPago.PAGADO.name,
                     "pagado" to true
@@ -265,17 +305,48 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
                 "creadaEn" to FieldValue.serverTimestamp()
             ))
 
+            val notificationRef = firestore.collection("notificaciones").document("pago_confirmado_$pagoId")
+            transaction.set(notificationRef, mapOf(
+                "id" to notificationRef.id,
+                "usuarioId" to pacienteId,
+                "destinatarioRol" to "paciente",
+                "titulo" to "Pago confirmado",
+                "mensaje" to "Registramos el pago de tu cita. Tu comprobante está disponible en Mis pagos.",
+                "tipo" to "PAGO_CONFIRMADO",
+                "citaId" to citaId,
+                "pagoId" to pagoId,
+                "fechaCreacion" to FieldValue.serverTimestamp(),
+                "leida" to false
+            ))
+            val adminNotificationRef = firestore.collection("notificaciones").document("admin_pago_confirmado_$pagoId")
+            transaction.set(adminNotificationRef, mapOf(
+                "id" to adminNotificationRef.id,
+                "destinatarioRol" to "admin",
+                "titulo" to "Pago confirmado",
+                "mensaje" to "Se confirmó el pago de una cita por ${monto} ${pagoSnapshot.getString("moneda") ?: "PEN"}.",
+                "tipo" to "PAGO_CONFIRMADO_ADMIN",
+                "citaId" to citaId,
+                "pagoId" to pagoId,
+                "fechaCreacion" to FieldValue.serverTimestamp(),
+                "leida" to false
+            ))
+
             comprobante
         }.await()
     }
 
     suspend fun obtenerComprobantePorCita(citaId: String): Comprobante? {
+        require(citaId.isNotBlank()) { "Cita inválida para buscar el comprobante." }
+        val cita = firestore.collection("citas").document(citaId).get().await()
+        if (!cita.exists()) return null
+        val pacienteId = cita.getString("pacienteId").orEmpty()
+        check(pacienteId.isNotBlank()) { "La cita no tiene un paciente asociado." }
         val snapshot = firestore.collection("comprobantes")
-            .whereEqualTo("citaId", citaId)
+            .whereEqualTo("pacienteId", pacienteId)
             .get()
             .await()
 
-        val doc = snapshot.documents.firstOrNull() ?: return null
+        val doc = snapshot.documents.firstOrNull { it.getString("citaId") == citaId } ?: return null
         return Comprobante(
             id = doc.getString("id") ?: doc.id,
             pagoId = doc.getString("pagoId").orEmpty(),
@@ -291,12 +362,25 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
     }
 
     suspend fun obtenerPagoPorCita(citaId: String): Pago? {
-        val snapshot = firestore.collection("pagos")
-            .whereEqualTo("citaId", citaId)
+        require(citaId.isNotBlank()) { "Cita inválida para buscar el pago." }
+
+        // Las reglas de Firestore permiten listar pagos únicamente cuando la
+        // consulta queda acotada por pacienteId (o psicologoId). Consultar solo
+        // por citaId provoca PERMISSION_DENIED aunque la cita sea del paciente.
+        val citaDoc = firestore.collection("citas").document(citaId).get().await()
+        if (!citaDoc.exists()) return null
+        val pacienteId = citaDoc.getString("pacienteId").orEmpty()
+        val psicologoId = citaDoc.getString("psicologoId").orEmpty()
+        check(pacienteId.isNotBlank() && psicologoId.isNotBlank()) {
+            "La cita no tiene paciente o profesional asociado."
+        }
+
+        val pagosPaciente = firestore.collection("pagos")
+            .whereEqualTo("pacienteId", pacienteId)
             .get()
             .await()
 
-        val doc = snapshot.documents.firstOrNull()
+        val doc = pagosPaciente.documents.firstOrNull { it.getString("citaId") == citaId }
         if (doc != null) {
             return Pago(
                 id = doc.getString("id") ?: doc.id,
@@ -313,11 +397,6 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             )
         }
 
-        val citaDoc = firestore.collection("citas").document(citaId).get().await()
-        if (!citaDoc.exists()) return null
-        val pacienteId = citaDoc.getString("pacienteId").orEmpty()
-        val psicologoId = citaDoc.getString("psicologoId").orEmpty()
-
         val nuevoPagoRef = firestore.collection("pagos").document()
         val pagoMap = mapOf(
             "id" to nuevoPagoRef.id,
@@ -329,7 +408,9 @@ class PagoDataSource(private val firestore: FirebaseFirestore) {
             "estado" to EstadoPago.PENDIENTE.name,
             "creadaEn" to FieldValue.serverTimestamp()
         )
-        runCatching { nuevoPagoRef.set(pagoMap).await() }
+        // No se devuelve un ID local si Firestore rechazó la creación: eso
+        // dejaba avanzar a la pantalla de pago con un documento inexistente.
+        nuevoPagoRef.set(pagoMap).await()
 
         return Pago(
             id = nuevoPagoRef.id,

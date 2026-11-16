@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.domain.model.EstadoPago
+import com.pe.terapia.domain.model.MetodoPago
 import com.pe.terapia.domain.model.Pago
 import com.pe.terapia.domain.model.Comprobante
 import kotlinx.coroutines.launch
@@ -95,6 +96,9 @@ fun HistorialPagosScreen(
                                     pago = pago,
                                     comprobante = comprobante,
                                     onPagarOnline = { onPagarOnline(pago.id) },
+                                    onPagarEnClinica = { viewModel.seleccionarPagoEnClinica(pago.id) },
+                                    seleccionandoPagoEnClinica = state.pagoEnActualizacionId == pago.id,
+                                    errorAccion = state.errorAccion,
                                     onDescargarPdf = { comp ->
                                         scope.launch {
                                             val file = viewModel.generarArchivoPdf(comp, pago)
@@ -121,6 +125,9 @@ fun PagoItemCard(
     pago: Pago,
     comprobante: Comprobante?,
     onPagarOnline: () -> Unit,
+    onPagarEnClinica: () -> Unit,
+    seleccionandoPagoEnClinica: Boolean,
+    errorAccion: String?,
     onDescargarPdf: (Comprobante) -> Unit,
     onCompartirPdf: (Comprobante) -> Unit
 ) {
@@ -161,7 +168,12 @@ fun PagoItemCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(12.dp))
 
-            Text(text = "Método: ${pago.metodoPago?.name ?: "Pendiente de selección"}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val metodoVisible = when (pago.metodoPago) {
+                MetodoPago.EFECTIVO_CLINICA -> "Pago presencial en clínica"
+                MetodoPago.ONLINE_MERCADOPAGO -> "Mercado Pago"
+                null -> "Pendiente de selección"
+            }
+            Text(text = "Método: $metodoVisible", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (!pago.referenciaTransaccion.isNullOrBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(text = "Ref. Transacción: ${pago.referenciaTransaccion}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -221,14 +233,41 @@ fun PagoItemCard(
 
             if (!esPagado) {
                 Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = onPagarOnline,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Outlined.CreditCard, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Pagar Online (Mercado Pago)")
+                if (errorAccion != null) {
+                    Text(errorAccion, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onPagarOnline,
+                        enabled = !seleccionandoPagoEnClinica,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Outlined.CreditCard, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Pagar online")
+                    }
+                    if (pago.metodoPago != MetodoPago.EFECTIVO_CLINICA) {
+                        OutlinedButton(
+                            onClick = onPagarEnClinica,
+                            enabled = !seleccionandoPagoEnClinica,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (seleccionandoPagoEnClinica) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text("Elegir pago presencial")
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "Pago presencial pendiente de confirmación en la clínica.",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

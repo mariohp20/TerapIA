@@ -3,9 +3,7 @@ package com.pe.terapia.presentation.pagos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Comprobante
-import com.pe.terapia.domain.model.NotificacionLocal
 import com.pe.terapia.domain.usecase.pagos.PagarOnlineUseCase
-import com.pe.terapia.domain.usecase.notificaciones.GuardarNotificacionUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,8 +19,7 @@ sealed interface PasarelaPagoUiState {
 
 class PasarelaPagoViewModel(
     private val pagoId: String,
-    private val pagarOnlineUseCase: PagarOnlineUseCase,
-    private val guardarNotificacionUseCase: GuardarNotificacionUseCase
+    private val pagarOnlineUseCase: PagarOnlineUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PasarelaPagoUiState>(PasarelaPagoUiState.Idle)
@@ -35,20 +32,6 @@ class PasarelaPagoViewModel(
 
             pagarOnlineUseCase(pagoId, referencia)
                 .onSuccess { comprobante ->
-                    runCatching {
-                        guardarNotificacionUseCase(
-                            NotificacionLocal(
-                                id = "pago_confirmado_${comprobante.pagoId}",
-                                usuarioId = comprobante.pacienteId,
-                                titulo = "Pago confirmado",
-                                mensaje = "Registramos tu pago. Tu comprobante está disponible en Mis pagos.",
-                                tipo = "PAGO_CONFIRMADO",
-                                fechaCreacionMillis = System.currentTimeMillis(),
-                                leida = false,
-                                citaId = comprobante.citaId
-                            )
-                        )
-                    }
                     _uiState.value = PasarelaPagoUiState.Exito(comprobante)
                 }
                 .onFailure { error ->
