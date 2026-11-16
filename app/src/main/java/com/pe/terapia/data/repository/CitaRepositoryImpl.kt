@@ -3,6 +3,7 @@ package com.pe.terapia.data.repository
 import com.pe.terapia.data.remote.firebase.CitaDataSource
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.CitaQrInfo
+import com.pe.terapia.domain.model.CitasPsicologoResumen
 import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.Especialidad
 import com.pe.terapia.domain.model.Reserva
@@ -48,6 +49,10 @@ class CitaRepositoryImpl(private val dataSource: CitaDataSource) : CitaRepositor
 
     override suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>> = capture {
         dataSource.obtenerCitasPsicologoHoy(psicologoId, fechaText)
+    }
+
+    override suspend fun obtenerCitasPsicologoResumen(psicologoId: String, ahoraEpochMillis: Long): Result<CitasPsicologoResumen> = capture {
+        dataSource.obtenerCitasPsicologoResumen(psicologoId, ahoraEpochMillis)
     }
 
     override suspend fun marcarCitaNoAsistio(citaId: String, psicologoId: String, ahoraEpochMillis: Long): Result<Unit> = capture {

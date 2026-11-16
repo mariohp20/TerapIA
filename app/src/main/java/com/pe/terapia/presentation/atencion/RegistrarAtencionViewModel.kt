@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.pe.terapia.domain.usecase.historiaclinica.ObtenerAtencionPorCitaUseCase
+import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
 
 data class RegistrarAtencionUiState(
     val cargandoInicial: Boolean = true,
@@ -28,7 +29,8 @@ data class RegistrarAtencionUiState(
 class RegistrarAtencionViewModel(
     private val registrarAtencionUseCase: RegistrarAtencionUseCase,
     private val obtenerAtencionPorCitaUseCase: ObtenerAtencionPorCitaUseCase,
-    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase
+    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
+    private val recordatorioCitasScheduler: RecordatorioCitasScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrarAtencionUiState())
@@ -94,6 +96,7 @@ class RegistrarAtencionViewModel(
 
             result.fold(
                 onSuccess = {
+                    runCatching { recordatorioCitasScheduler.cancelar(citaId) }
                     _uiState.value = _uiState.value.copy(guardando = false, exito = true)
                 },
                 onFailure = { excepcion ->

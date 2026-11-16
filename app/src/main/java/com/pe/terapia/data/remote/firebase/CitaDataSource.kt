@@ -7,6 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.BloqueHorario
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.CitaQrInfo
+import com.pe.terapia.domain.model.CitasPsicologoResumen
 import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
@@ -377,6 +378,35 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L
             )
         }.sortedBy { it.hora }
+    }
+
+    suspend fun obtenerCitasPsicologoResumen(psicologoId: String, ahoraEpochMillis: Long): CitasPsicologoResumen {
+        require(psicologoId.isNotBlank()) { "No se pudo identificar al psicólogo." }
+        val documentos = firestore.collection("citas")
+            .whereEqualTo("psicologoId", psicologoId)
+            .get().await().documents
+        val documentosPorId = documentos.associateBy { it.id }
+        val programadas = documentos.mapNotNull { doc ->
+            if (doc.getString("estado") != EstadoCita.PROGRAMADA.name) return@mapNotNull null
+            val inicio = doc.getLong("inicioEpochMillis") ?: return@mapNotNull null
+            val pacienteId = doc.getString("pacienteId") ?: return@mapNotNull null
+            CitaPacienteDetalle(
+                citaId = doc.id,
+                pacienteId = pacienteId,
+                hora = doc.getString("hora").orEmpty(),
+                nombrePaciente = doc.getString("pacienteNombre").orEmpty().ifBlank { "Paciente sin registrar" },
+                fecha = doc.getString("fecha").orEmpty(),
+                inicioEpochMillis = inicio
+            )
+        }
+        val pendientes = programadas.filter { cita ->
+            val duration = documentosPorId[cita.citaId]
+                ?.getLong("duracionMinutos")?.toInt() ?: DURACION_CITA_MINUTOS
+            cita.inicioEpochMillis + duration * 60_000L <= ahoraEpochMillis
+        }.sortedBy { it.inicioEpochMillis }
+        val futuras = programadas.filter { it.inicioEpochMillis > ahoraEpochMillis }
+            .sortedBy { it.inicioEpochMillis }
+        return CitasPsicologoResumen(pendientes, futuras)
     }
 
     suspend fun obtenerCitasPendientesResultado(psicologoId: String, ahoraEpochMillis: Long): List<CitaPacienteDetalle> = coroutineScope {

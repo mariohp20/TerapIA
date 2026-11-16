@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Reserva
 import com.pe.terapia.domain.model.Rol
+import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
 import com.pe.terapia.domain.usecase.pagos.ObtenerPagoPorCitaUseCase
@@ -57,7 +58,8 @@ class ConfirmacionCitaViewModel(
     private val reservarCitaUseCase: ReservarCitaUseCase,
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
     private val obtenerPagoPorCitaUseCase: ObtenerPagoPorCitaUseCase,
-    private val seleccionarPagoEnClinicaUseCase: SeleccionarPagoEnClinicaUseCase
+    private val seleccionarPagoEnClinicaUseCase: SeleccionarPagoEnClinicaUseCase,
+    private val recordatorioCitasScheduler: RecordatorioCitasScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ConfirmacionCitaUiState>(ConfirmacionCitaUiState.Idle)
@@ -97,6 +99,7 @@ class ConfirmacionCitaViewModel(
 
             reservarCitaUseCase(reserva)
                 .onSuccess { cita ->
+                    runCatching { recordatorioCitasScheduler.programar(cita.id, cita.inicioEpochMillis, Rol.PACIENTE) }
                     val pago = obtenerPagoPorCitaUseCase(cita.id).getOrNull()
                     _uiState.value = ConfirmacionCitaUiState.Confirmada(
                         citaId = cita.id,

@@ -2,10 +2,13 @@ package com.pe.terapia.di
 
 import com.pe.terapia.data.remote.firebase.CitaDataSource
 import com.pe.terapia.data.repository.CitaRepositoryImpl
+import com.pe.terapia.data.work.WorkManagerRecordatorioCitasScheduler
 import com.pe.terapia.domain.repository.CitaRepository
+import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUidSesionActualUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasHoyPsicologoUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerCitasPsicologoResumenUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasPacienteUseCase
@@ -29,6 +32,7 @@ val citaModule = module {
     // 1. Data Sources y Repositories
     single { CitaDataSource(get()) }
     single<CitaRepository> { CitaRepositoryImpl(get()) }
+    single<RecordatorioCitasScheduler> { WorkManagerRecordatorioCitasScheduler(get()) }
 
     // 2. Casos de Uso (Use Cases)
     factory { ObtenerDisponibilidadUseCase(get()) }
@@ -36,6 +40,7 @@ val citaModule = module {
     factory { ObtenerCitasPacienteUseCase(get()) }
     factory { ReservarCitaUseCase(get()) }
     factory { ObtenerCitasHoyPsicologoUseCase(get()) }
+    factory { ObtenerCitasPsicologoResumenUseCase(get()) }
     factory { MarcarCitaNoAsistioUseCase(get()) }
     factory { ObtenerCitasPendientesResultadoUseCase(get()) }
     factory { ValidarCitaQrUseCase(get()) }
@@ -45,9 +50,9 @@ val citaModule = module {
 
     // 3. ViewModels simples
     viewModel { ReservaCitaViewModel(get()) }
-    viewModel { HomePacienteViewModel(get(), get(), get(), get(), get()) }
+    viewModel { HomePacienteViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { MisCitasViewModel(get(), get()) }
-    viewModel { HomePsicologoViewModel(get(), get(), get()) }
+    viewModel { HomePsicologoViewModel(get(), get(), get(), get()) }
     viewModel { EscannerViewModel(get(), get()) }
 
     // 4. ViewModels con parámetros dinámicos
@@ -67,6 +72,7 @@ val citaModule = module {
             parameters[11],
             get(),
             get<ObtenerUsuarioActualUseCase>(),
+            get(),
             get(),
             get()
         )

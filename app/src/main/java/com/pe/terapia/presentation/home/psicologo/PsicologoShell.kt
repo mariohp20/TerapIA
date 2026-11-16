@@ -42,6 +42,7 @@ import com.pe.terapia.presentation.escanner.EscannerScreen
 import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoScreen
 import kotlinx.serialization.Serializable
 import com.pe.terapia.presentation.home.psicologo.perfil.PerfilPsicologoScreen
+import com.pe.terapia.presentation.notifications.PermisoNotificacionesEffect
 
 @Serializable
 sealed class PsicologoTab {
@@ -77,6 +78,7 @@ fun PsicologoShell(
     onAbrirAtencionDesdeQr: (String, String) -> Unit,
     onAbrirHistorialDesdeQr: (String, String, String) -> Unit
 ) {
+    PermisoNotificacionesEffect()
     val tabNavController = rememberNavController()
     val entradaActual by tabNavController.currentBackStackEntryAsState()
     val destinoActual = entradaActual?.destination

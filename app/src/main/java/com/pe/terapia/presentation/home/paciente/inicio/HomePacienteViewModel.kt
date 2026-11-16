@@ -7,7 +7,10 @@ import com.pe.terapia.domain.usecase.auth.ObtenerUidSesionActualUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.GuardarProximaCitaEnCacheUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaDeCacheUseCase
-import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerCitasPacienteUseCase
+import com.pe.terapia.domain.model.EstadoCita
+import com.pe.terapia.domain.model.Rol
+import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -31,9 +34,10 @@ sealed interface HomePacienteUiEvent {
 class HomePacienteViewModel(
     private val obtenerUidSesionActual: ObtenerUidSesionActualUseCase,
     private val obtenerUsuarioActual: ObtenerUsuarioActualUseCase,
-    private val obtenerProximaCita: ObtenerProximaCitaUseCase,
+    private val obtenerCitasPaciente: ObtenerCitasPacienteUseCase,
     private val guardarProximaCitaEnCache: GuardarProximaCitaEnCacheUseCase,
-    private val obtenerProximaCitaDeCache: ObtenerProximaCitaDeCacheUseCase
+    private val obtenerProximaCitaDeCache: ObtenerProximaCitaDeCacheUseCase,
+    private val recordatorioCitasScheduler: RecordatorioCitasScheduler
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomePacienteUiState())
     val uiState: StateFlow<HomePacienteUiState> = _uiState.asStateFlow()
@@ -77,8 +81,19 @@ class HomePacienteViewModel(
             }
 
             launch {
-                obtenerProximaCita(pacienteId).fold(
-                    onSuccess = { cita ->
+                obtenerCitasPaciente(pacienteId).fold(
+                    onSuccess = { citas ->
+                        val ahora = System.currentTimeMillis()
+                        citas.asSequence()
+                            .filter { it.estado == EstadoCita.PROGRAMADA.name && it.inicioEpochMillis > ahora }
+                            .forEach { cita ->
+                                runCatching {
+                                    recordatorioCitasScheduler.programar(cita.id, cita.inicioEpochMillis, Rol.PACIENTE)
+                                }
+                            }
+                        val cita = citas.firstOrNull {
+                            it.estado == EstadoCita.PROGRAMADA.name && it.inicioEpochMillis > ahora
+                        }
                         guardarProximaCitaEnCache(pacienteId, cita)
                         _uiState.update {
                             it.copy(

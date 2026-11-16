@@ -43,6 +43,7 @@ import com.pe.terapia.presentation.home.paciente.inicio.HomePacienteScreen
 import com.pe.terapia.presentation.home.paciente.miscitas.MisCitasScreen
 import com.pe.terapia.presentation.home.paciente.perfil.PerfilScreen
 import com.pe.terapia.presentation.dashboard.DashboardPacienteScreen
+import com.pe.terapia.presentation.notifications.PermisoNotificacionesEffect
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -77,6 +78,7 @@ fun PacienteShell(
     onVerDetalleCita: (String) -> Unit,
     mensajeError: String? = null
 ) {
+    PermisoNotificacionesEffect()
     val tabNavController = rememberNavController()
     val entradaActual by tabNavController.currentBackStackEntryAsState()
     val destinoActual = entradaActual?.destination
