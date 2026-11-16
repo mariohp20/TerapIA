@@ -70,10 +70,12 @@ class HomePsicologoViewModel(
 
                 resultado.fold(
                     onSuccess = { citas ->
+                        resumenPsicologo?.citasSinRecordatorio?.forEach(recordatorioCitasScheduler::cancelar)
                         resumenPsicologo?.futurasProgramadas?.forEach { cita ->
                             runCatching {
                                 recordatorioCitasScheduler.programar(
                                     cita.citaId,
+                                    usuarioActual.uid,
                                     cita.inicioEpochMillis,
                                     Rol.PSICOLOGO
                                 )

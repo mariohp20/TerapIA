@@ -406,7 +406,12 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         }.sortedBy { it.inicioEpochMillis }
         val futuras = programadas.filter { it.inicioEpochMillis > ahoraEpochMillis }
             .sortedBy { it.inicioEpochMillis }
-        return CitasPsicologoResumen(pendientes, futuras)
+        val citasSinRecordatorio = documentos.mapNotNull { doc ->
+            val estado = doc.getString("estado")
+            val inicio = doc.getLong("inicioEpochMillis") ?: 0L
+            if (estado != EstadoCita.PROGRAMADA.name || inicio <= ahoraEpochMillis) doc.id else null
+        }
+        return CitasPsicologoResumen(pendientes, futuras, citasSinRecordatorio)
     }
 
     suspend fun obtenerCitasPendientesResultado(psicologoId: String, ahoraEpochMillis: Long): List<CitaPacienteDetalle> = coroutineScope {

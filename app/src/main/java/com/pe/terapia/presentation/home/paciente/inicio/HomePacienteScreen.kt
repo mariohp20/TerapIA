@@ -42,6 +42,7 @@ fun HomePacienteScreen(
     onVerTodas: () -> Unit,
     onVerDetalle: (String) -> Unit,
     onVerProgreso: () -> Unit,
+    onVerNotificaciones: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomePacienteViewModel = koinViewModel()
 ) {
@@ -65,7 +66,8 @@ fun HomePacienteScreen(
         onVerTodas = onVerTodas,
         onVerDetalle = onVerDetalle,
         onVerProgreso = onVerProgreso,
-        onToggleQr = viewModel::setMostrarQr
+        onToggleQr = viewModel::setMostrarQr,
+        onVerNotificaciones = onVerNotificaciones
     )
 }
 
@@ -80,7 +82,8 @@ private fun HomePacienteContent(
     onVerTodas: () -> Unit,
     onVerDetalle: (String) -> Unit,
     onVerProgreso: () -> Unit,
-    onToggleQr: (Boolean) -> Unit
+    onToggleQr: (Boolean) -> Unit,
+    onVerNotificaciones: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -91,7 +94,11 @@ private fun HomePacienteContent(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp)
     ) {
-        BienvenidaHeader(nombre = uiState.nombrePaciente, onCerrarSesion = onCerrarSesion)
+        BienvenidaHeader(
+            nombre = uiState.nombrePaciente,
+            onCerrarSesion = onCerrarSesion,
+            onVerNotificaciones = onVerNotificaciones
+        )
 
         (mensajeError ?: uiState.error)?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)

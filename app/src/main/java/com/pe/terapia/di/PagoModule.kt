@@ -29,6 +29,6 @@ val pagoModule = module {
     factory { SeleccionarPagoEnClinicaUseCase(get()) }
 
     viewModel { HistorialPagosViewModel(get(), get(), get(), get(), get()) }
-    viewModel { (pagoId: String) -> PasarelaPagoViewModel(pagoId, get()) }
+    viewModel { (pagoId: String) -> PasarelaPagoViewModel(pagoId, get(), get()) }
     viewModel { GestionPagosPsicologoViewModel(get(), get(), get()) }
 }

@@ -22,7 +22,7 @@ interface CitaRepository {
 
     suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>>
     suspend fun obtenerCitasPsicologoResumen(psicologoId: String, ahoraEpochMillis: Long): Result<CitasPsicologoResumen> =
-        Result.success(CitasPsicologoResumen(emptyList(), emptyList()))
+        Result.success(CitasPsicologoResumen(emptyList(), emptyList(), emptyList()))
     suspend fun marcarCitaNoAsistio(citaId: String, psicologoId: String, ahoraEpochMillis: Long): Result<Unit>
     suspend fun obtenerCitasPendientesResultado(psicologoId: String, ahoraEpochMillis: Long): Result<List<CitaPacienteDetalle>>
     suspend fun validarCitaQr(citaId: String, psicologoId: String): Result<CitaQrInfo>

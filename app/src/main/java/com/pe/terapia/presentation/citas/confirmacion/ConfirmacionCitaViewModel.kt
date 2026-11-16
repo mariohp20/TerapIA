@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Reserva
 import com.pe.terapia.domain.model.Rol
 import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
+import com.pe.terapia.domain.model.NotificacionLocal
+import com.pe.terapia.domain.usecase.notificaciones.GuardarNotificacionUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
 import com.pe.terapia.domain.usecase.pagos.ObtenerPagoPorCitaUseCase
@@ -59,7 +61,8 @@ class ConfirmacionCitaViewModel(
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
     private val obtenerPagoPorCitaUseCase: ObtenerPagoPorCitaUseCase,
     private val seleccionarPagoEnClinicaUseCase: SeleccionarPagoEnClinicaUseCase,
-    private val recordatorioCitasScheduler: RecordatorioCitasScheduler
+    private val recordatorioCitasScheduler: RecordatorioCitasScheduler,
+    private val guardarNotificacionUseCase: GuardarNotificacionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ConfirmacionCitaUiState>(ConfirmacionCitaUiState.Idle)
@@ -99,7 +102,28 @@ class ConfirmacionCitaViewModel(
 
             reservarCitaUseCase(reserva)
                 .onSuccess { cita ->
-                    runCatching { recordatorioCitasScheduler.programar(cita.id, cita.inicioEpochMillis, Rol.PACIENTE) }
+                    runCatching {
+                        recordatorioCitasScheduler.programar(
+                            cita.id,
+                            paciente.uid,
+                            cita.inicioEpochMillis,
+                            Rol.PACIENTE
+                        )
+                    }
+                    runCatching {
+                        guardarNotificacionUseCase(
+                            NotificacionLocal(
+                                id = "cita_confirmada_${cita.id}",
+                                usuarioId = paciente.uid,
+                                titulo = "Cita reservada",
+                                mensaje = "Tu cita con ${resumen.psicologoNombre} quedó reservada para el ${cita.fecha} a las ${cita.hora}.",
+                                tipo = "CITA_CONFIRMADA",
+                                fechaCreacionMillis = System.currentTimeMillis(),
+                                leida = false,
+                                citaId = cita.id
+                            )
+                        )
+                    }
                     val pago = obtenerPagoPorCitaUseCase(cita.id).getOrNull()
                     _uiState.value = ConfirmacionCitaUiState.Confirmada(
                         citaId = cita.id,

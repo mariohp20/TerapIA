@@ -84,12 +84,13 @@ class HomePacienteViewModel(
                 obtenerCitasPaciente(pacienteId).fold(
                     onSuccess = { citas ->
                         val ahora = System.currentTimeMillis()
-                        citas.asSequence()
-                            .filter { it.estado == EstadoCita.PROGRAMADA.name && it.inicioEpochMillis > ahora }
-                            .forEach { cita ->
+                        citas.forEach { cita ->
+                            if (cita.estado == EstadoCita.PROGRAMADA.name && cita.inicioEpochMillis > ahora) {
                                 runCatching {
-                                    recordatorioCitasScheduler.programar(cita.id, cita.inicioEpochMillis, Rol.PACIENTE)
+                                    recordatorioCitasScheduler.programar(cita.id, pacienteId, cita.inicioEpochMillis, Rol.PACIENTE)
                                 }
+                            } else {
+                                recordatorioCitasScheduler.cancelar(cita.id)
                             }
                         val cita = citas.firstOrNull {
                             it.estado == EstadoCita.PROGRAMADA.name && it.inicioEpochMillis > ahora

@@ -74,6 +74,7 @@ val citaModule = module {
             get<ObtenerUsuarioActualUseCase>(),
             get(),
             get(),
+            get(),
             get()
         )
     }

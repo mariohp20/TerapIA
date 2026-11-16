@@ -42,7 +42,7 @@ import com.pe.terapia.presentation.escanner.EscannerScreen
 import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoScreen
 import kotlinx.serialization.Serializable
 import com.pe.terapia.presentation.home.psicologo.perfil.PerfilPsicologoScreen
-import com.pe.terapia.presentation.notifications.PermisoNotificacionesEffect
+import com.pe.terapia.presentation.notifications.NotificacionesScreen
 
 @Serializable
 sealed class PsicologoTab {
@@ -51,6 +51,7 @@ sealed class PsicologoTab {
     @Serializable data object Disponibilidad : PsicologoTab()
     @Serializable data object Perfil : PsicologoTab()
     @Serializable data object Escanear : PsicologoTab()
+    @Serializable data object Notificaciones : PsicologoTab()
 }
 
 private data class TabPsicologoItem(
@@ -78,10 +79,10 @@ fun PsicologoShell(
     onAbrirAtencionDesdeQr: (String, String) -> Unit,
     onAbrirHistorialDesdeQr: (String, String, String) -> Unit
 ) {
-    PermisoNotificacionesEffect()
     val tabNavController = rememberNavController()
     val entradaActual by tabNavController.currentBackStackEntryAsState()
     val destinoActual = entradaActual?.destination
+    val mostrarBarra = destinoActual?.hierarchy?.any { it.hasRoute(PsicologoTab.Notificaciones::class) } != true
 
     val irATab: (PsicologoTab) -> Unit = { tab ->
         tabNavController.navigate(tab) {
@@ -94,7 +95,7 @@ fun PsicologoShell(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+            if (mostrarBarra) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
                 tabsPsicologo.forEach { tab ->
                     val seleccionada = destinoActual?.hierarchy?.any { it.hasRoute(tab.ruta::class) } == true
                     NavigationBarItem(
@@ -129,7 +130,8 @@ fun PsicologoShell(
                     onCerrarSesion = onCerrarSesion,
                     onAbrirSalaConsulta = onAbrirSalaConsulta,
                     onIrAHistorialClinico = onIrAHistorialClinico,
-                    onDashboardPsicologo = onDashboardPsicologo
+                    onDashboardPsicologo = onDashboardPsicologo,
+                    onVerNotificaciones = { irATab(PsicologoTab.Notificaciones) }
                 )
             }
             composable<PsicologoTab.Agenda> {
@@ -155,6 +157,9 @@ fun PsicologoShell(
                     onAbrirAtencion = onAbrirAtencionDesdeQr,
                     onAbrirHistorial = onAbrirHistorialDesdeQr
                 )
+            }
+            composable<PsicologoTab.Notificaciones> {
+                NotificacionesScreen(onVolver = { irATab(PsicologoTab.Inicio) })
             }
         }
     }
