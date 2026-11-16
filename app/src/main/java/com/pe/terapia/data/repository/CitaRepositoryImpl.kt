@@ -47,6 +47,38 @@ class CitaRepositoryImpl(private val dataSource: CitaDataSource) : CitaRepositor
         dataSource.reservarYConfirmar(reserva)
     }
 
+    override suspend fun solicitarGestionCita(citaId: String, pacienteId: String, tipo: String, slotSolicitado: SlotDisponible?): Result<Unit> = capture {
+        dataSource.solicitarGestionCita(citaId, pacienteId, tipo, slotSolicitado)
+    }
+
+    override suspend fun tieneSolicitudGestionPendiente(citaId: String, pacienteId: String): Result<Boolean> = capture {
+        dataSource.tieneSolicitudGestionPendiente(citaId, pacienteId)
+    }
+
+    override suspend fun obtenerSolicitudGestionPendiente(
+        citaId: String,
+        pacienteId: String
+    ): Result<com.pe.terapia.domain.model.SolicitudGestionCita?> = capture {
+        dataSource.obtenerSolicitudGestionPendiente(citaId, pacienteId)?.let { request ->
+            val cita = dataSource.obtenerCitasPaciente(pacienteId).firstOrNull { it.id == citaId }
+            com.pe.terapia.domain.model.SolicitudGestionCita(
+                id = request.id,
+                citaId = citaId,
+                pacienteNombre = "",
+                tipo = request.getString("tipo").orEmpty(),
+                fecha = cita?.fecha.orEmpty(),
+                hora = cita?.hora.orEmpty(),
+                pagada = cita?.pagado == true,
+                fechaSolicitada = request.getString("fechaSolicitada"),
+                horaSolicitada = request.getString("horaSolicitada")
+            )
+        }
+    }
+
+    override suspend fun cancelarCitaPaciente(citaId: String, pacienteId: String): Result<Unit> = capture {
+        dataSource.cancelarCitaPaciente(citaId, pacienteId)
+    }
+
     override suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>> = capture {
         dataSource.obtenerCitasPsicologoHoy(psicologoId, fechaText)
     }

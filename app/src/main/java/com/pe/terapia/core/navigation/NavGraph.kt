@@ -33,6 +33,7 @@ import com.pe.terapia.presentation.auth.registro.RegistroScreen
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaScreen
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaScreen
 import com.pe.terapia.presentation.home.admin.HomeAdminScreen
+import com.pe.terapia.presentation.admin.solicitudes.SolicitudesGestionCitaScreen
 import com.pe.terapia.presentation.admin.promover.PromoverUsuarioScreen
 import com.pe.terapia.presentation.home.paciente.PacienteShell
 import com.pe.terapia.presentation.home.psicologo.PsicologoShell
@@ -422,6 +423,8 @@ fun NavGraph(
                     onDashboard = { navController.navigate(Route.DashboardAdmin) },
                     onCerrarSesion = authViewModel::cerrarSesion,
                     onGestionarPsicologo = { navController.navigate(Route.GestionarPsicologo) },
+                    onVerSolicitudesCita = { navController.navigate(Route.SolicitudesGestionCita) },
+                    onVerNotificaciones = { navController.navigate(Route.NotificacionesAdmin) },
                     mensajeError = error
                 )
             }
@@ -431,6 +434,21 @@ fun NavGraph(
             RoleProtectedRoute(Rol.PSICOLOGO, navController) {
                 GestionPagosPsicologoScreen(
                     onVolver = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable<Route.SolicitudesGestionCita> {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                SolicitudesGestionCitaScreen(onVolver = { navController.popBackStack() })
+            }
+        }
+
+        composable<Route.NotificacionesAdmin> {
+            RoleProtectedRoute(Rol.ADMIN, navController) {
+                com.pe.terapia.presentation.notifications.NotificacionesScreen(
+                    onVolver = { navController.popBackStack() },
+                    onVerSolicitudes = { navController.navigate(Route.SolicitudesGestionCita) }
                 )
             }
         }

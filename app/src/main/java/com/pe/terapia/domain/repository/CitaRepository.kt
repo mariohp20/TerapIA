@@ -19,6 +19,10 @@ interface CitaRepository {
     suspend fun obtenerProximaCita(pacienteId: String): Result<ProximaCita?>
     suspend fun obtenerCitasPaciente(pacienteId: String): Result<List<ProximaCita>>
     suspend fun reservarYConfirmar(reserva: Reserva): Result<Cita>
+    suspend fun solicitarGestionCita(citaId: String, pacienteId: String, tipo: String, slotSolicitado: SlotDisponible? = null): Result<Unit>
+    suspend fun tieneSolicitudGestionPendiente(citaId: String, pacienteId: String): Result<Boolean>
+    suspend fun obtenerSolicitudGestionPendiente(citaId: String, pacienteId: String): Result<com.pe.terapia.domain.model.SolicitudGestionCita?>
+    suspend fun cancelarCitaPaciente(citaId: String, pacienteId: String): Result<Unit>
 
     suspend fun obtenerCitasPsicologoHoy(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>>
     suspend fun obtenerCitasPsicologoResumen(psicologoId: String, ahoraEpochMillis: Long): Result<CitasPsicologoResumen> =

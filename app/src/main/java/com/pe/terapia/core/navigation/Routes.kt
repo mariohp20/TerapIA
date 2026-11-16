@@ -102,4 +102,10 @@ sealed class Route {
     @Serializable
     data object DashboardAdmin : Route()
 
+    @Serializable
+    data object SolicitudesGestionCita : Route()
+
+    @Serializable
+    data object NotificacionesAdmin : Route()
+
 }

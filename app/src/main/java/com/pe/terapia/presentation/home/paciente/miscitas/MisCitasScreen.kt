@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,7 +48,6 @@ fun MisCitasScreen(
     viewModel: MisCitasViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var mostrarPoliticaGestion by remember { mutableStateOf(false) }
     val tabs = listOf("Próximas", "Pasadas", "Canceladas")
 
     // 1. Reemplazamos la variable simple por un PagerState
@@ -193,19 +191,16 @@ fun MisCitasScreen(
                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Text(
-                                        text = "¿Necesitas reprogramar o cancelar?",
+                                        text = "¿Necesitas cambiar una cita?",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
-                                    OutlinedButton(
-                                        onClick = { mostrarPoliticaGestion = true },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                                    ) {
-                                        Text(text = "Gestionar cita \u2192")
-                                    }
+                                    Text(
+                                        text = "Toca la cita que quieres gestionar. En su detalle podrás proponer otra fecha y hora con el mismo profesional y sede, o solicitar una cancelación. La cita sigue vigente mientras el administrador revisa una propuesta.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
@@ -213,17 +208,5 @@ fun MisCitasScreen(
                 }
             }
         }
-    }
-    if (mostrarPoliticaGestion) {
-        AlertDialog(
-            onDismissRequest = { mostrarPoliticaGestion = false },
-            title = { Text("Reprogramar o cancelar") },
-            text = { Text("La gestión directa desde la app aún no está habilitada. Como política provisional, los cambios se solicitan hasta 24 horas antes. Después de ese plazo, o si la cita ya está pagada, contacta a la clínica para que revise tu caso. No se aplica ninguna pérdida o devolución automática.") },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { mostrarPoliticaGestion = false }) {
-                    Text("Entendido")
-                }
-            }
-        )
     }
 }

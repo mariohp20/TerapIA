@@ -39,6 +39,7 @@ class NotificacionesViewModel(
                 return@launch
             }
             usuarioId = usuario.uid
+            runCatching { observarNotificacionesUseCase.sincronizar(usuario.uid, usuario.rol) }
             observarNotificacionesUseCase(usuario.uid)
                 .catch { error ->
                     _uiState.value = _uiState.value.copy(cargando = false, error = error.message ?: "No se pudieron cargar las notificaciones.")

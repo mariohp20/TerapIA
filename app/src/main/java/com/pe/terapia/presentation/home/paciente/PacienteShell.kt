@@ -164,7 +164,8 @@ fun PacienteShell(
                 NotificacionesScreen(
                     onVolver = { irATab(PacienteTab.Inicio) },
                     onVerCita = onVerDetalleCita,
-                    onVerPagos = onVerHistorialPagos
+                    onVerPagos = onVerHistorialPagos,
+                    onRetomarAtencion = onReservarCita
                 )
             }
         }

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.SupervisedUserCircle
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,6 +37,8 @@ fun HomeAdminScreen(
     onAsignarHorario: () -> Unit,
     onDashboard: () -> Unit,
     onGestionarPsicologo: () -> Unit,
+    onVerSolicitudesCita: () -> Unit,
+    onVerNotificaciones: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomeAdminViewModel = koinViewModel()
 ) {
@@ -47,6 +50,8 @@ fun HomeAdminScreen(
         onAsignarHorario = onAsignarHorario,
         onDashboard = onDashboard,
         onGestionarPsicologo = onGestionarPsicologo,
+        onVerSolicitudesCita = onVerSolicitudesCita,
+        onVerNotificaciones = onVerNotificaciones,
         onCerrarSesion = onCerrarSesion
     )
 }
@@ -59,6 +64,8 @@ private fun HomeAdminContent(
     onAsignarHorario: () -> Unit,
     onDashboard: () -> Unit,
     onGestionarPsicologo: () -> Unit,
+    onVerSolicitudesCita: () -> Unit,
+    onVerNotificaciones: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
@@ -82,11 +89,19 @@ private fun HomeAdminContent(
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
                 )
             }
-            IconButton(
-                onClick = onCerrarSesion,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), CircleShape)
-            ) {
-                Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = stringResource(R.string.home_cerrar_sesion), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = onVerNotificaciones,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), CircleShape)
+                ) {
+                    Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+                IconButton(
+                    onClick = onCerrarSesion,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), CircleShape)
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = stringResource(R.string.home_cerrar_sesion), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
             }
         }
 
@@ -181,6 +196,17 @@ private fun HomeAdminContent(
                     Spacer(Modifier.width(12.dp))
                     Text("Gestionar Perfiles de Psicólogos", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
+
+                Spacer(Modifier.height(14.dp))
+                OutlinedButton(
+                    onClick = onVerSolicitudesCita,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Outlined.CalendarMonth, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Solicitudes de cancelación y reprogramación", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
@@ -197,6 +223,8 @@ private fun HomeAdminPreview() {
             onAsignarHorario = {},
             onDashboard = {},
             onGestionarPsicologo = {},
+            onVerSolicitudesCita = {},
+            onVerNotificaciones = {},
             onCerrarSesion = {}
         )
     }

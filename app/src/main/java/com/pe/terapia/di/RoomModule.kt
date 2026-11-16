@@ -20,5 +20,5 @@ val roomModule = module {
     single { get<AppDatabase>().agendaPsicologoDao() }
     single<AgendaPsicologoLocalRepository> { AgendaPsicologoLocalRepositoryImpl(get()) }
     single<NotificacionesPreferenciasRepository> { NotificacionesPreferenciasRepositoryImpl(androidContext()) }
-    single<NotificacionLocalRepository> { NotificacionLocalRepositoryImpl(get(), get()) }
+    single<NotificacionLocalRepository> { NotificacionLocalRepositoryImpl(get(), get(), get()) }
 }

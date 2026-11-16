@@ -49,6 +49,8 @@ fun NotificacionesScreen(
     onVolver: () -> Unit,
     onVerCita: ((String) -> Unit)? = null,
     onVerPagos: (() -> Unit)? = null,
+    onRetomarAtencion: (() -> Unit)? = null,
+    onVerSolicitudes: (() -> Unit)? = null,
     viewModel: NotificacionesViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,6 +98,10 @@ fun NotificacionesScreen(
                             viewModel.marcarLeida(notification.id)
                             if (notification.tipo == "PAGO_CONFIRMADO") {
                                 onVerPagos?.invoke()
+                            } else if (notification.tipo == "SEGUIMIENTO_BIENESTAR") {
+                                onRetomarAtencion?.invoke()
+                            } else if (notification.tipo == "SOLICITUD_GESTION") {
+                                onVerSolicitudes?.invoke()
                             } else {
                                 notification.citaId?.let { onVerCita?.invoke(it) }
                             }
@@ -117,7 +123,7 @@ private fun EmptyNotifications() {
         Icon(Icons.Outlined.NotificationsNone, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp))
         Spacer(Modifier.size(16.dp))
         Text("Aún no tienes notificaciones", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Text("Aquí aparecerán las confirmaciones y recordatorios de tus citas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Aquí aparecerán avisos de citas, pagos y solicitudes de gestión.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

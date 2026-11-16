@@ -1,9 +1,15 @@
 package com.pe.terapia.di
 
 import com.pe.terapia.data.remote.firebase.CitaDataSource
+import com.pe.terapia.data.remote.firebase.SolicitudesGestionCitaDataSource
 import com.pe.terapia.data.repository.CitaRepositoryImpl
+import com.pe.terapia.data.repository.SolicitudesGestionCitaRepositoryImpl
 import com.pe.terapia.data.work.WorkManagerRecordatorioCitasScheduler
 import com.pe.terapia.domain.repository.CitaRepository
+import com.pe.terapia.domain.repository.SolicitudesGestionCitaRepository
+import com.pe.terapia.domain.usecase.citas.ObtenerSolicitudesGestionCitaUseCase
+import com.pe.terapia.domain.usecase.citas.ResolverSolicitudGestionCitaUseCase
+import com.pe.terapia.presentation.admin.solicitudes.SolicitudesGestionCitaViewModel
 import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUidSesionActualUseCase
@@ -12,6 +18,10 @@ import com.pe.terapia.domain.usecase.citas.ObtenerCitasPsicologoResumenUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasPacienteUseCase
+import com.pe.terapia.domain.usecase.citas.SolicitarGestionCitaUseCase
+import com.pe.terapia.domain.usecase.citas.CancelarCitaPacienteUseCase
+import com.pe.terapia.domain.usecase.citas.TieneSolicitudGestionPendienteUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerSolicitudGestionPendienteUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
 import com.pe.terapia.domain.usecase.citas.MarcarCitaNoAsistioUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasPendientesResultadoUseCase
@@ -32,12 +42,20 @@ val citaModule = module {
     // 1. Data Sources y Repositories
     single { CitaDataSource(get()) }
     single<CitaRepository> { CitaRepositoryImpl(get()) }
+    single { SolicitudesGestionCitaDataSource(get()) }
+    single<SolicitudesGestionCitaRepository> { SolicitudesGestionCitaRepositoryImpl(get()) }
     single<RecordatorioCitasScheduler> { WorkManagerRecordatorioCitasScheduler(get()) }
 
     // 2. Casos de Uso (Use Cases)
     factory { ObtenerDisponibilidadUseCase(get()) }
     factory { ObtenerProximaCitaUseCase(get()) }
     factory { ObtenerCitasPacienteUseCase(get()) }
+    factory { SolicitarGestionCitaUseCase(get()) }
+    factory { CancelarCitaPacienteUseCase(get()) }
+    factory { TieneSolicitudGestionPendienteUseCase(get()) }
+    factory { ObtenerSolicitudGestionPendienteUseCase(get()) }
+    factory { ObtenerSolicitudesGestionCitaUseCase(get()) }
+    factory { ResolverSolicitudGestionCitaUseCase(get()) }
     factory { ReservarCitaUseCase(get()) }
     factory { ObtenerCitasHoyPsicologoUseCase(get()) }
     factory { ObtenerCitasPsicologoResumenUseCase(get()) }
@@ -49,11 +67,12 @@ val citaModule = module {
     // IMPORTANTE: Se eliminó ObtenerUsuarioActualUseCase porque Koin ya lo toma del AuthModule automáticamente.
 
     // 3. ViewModels simples
-    viewModel { ReservaCitaViewModel(get()) }
+    viewModel { ReservaCitaViewModel(get(), get()) }
     viewModel { HomePacienteViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { MisCitasViewModel(get(), get()) }
-    viewModel { HomePsicologoViewModel(get(), get(), get(), get()) }
+    viewModel { HomePsicologoViewModel(get(), get(), get(), get(), get()) }
     viewModel { EscannerViewModel(get(), get()) }
+    viewModel { SolicitudesGestionCitaViewModel(get(), get(), get()) }
 
     // 4. ViewModels con parámetros dinámicos
     viewModel { parameters ->
@@ -83,7 +102,13 @@ val citaModule = module {
         DetalleCitaViewModel(
             citaId = parameters[0],
             obtenerUsuarioActualUseCase = get(),
-            obtenerCitasPacienteUseCase = get()
+            obtenerCitasPacienteUseCase = get(),
+            solicitarGestionCitaUseCase = get(),
+            obtenerDisponibilidadUseCase = get(),
+            tieneSolicitudGestionPendienteUseCase = get(),
+            obtenerSolicitudGestionPendienteUseCase = get(),
+            cancelarCitaPacienteUseCase = get(),
+            recordatorioCitasScheduler = get()
         )
     }
 }
