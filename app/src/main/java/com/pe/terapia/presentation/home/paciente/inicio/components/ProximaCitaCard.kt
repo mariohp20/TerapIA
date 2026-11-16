@@ -87,7 +87,9 @@ internal fun EstadoCitaChip(cita: ProximaCita, modifier: Modifier = Modifier) {
     val c = MaterialTheme.colorScheme
     val (texto, fondo, contenido) = when {
         cita.estado == EstadoCita.CANCELADA.name -> Triple("Cancelada", c.errorContainer, c.onErrorContainer)
+        cita.estado == EstadoCita.NO_ASISTIO.name -> Triple("No asistió", c.tertiaryContainer, c.onTertiaryContainer)
         cita.estado == EstadoCita.COMPLETADA.name -> Triple("Atendida", c.surfaceVariant, c.onSurfaceVariant)
+        cita.estado == EstadoCita.EN_CURSO.name -> Triple("En curso", c.secondaryContainer, c.onSecondaryContainer)
         cita.estadoPago == EstadoPago.PAGADO.name -> Triple("Confirmada", c.primaryContainer, c.onPrimaryContainer)
         else -> Triple("Reservada", c.tertiaryContainer, c.onTertiaryContainer)
     }

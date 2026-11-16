@@ -20,9 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.ui.components.BiometricoSwitchItem
 import com.pe.terapia.ui.components.PerfilOpcionItem
+import com.pe.terapia.ui.components.NotificacionesSwitchItem
+import com.pe.terapia.presentation.notifications.RecordatoriosSettingsViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -34,6 +36,8 @@ fun PerfilScreen(
     viewModel: PerfilViewModel = koinViewModel()
 ) {
     val usuario by viewModel.usuario.collectAsStateWithLifecycle()
+    val recordatoriosViewModel: RecordatoriosSettingsViewModel = koinViewModel()
+    val recordatorios by recordatoriosViewModel.uiState.collectAsStateWithLifecycle()
 
     val iniciales = usuario?.let { user ->
         user.nombres.split(" ").filter { it.isNotBlank() }
@@ -77,6 +81,12 @@ fun PerfilScreen(
 
                 // COMPONENTE COMPARTIDO DEL SWITCH BIOMÉTRICO
                 BiometricoSwitchItem()
+                NotificacionesSwitchItem(
+                    activas = recordatorios.activos,
+                    cargando = recordatorios.cargando,
+                    error = recordatorios.error,
+                    onCambio = recordatoriosViewModel::establecerActivos
+                )
 
                 PerfilOpcionItem(Icons.AutoMirrored.Outlined.Help, "Ayuda y soporte", onClick = {})
                 PerfilOpcionItem(Icons.AutoMirrored.Outlined.ExitToApp, "Cerrar sesión", esRojo = true, onClick = onCerrarSesion)

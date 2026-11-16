@@ -286,6 +286,12 @@ fun ReservaCitaScreen(
                 // Lista de Horarios
                 if (uiState.fechaSeleccionada != null) {
                     Spacer(modifier = Modifier.height(16.dp))
+                    if (uiState.consultandoFeriado) {
+                        Text("Consultando feriados del Perú…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    uiState.feriados.firstOrNull()?.let { feriado ->
+                        Text("${feriado.nombre}: la sede podría tener un horario especial. Confirma disponibilidad con la clínica.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                    }
                     Text("Horarios disponibles", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
 

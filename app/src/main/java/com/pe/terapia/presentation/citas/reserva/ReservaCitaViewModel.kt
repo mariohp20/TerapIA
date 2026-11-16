@@ -7,6 +7,7 @@ import com.pe.terapia.domain.model.Psicologo
 import com.pe.terapia.domain.model.Sede
 import com.pe.terapia.domain.model.SlotDisponible
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerFeriadosUseCase
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.Job
@@ -19,7 +20,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ReservaCitaViewModel(
-    private val obtenerDisponibilidadUseCase: ObtenerDisponibilidadUseCase
+    private val obtenerDisponibilidadUseCase: ObtenerDisponibilidadUseCase,
+    private val obtenerFeriadosUseCase: ObtenerFeriadosUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReservaCitaUiState())
@@ -28,6 +30,7 @@ class ReservaCitaViewModel(
     private var cargarSedesJob: Job? = null
     private var cargarHorariosJob: Job? = null
     private var cargarFechasJob: Job? = null
+    private val feriadosPorAnio = mutableMapOf<Int, List<com.pe.terapia.domain.model.Feriado>>()
 
     init {
         cargarEspecialidades()
@@ -202,6 +205,7 @@ class ReservaCitaViewModel(
             slotsDisponibles = emptyList(),
             error = null
         )
+        consultarFeriado(fecha)
         _uiState.value.disponibilidadPorFecha[fecha]?.let { cached ->
             _uiState.value = _uiState.value.copy(
                 horariosDisponibles = cached.map { it.hora },
@@ -235,6 +239,28 @@ class ReservaCitaViewModel(
                         )
                     }
                 }
+        }
+    }
+
+    private fun consultarFeriado(fecha: String) {
+        val date = runCatching { LocalDate.parse(fecha) }.getOrNull() ?: return
+        val cached = feriadosPorAnio[date.year]
+        if (cached != null) {
+            _uiState.value = _uiState.value.copy(feriados = cached.filter { it.fecha == fecha }, consultandoFeriado = false)
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(consultandoFeriado = true, feriados = emptyList())
+            obtenerFeriadosUseCase(date).onSuccess { feriados ->
+                feriadosPorAnio[date.year] = feriados
+                if (_uiState.value.fechaSeleccionada == fecha) {
+                    _uiState.value = _uiState.value.copy(consultandoFeriado = false, feriados = feriados.filter { it.fecha == fecha })
+                }
+            }.onFailure {
+                if (_uiState.value.fechaSeleccionada == fecha) {
+                    _uiState.value = _uiState.value.copy(consultandoFeriado = false)
+                }
+            }
         }
     }
 

@@ -4,10 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Reserva
 import com.pe.terapia.domain.model.Rol
-import com.pe.terapia.domain.repository.PagoRepository
+import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
+import com.pe.terapia.domain.model.NotificacionLocal
+import com.pe.terapia.domain.usecase.notificaciones.GuardarNotificacionUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
+import com.pe.terapia.domain.usecase.pagos.ObtenerPagoPorCitaUseCase
+import com.pe.terapia.domain.usecase.pagos.SeleccionarPagoEnClinicaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -15,8 +21,17 @@ import kotlinx.coroutines.launch
 sealed interface ConfirmacionCitaUiState {
     data object Idle : ConfirmacionCitaUiState
     data object Cargando : ConfirmacionCitaUiState
-    data class Confirmada(val citaId: String, val pagoId: String) : ConfirmacionCitaUiState
+    data class Confirmada(
+        val citaId: String,
+        val pagoId: String,
+        val seleccionandoPagoEnClinica: Boolean = false,
+        val errorPagoEnClinica: String? = null
+    ) : ConfirmacionCitaUiState
     data class Error(val mensaje: String) : ConfirmacionCitaUiState
+}
+
+sealed interface ConfirmacionCitaUiEvent {
+    data class IrAPagoEnClinica(val pagoId: String) : ConfirmacionCitaUiEvent
 }
 
 data class ResumenCita(
@@ -44,11 +59,16 @@ class ConfirmacionCitaViewModel(
     private val inicioEpochMillis: Long,
     private val reservarCitaUseCase: ReservarCitaUseCase,
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
-    private val pagoRepository: PagoRepository
+    private val obtenerPagoPorCitaUseCase: ObtenerPagoPorCitaUseCase,
+    private val seleccionarPagoEnClinicaUseCase: SeleccionarPagoEnClinicaUseCase,
+    private val recordatorioCitasScheduler: RecordatorioCitasScheduler,
+    private val guardarNotificacionUseCase: GuardarNotificacionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ConfirmacionCitaUiState>(ConfirmacionCitaUiState.Idle)
     val uiState: StateFlow<ConfirmacionCitaUiState> = _uiState.asStateFlow()
+    private val _uiEvents = MutableSharedFlow<ConfirmacionCitaUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<ConfirmacionCitaUiEvent> = _uiEvents
 
     val resumen = ResumenCita(psicologoNombre, especialidadNombre, sedeNombre, fecha, hora,"", costo_cita)
 
@@ -82,7 +102,29 @@ class ConfirmacionCitaViewModel(
 
             reservarCitaUseCase(reserva)
                 .onSuccess { cita ->
-                    val pago = pagoRepository.obtenerPagoPorCita(cita.id).getOrNull()
+                    runCatching {
+                        recordatorioCitasScheduler.programar(
+                            cita.id,
+                            paciente.uid,
+                            cita.inicioEpochMillis,
+                            Rol.PACIENTE
+                        )
+                    }
+                    runCatching {
+                        guardarNotificacionUseCase(
+                            NotificacionLocal(
+                                id = "cita_confirmada_${cita.id}",
+                                usuarioId = paciente.uid,
+                                titulo = "Cita reservada",
+                                mensaje = "Tu cita con ${resumen.psicologoNombre} quedó reservada para el ${cita.fecha} a las ${cita.hora}.",
+                                tipo = "CITA_CONFIRMADA",
+                                fechaCreacionMillis = System.currentTimeMillis(),
+                                leida = false,
+                                citaId = cita.id
+                            )
+                        )
+                    }
+                    val pago = obtenerPagoPorCitaUseCase(cita.id).getOrNull()
                     _uiState.value = ConfirmacionCitaUiState.Confirmada(
                         citaId = cita.id,
                         pagoId = pago?.id.orEmpty()
@@ -92,12 +134,26 @@ class ConfirmacionCitaViewModel(
         }
     }
 
-    fun seleccionarPagoEnClinica(pagoId: String, onCompletado: () -> Unit) {
+    fun seleccionarPagoEnClinica(pagoId: String) {
         viewModelScope.launch {
-            if (pagoId.isNotBlank()) {
-                pagoRepository.seleccionarPagoEnClinica(pagoId)
+            val confirmada = _uiState.value as? ConfirmacionCitaUiState.Confirmada ?: return@launch
+            if (confirmada.seleccionandoPagoEnClinica) return@launch
+            if (pagoId.isBlank()) {
+                _uiState.value = confirmada.copy(errorPagoEnClinica = "No se pudo identificar el pago.")
+                return@launch
             }
-            onCompletado()
+            _uiState.value = confirmada.copy(seleccionandoPagoEnClinica = true, errorPagoEnClinica = null)
+            seleccionarPagoEnClinicaUseCase(pagoId)
+                .onSuccess {
+                    _uiState.value = confirmada.copy(seleccionandoPagoEnClinica = false)
+                    _uiEvents.emit(ConfirmacionCitaUiEvent.IrAPagoEnClinica(pagoId))
+                }
+                .onFailure {
+                    _uiState.value = confirmada.copy(
+                        seleccionandoPagoEnClinica = false,
+                        errorPagoEnClinica = it.message ?: "No se pudo seleccionar el pago en clínica."
+                    )
+                }
         }
     }
 }

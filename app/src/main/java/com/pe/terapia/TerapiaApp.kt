@@ -7,6 +7,7 @@ import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderF
 import com.pe.terapia.di.adminModule
 import com.pe.terapia.di.authModule
 import com.pe.terapia.di.citaModule
+import com.pe.terapia.di.apiModule
 import com.pe.terapia.di.dashboardModule
 import com.pe.terapia.di.firebaseModule
 import com.pe.terapia.di.pagoModule
@@ -16,6 +17,7 @@ import com.pe.terapia.di.tiempoModule
 import com.pe.terapia.di.roomModule
 import com.pe.terapia.di.pdfModule
 import com.pe.terapia.di.chatModule
+import com.pe.terapia.di.notificacionesModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -37,9 +39,9 @@ class TerapiaApp : Application(){
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@TerapiaApp)
-            modules(listOf(firebaseModule, authModule, citaModule, perfilModule, pagoModule, adminModule,
+            modules(listOf(firebaseModule, authModule, citaModule, apiModule, perfilModule, pagoModule, adminModule,
                 historiaClinicaModule, tiempoModule, roomModule, pdfModule, chatModule,
-                dashboardModule
+                dashboardModule, notificacionesModule
             ))
         }
     }

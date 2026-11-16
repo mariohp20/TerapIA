@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 
 @Dao
 interface CitaDao {
@@ -12,4 +13,13 @@ interface CitaDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarCita(cita: CitaEntity)
+
+    @Query("DELETE FROM citas_locales WHERE pacienteId = :pacienteId")
+    suspend fun eliminarCitasPaciente(pacienteId: String)
+
+    @Transaction
+    suspend fun reemplazarProximaCita(pacienteId: String, cita: CitaEntity?) {
+        eliminarCitasPaciente(pacienteId)
+        if (cita != null) insertarCita(cita)
+    }
 }

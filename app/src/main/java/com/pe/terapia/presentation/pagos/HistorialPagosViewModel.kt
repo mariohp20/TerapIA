@@ -12,6 +12,7 @@ import com.pe.terapia.domain.model.Pago
 import com.pe.terapia.domain.model.Rol
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.pagos.ObtenerHistorialPagosUseCase
+import com.pe.terapia.domain.usecase.pagos.SeleccionarPagoEnClinicaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +22,11 @@ import java.util.Locale
 
 sealed interface HistorialPagosUiState {
     data object Cargando : HistorialPagosUiState
-    data class Exito(val pagosConComprobante: List<Pair<Pago, Comprobante?>>) : HistorialPagosUiState
+    data class Exito(
+        val pagosConComprobante: List<Pair<Pago, Comprobante?>>,
+        val pagoEnActualizacionId: String? = null,
+        val errorAccion: String? = null
+    ) : HistorialPagosUiState
     data class Error(val mensaje: String) : HistorialPagosUiState
 }
 
@@ -30,7 +35,8 @@ class HistorialPagosViewModel(
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
     private val pdfGenerator: PdfGenerator,
     private val pdfExporter: PdfExporter,
-    private val comprobantePdfTemplate: ComprobantePdfTemplate
+    private val comprobantePdfTemplate: ComprobantePdfTemplate,
+    private val seleccionarPagoEnClinicaUseCase: SeleccionarPagoEnClinicaUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HistorialPagosUiState>(HistorialPagosUiState.Cargando)
@@ -56,6 +62,26 @@ class HistorialPagosViewModel(
                 }
                 .onFailure { error ->
                     _uiState.value = HistorialPagosUiState.Error(error.message ?: "Error al cargar historial de pagos.")
+                }
+        }
+    }
+
+    fun seleccionarPagoEnClinica(pagoId: String) {
+        val estadoActual = _uiState.value as? HistorialPagosUiState.Exito ?: return
+        if (pagoId.isBlank() || estadoActual.pagoEnActualizacionId != null) return
+
+        viewModelScope.launch {
+            _uiState.value = estadoActual.copy(pagoEnActualizacionId = pagoId, errorAccion = null)
+            seleccionarPagoEnClinicaUseCase(pagoId)
+                .onSuccess { cargarHistorial() }
+                .onFailure { error ->
+                    val estadoConError = _uiState.value as? HistorialPagosUiState.Exito
+                    if (estadoConError != null) {
+                        _uiState.value = estadoConError.copy(
+                            pagoEnActualizacionId = null,
+                            errorAccion = error.message ?: "No se pudo seleccionar el pago presencial."
+                        )
+                    }
                 }
         }
     }

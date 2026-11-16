@@ -28,7 +28,12 @@ import androidx.compose.ui.unit.sp
 import com.pe.terapia.R
 
 @Composable
-internal fun BienvenidaHeader(nombre: String, onCerrarSesion: () -> Unit, modifier: Modifier = Modifier) {
+internal fun BienvenidaHeader(
+    nombre: String,
+    onCerrarSesion: () -> Unit,
+    onVerNotificaciones: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val nombreMostrado = nombre.ifBlank { stringResource(R.string.inicio_paciente_generico) }
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -51,7 +56,7 @@ internal fun BienvenidaHeader(nombre: String, onCerrarSesion: () -> Unit, modifi
                 IconButton(onClick = { /* TODO: Buscar */ }) {
                     Icon(Icons.Outlined.Search, contentDescription = "Buscar")
                 }
-                IconButton(onClick = { /* TODO: Abrir panel de notificaciones */ }) {
+                IconButton(onClick = onVerNotificaciones) {
                     Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones")
                 }
             }

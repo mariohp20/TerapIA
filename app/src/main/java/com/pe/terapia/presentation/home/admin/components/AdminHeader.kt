@@ -25,6 +25,7 @@ import java.util.Locale
 @Composable
 internal fun AdminHeader(
     nombreAdmin: String,
+    onVerNotificaciones: () -> Unit,
     onCerrarSesion: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -45,7 +46,7 @@ internal fun AdminHeader(
                 modifier = Modifier.size(32.dp)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { /* TODO: Notificaciones */ }) {
+                IconButton(onClick = onVerNotificaciones) {
                     Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones")
                 }
                 IconButton(onClick = onCerrarSesion) {

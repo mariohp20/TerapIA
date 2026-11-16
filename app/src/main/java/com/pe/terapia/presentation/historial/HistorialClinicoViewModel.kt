@@ -48,9 +48,9 @@ class HistorialClinicoViewModel(
         }
     }
 
-    fun cargarHistorial(pacienteId: String) {
+    fun cargarHistorial(pacienteId: String, citaId: String? = null) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(cargando = true)
+            _uiState.value = _uiState.value.copy(cargando = true, error = null)
 
             val atencionesDeferred = async { obtenerAtencionesUseCase(pacienteId) }
             val catalogoDeferred = async { obtenerTiposEtapasUseCase() }
@@ -68,7 +68,12 @@ class HistorialClinicoViewModel(
                 return@launch
             }
 
-            val listaAtenciones = atencionesResult.getOrDefault(emptyList())
+            val atencionesPaciente = atencionesResult.getOrDefault(emptyList())
+            val listaAtenciones = if (citaId.isNullOrBlank()) {
+                atencionesPaciente
+            } else {
+                atencionesPaciente.filter { it.citaId == citaId }
+            }
             val listaTipos = catalogoResult.getOrDefault(emptyList())
             val proceso = procesoResult.getOrNull()
 
@@ -90,7 +95,8 @@ class HistorialClinicoViewModel(
                 atenciones = listaAtenciones,
                 tiposEtapas = listaTipos,
                 historialEtapas = listaEtapasHistorial,
-                etapaActivaNombre = nombreEtapaActiva
+                etapaActivaNombre = nombreEtapaActiva,
+                error = null
             )
         }
     }

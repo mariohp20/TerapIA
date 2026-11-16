@@ -17,6 +17,10 @@ kotlinxSerialization = "1.6.3"
 credentials = "1.3.0-alpha01"
 googleid = "1.1.1"
 firebaseAppcheckPlayintegrity = "20.0.0"
+workManager = "2.12.0"
+retrofit = "2.11.0"
+converterGson = "2.11.0"
+playServicesLocation = "21.3.0"
 uiGeometry = "1.12.1"
 
 [libraries]
@@ -48,6 +52,10 @@ androidx-credentials-play-services-auth = { group = "androidx.credentials", name
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity", version.ref = "firebaseAppcheckPlayintegrity" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "converterGson" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 androidx-compose-ui-geometry = { group = "androidx.compose.ui", name = "ui-geometry", version.ref = "uiGeometry" }
 
 [plugins]

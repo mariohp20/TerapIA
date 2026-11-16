@@ -6,3 +6,7 @@ import com.pe.terapia.domain.repository.AuthRepository
 class ObtenerUsuarioActualUseCase(private val repository: AuthRepository) {
     suspend operator fun invoke(): Result<Usuario?> = repository.obtenerUsuarioActual()
 }
+
+class ObtenerUidSesionActualUseCase(private val repository: AuthRepository) {
+    operator fun invoke(): String? = repository.obtenerUidSesionActual()
+}

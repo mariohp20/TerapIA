@@ -24,6 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.presentation.home.psicologo.perfil.PerfilPsicologoViewModel
 import com.pe.terapia.ui.components.BiometricoSwitchItem
 import com.pe.terapia.ui.components.PerfilOpcionItem
+import com.pe.terapia.ui.components.NotificacionesSwitchItem
+import com.pe.terapia.presentation.notifications.RecordatoriosSettingsViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -34,6 +36,8 @@ fun PerfilPsicologoScreen(
     viewModel: PerfilPsicologoViewModel = koinViewModel()
 ) {
     val usuario by viewModel.usuario.collectAsStateWithLifecycle()
+    val recordatoriosViewModel: RecordatoriosSettingsViewModel = koinViewModel()
+    val recordatorios by recordatoriosViewModel.uiState.collectAsStateWithLifecycle()
 
     val iniciales = usuario?.let { user ->
         user.nombres.split(" ").filter { it.isNotBlank() }
@@ -103,6 +107,12 @@ fun PerfilPsicologoScreen(
 
                 // COMPONENTE COMPARTIDO DEL SWITCH BIOMÉTRICO
                 BiometricoSwitchItem()
+                NotificacionesSwitchItem(
+                    activas = recordatorios.activos,
+                    cargando = recordatorios.cargando,
+                    error = recordatorios.error,
+                    onCambio = recordatoriosViewModel::establecerActivos
+                )
 
                 PerfilOpcionItem(Icons.AutoMirrored.Outlined.Help, "Ayuda y soporte", onClick = {})
                 PerfilOpcionItem(Icons.AutoMirrored.Outlined.ExitToApp, "Cerrar sesión", esRojo = true, onClick = onCerrarSesion)

@@ -29,6 +29,7 @@ import java.util.Locale
 internal fun PsicologoHeader(
     nombrePsicologo: String,
     onCerrarSesion: () -> Unit,
+    onVerNotificaciones: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val fechaHoy = LocalDate.now().format(DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es", "ES")))
@@ -43,7 +44,7 @@ internal fun PsicologoHeader(
         ) {
             Icon(Icons.Filled.Favorite, contentDescription = "Logo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { /* TODO: Notificaciones */ }) {
+                IconButton(onClick = onVerNotificaciones) {
                     Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones")
                 }
                 IconButton(onClick = onCerrarSesion) {

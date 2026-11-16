@@ -2,11 +2,14 @@ package com.pe.terapia.presentation.escanner
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.firestore.FirebaseFirestore
+import com.pe.terapia.domain.model.EstadoCita
+import com.pe.terapia.domain.model.Rol
+import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
+import com.pe.terapia.domain.usecase.citas.ValidarCitaQrUseCase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.launch
 
 sealed interface EscannerUiState {
@@ -15,17 +18,20 @@ sealed interface EscannerUiState {
     data class CitaEscaneada(
         val citaId: String,
         val pacienteId: String,
+        val pacienteNombre: String,
         val fecha: String,
         val hora: String,
         val especialidadId: String,
-        val estado: String
+        val estado: String,
+        val puedeRegistrarAtencion: Boolean,
+        val mensaje: String
     ) : EscannerUiState
-    data class AsistenciaConfirmada(val mensaje: String) : EscannerUiState
     data class Error(val mensaje: String) : EscannerUiState
 }
 
 class EscannerViewModel(
-    private val firestore: FirebaseFirestore
+    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
+    private val validarCitaQrUseCase: ValidarCitaQrUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EscannerUiState>(EscannerUiState.Idle)
@@ -40,46 +46,42 @@ class EscannerViewModel(
         viewModelScope.launch {
             _uiState.value = EscannerUiState.Cargando
             try {
-                val docRef = firestore.collection("citas").document(codigoCita.trim())
-                val snapshot = docRef.get().await()
-
-                if (!snapshot.exists()) {
-                    _uiState.value = EscannerUiState.Error("Cita no encontrada con el código: $codigoCita")
-                    return@launch
+                val psicologo = obtenerUsuarioActualUseCase().getOrThrow()
+                    ?: error("No hay un psicólogo autenticado.")
+                check(psicologo.rol == Rol.PSICOLOGO) {
+                    "Esta función solo está disponible para psicólogos."
+                }
+                val cita = validarCitaQrUseCase(codigoCita.trim(), psicologo.uid).getOrThrow()
+                val estado = cita.estado
+                val puedeRegistrar = estado == EstadoCita.PROGRAMADA.name &&
+                    cita.inicioEpochMillis > 0L && System.currentTimeMillis() >= cita.inicioEpochMillis
+                val mensaje = when (estado) {
+                    EstadoCita.PROGRAMADA.name -> if (puedeRegistrar) {
+                        "Cita validada. Puedes abrir el registro de atención; al guardarlo, la cita quedará completada."
+                    } else {
+                        "Cita validada. El registro de atención estará disponible desde la hora programada."
+                    }
+                    EstadoCita.COMPLETADA.name -> "Esta cita ya tiene una atención registrada. No se puede completar otra vez."
+                    EstadoCita.NO_ASISTIO.name -> "La cita ya fue marcada como inasistencia."
+                    EstadoCita.CANCELADA.name -> "La cita está cancelada y no admite registro de asistencia."
+                    else -> "Estado de cita no reconocido; no se puede registrar asistencia."
                 }
 
-                val citaId = snapshot.id
-                val pacienteId = snapshot.getString("pacienteId").orEmpty()
-                val fecha = snapshot.getString("fecha").orEmpty()
-                val hora = snapshot.getString("hora").orEmpty()
-                val especialidadId = snapshot.getString("especialidadId").orEmpty()
-                val estado = snapshot.getString("estado") ?: "PROGRAMADA"
-
                 _uiState.value = EscannerUiState.CitaEscaneada(
-                    citaId = citaId,
-                    pacienteId = pacienteId,
-                    fecha = fecha,
-                    hora = hora,
-                    especialidadId = especialidadId,
-                    estado = estado
+                    citaId = cita.citaId,
+                    pacienteId = cita.pacienteId,
+                    pacienteNombre = cita.pacienteNombre,
+                    fecha = cita.fecha,
+                    hora = cita.hora,
+                    especialidadId = cita.especialidadId,
+                    estado = estado,
+                    puedeRegistrarAtencion = puedeRegistrar,
+                    mensaje = mensaje
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = EscannerUiState.Error(e.message ?: "Error al verificar la cita.")
-            }
-        }
-    }
-
-    fun confirmarAsistencia(citaId: String) {
-        viewModelScope.launch {
-            _uiState.value = EscannerUiState.Cargando
-            try {
-                firestore.collection("citas").document(citaId)
-                    .update("estado", "COMPLETADA")
-                    .await()
-
-                _uiState.value = EscannerUiState.AsistenciaConfirmada("¡Asistencia confirmada y cita marcada como completada exitosamente!")
-            } catch (e: Exception) {
-                _uiState.value = EscannerUiState.Error(e.message ?: "Error al confirmar asistencia.")
             }
         }
     }

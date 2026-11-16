@@ -3,13 +3,13 @@ package com.pe.terapia.presentation.home.admin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.SupervisedUserCircle
 import androidx.compose.material.icons.outlined.ManageAccounts
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.SupervisedUserCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.presentation.home.admin.components.AdminHeader
 import com.pe.terapia.presentation.home.admin.components.AdminHerramientaButton
@@ -32,6 +31,8 @@ fun HomeAdminScreen(
     onAsignarHorario: () -> Unit,
     onDashboard: () -> Unit,
     onGestionarPsicologo: () -> Unit,
+    onVerSolicitudesCita: () -> Unit,
+    onVerNotificaciones: () -> Unit,
     mensajeError: String? = null,
     viewModel: HomeAdminViewModel = koinViewModel()
 ) {
@@ -44,6 +45,8 @@ fun HomeAdminScreen(
         onAsignarHorario = onAsignarHorario,
         onDashboard = onDashboard,
         onGestionarPsicologo = onGestionarPsicologo,
+        onVerSolicitudesCita = onVerSolicitudesCita,
+        onVerNotificaciones = onVerNotificaciones,
         onCerrarSesion = onCerrarSesion
     )
 }
@@ -56,6 +59,8 @@ private fun HomeAdminContent(
     onAsignarHorario: () -> Unit,
     onDashboard: () -> Unit,
     onGestionarPsicologo: () -> Unit,
+    onVerSolicitudesCita: () -> Unit,
+    onVerNotificaciones: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
     Column(
@@ -67,9 +72,9 @@ private fun HomeAdminContent(
             .padding(horizontal = 24.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp)
     ) {
-
         AdminHeader(
             nombreAdmin = uiState.nombreAdmin,
+            onVerNotificaciones = onVerNotificaciones,
             onCerrarSesion = onCerrarSesion
         )
 
@@ -118,9 +123,21 @@ private fun HomeAdminContent(
                 )
 
                 AdminHerramientaButton(
+                    titulo = "Solicitudes de cancelación y reprogramación",
+                    icono = Icons.Outlined.CalendarMonth,
+                    onClick = onVerSolicitudesCita
+                )
+
+                AdminHerramientaButton(
                     titulo = "Dashboard de la clínica",
                     icono = Icons.Outlined.BarChart,
                     onClick = onDashboard
+                )
+
+                AdminHerramientaButton(
+                    titulo = "Notificaciones",
+                    icono = Icons.Outlined.Notifications,
+                    onClick = onVerNotificaciones
                 )
             }
         }
@@ -138,6 +155,8 @@ private fun HomeAdminPreview() {
             onAsignarHorario = {},
             onDashboard = {},
             onGestionarPsicologo = {},
+            onVerSolicitudesCita = {},
+            onVerNotificaciones = {},
             onCerrarSesion = {}
         )
     }

@@ -19,11 +19,27 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/usuarios/$(uid)).data.activo == true;
     }
 
+    function isActivePsychologist(uid) {
+      let userPath = /databases/$(database)/documents/usuarios/$(uid);
+      return exists(userPath)
+        && get(userPath).data.rol == 'psicologo'
+        && get(userPath).data.activo == true;
+    }
+
     function isActivePatient(uid) {
       return signedIn()
         && request.auth.uid == uid
         && get(/databases/$(database)/documents/usuarios/$(uid)).data.rol == 'paciente'
         && get(/databases/$(database)/documents/usuarios/$(uid)).data.activo == true;
+    }
+
+    function isAdminOrPaymentProfessional(pagoId) {
+      let paymentPath = /databases/$(database)/documents/pagos/$(pagoId);
+      return isAdmin()
+        || (signedIn() && existsAfter(paymentPath)
+          && getAfter(paymentPath).data.psicologoId == request.auth.uid)
+        || (signedIn() && existsAfter(paymentPath)
+          && getAfter(paymentPath).data.pacienteId == request.auth.uid);
     }
 
     function ownsProfile(uid) {
@@ -111,6 +127,31 @@ service cloud.firestore {
         && getAfter(appointmentPath).data.pacienteId == data.pacienteId
         && getAfter(appointmentPath).data.slotId == data.slotId
         && getAfter(appointmentPath).data.inicioEpochMillis == data.inicioEpochMillis;
+    }
+
+    function patientCanCancel(data) {
+      let reservationPath = /databases/$(database)/documents/reservas/$(data.reservaId);
+      let reservation = get(reservationPath).data;
+      let lockPath = /databases/$(database)/documents/horariosLaborales/$(reservation.horarioId)/turnos/$(reservation.slotId);
+      return isActivePatient(data.pacienteId)
+        && request.auth.uid == data.pacienteId
+        && data.estado == 'PROGRAMADA'
+        && (!data.keys().hasAny(['estadoPago']) || data.estadoPago != 'PAGADO')
+        && (!data.keys().hasAny(['pagado']) || data.pagado != true)
+        && data.inicioAt > request.time + duration.value(24, 'h')
+        && exists(reservationPath)
+        && reservation.pacienteId == request.auth.uid
+        && reservation.estado == 'CONFIRMADA'
+        && getAfter(reservationPath).data.estado == 'CANCELADA'
+        && !existsAfter(lockPath);
+    }
+
+    function reservationAndAppointmentCancelledAfter(reservationId) {
+      let reservationPath = /databases/$(database)/documents/reservas/$(reservationId);
+      let reservation = getAfter(reservationPath).data;
+      let appointmentPath = /databases/$(database)/documents/citas/$(reservation.citaId);
+      return reservation.estado == 'CANCELADA'
+        && getAfter(appointmentPath).data.estado == 'CANCELADA';
     }
 
     function validReservationCreate(reservationId) {
@@ -235,9 +276,15 @@ service cloud.firestore {
           && existsAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId))
           && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.horarioId == horarioId
           && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.slotId == slotId
-          && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.pacienteId == request.auth.uid
+          && (isAdmin() || getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.pacienteId == request.auth.uid)
           && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioEpochMillis == request.resource.data.inicioEpochMillis;
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isAdmin() || (signedIn()
+          && exists(/databases/$(database)/documents/reservas/$(resource.data.reservaId))
+          && get(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.pacienteId == request.auth.uid
+          && get(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.horarioId == horarioId
+          && get(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.slotId == slotId
+          && reservationAndAppointmentCancelledAfter(resource.data.reservaId));
       }
     }
 
@@ -248,9 +295,35 @@ service cloud.firestore {
     }
 
     match /reservas/{reservaId} {
-      allow get, list: if signedIn() && resource.data.pacienteId == request.auth.uid;
+      allow get, list: if isAdmin() || (signedIn() && resource.data.pacienteId == request.auth.uid);
       allow create: if validReservationCreate(reservaId);
-      allow update, delete: if false;
+      allow update: if (signedIn()
+        && resource.data.pacienteId == request.auth.uid
+        && resource.data.estado == 'CONFIRMADA'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+        && request.resource.data.estado == 'CANCELADA'
+        && getAfter(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.estado == 'CANCELADA'
+        && get(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.inicioAt > request.time + duration.value(24, 'h')
+        && (!get(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.keys().hasAny(['estadoPago'])
+          || get(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.estadoPago != 'PAGADO')
+        && (!get(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.keys().hasAny(['pagado'])
+          || get(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.pagado != true))
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+          && request.resource.data.estado == 'CANCELADA')
+        || (isAdmin()
+          && resource.data.estado == 'CONFIRMADA'
+          && request.resource.data.estado == 'CONFIRMADA'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'fecha', 'hora', 'inicioEpochMillis', 'inicioAt', 'slotId', 'bloqueId'
+          ])
+          && getAfter(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.fecha == request.resource.data.fecha
+          && getAfter(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.hora == request.resource.data.hora
+          && getAfter(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.slotId == request.resource.data.slotId
+          && getAfter(/databases/$(database)/documents/citas/$(resource.data.citaId)).data.inicioEpochMillis == request.resource.data.inicioEpochMillis
+          && getAfter(/databases/$(database)/documents/horariosLaborales/$(request.resource.data.horarioId)/turnos/$(request.resource.data.slotId)).data.reservaId == reservaId
+          && !existsAfter(/databases/$(database)/documents/horariosLaborales/$(resource.data.horarioId)/turnos/$(resource.data.slotId)));
+      allow delete: if false;
     }
 
     match /citas/{citaId} {
@@ -261,11 +334,14 @@ service cloud.firestore {
       );
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
-          'id', 'reservaId', 'pacienteId', 'psicologoId', 'sedeId', 'especialidadId',
+          'id', 'reservaId', 'pacienteId', 'pacienteNombre', 'psicologoId', 'sedeId', 'especialidadId',
           'slotId', 'fecha', 'hora', 'inicioEpochMillis', 'inicioAt',
           'duracionMinutos', 'estado', 'creadaEn'
         ])
         && request.resource.data.id == citaId
+        && request.resource.data.pacienteNombre is string
+        && request.resource.data.pacienteNombre.size() > 0
+        && request.resource.data.pacienteNombre.size() <= 201
         && request.resource.data.estado == 'PROGRAMADA'
         && request.resource.data.creadaEn == request.time
         && request.resource.data.pacienteId == request.auth.uid
@@ -280,7 +356,21 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.inicioAt == request.resource.data.inicioAt
         && getAfter(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.duracionMinutos == request.resource.data.duracionMinutos;
       allow update: if (isAdmin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'estadoPago', 'pagado']))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'estadoPago', 'pagado', 'canceladaEn']))
+        || (isAdmin()
+          && resource.data.estado == 'PROGRAMADA'
+          && request.resource.data.estado == 'PROGRAMADA'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'fecha', 'hora', 'inicioEpochMillis', 'inicioAt', 'slotId'
+          ])
+          && existsAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId))
+          && getAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.fecha == request.resource.data.fecha
+          && getAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.hora == request.resource.data.hora
+          && getAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.inicioEpochMillis == request.resource.data.inicioEpochMillis
+          && getAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.inicioAt == request.resource.data.inicioAt
+          && getAfter(/databases/$(database)/documents/reservas/$(resource.data.reservaId)).data.slotId == request.resource.data.slotId
+          && getAfter(/databases/$(database)/documents/horariosLaborales/$(resource.data.psicologoId + '~' + resource.data.sedeId)/turnos/$(request.resource.data.slotId)).data.reservaId == resource.data.reservaId
+          && !existsAfter(/databases/$(database)/documents/horariosLaborales/$(resource.data.psicologoId + '~' + resource.data.sedeId)/turnos/$(resource.data.slotId)))
         || (isPsychologist(resource.data.psicologoId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
           && request.resource.data.estado == 'COMPLETADA'
@@ -300,7 +390,97 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estadoPago', 'pagado'])
           && (!resource.data.keys().hasAny(['estadoPago']) || resource.data.estadoPago == 'PENDIENTE')
           && request.resource.data.estadoPago == 'PAGADO'
-          && request.resource.data.pagado == true);
+          && request.resource.data.pagado == true)
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'canceladaEn'])
+          && request.resource.data.estado == 'CANCELADA'
+          && patientCanCancel(resource.data));
+      allow delete: if false;
+    }
+
+    match /solicitudesGestionCitas/{solicitudId} {
+      allow get: if isAdmin() || (signedIn() && (
+        (!exists(/databases/$(database)/documents/solicitudesGestionCitas/$(solicitudId))
+          && exists(/databases/$(database)/documents/citas/$(solicitudId))
+          && get(/databases/$(database)/documents/citas/$(solicitudId)).data.pacienteId == request.auth.uid)
+        || (exists(/databases/$(database)/documents/solicitudesGestionCitas/$(solicitudId))
+          && resource.data.pacienteId == request.auth.uid)
+      ));
+      allow list: if isAdmin() || (signedIn() && resource.data.pacienteId == request.auth.uid);
+      allow create: if isActivePatient(request.resource.data.pacienteId)
+        && request.resource.data.id == solicitudId
+        && request.resource.data.citaId == solicitudId
+        && request.resource.data.keys().hasOnly([
+          'id', 'citaId', 'pacienteId', 'psicologoId', 'tipo', 'estado', 'creadaEn',
+          'fechaSolicitada', 'horaSolicitada', 'inicioEpochMillisSolicitado',
+          'horarioIdSolicitado', 'bloqueIdSolicitado', 'duracionMinutosSolicitada'
+        ])
+        && request.resource.data.tipo in ['CANCELACION', 'REPROGRAMACION']
+        && request.resource.data.estado == 'PENDIENTE'
+        && request.resource.data.creadaEn == request.time
+        && exists(/databases/$(database)/documents/citas/$(request.resource.data.citaId))
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.pacienteId == request.auth.uid
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.psicologoId == request.resource.data.psicologoId
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.estado == 'PROGRAMADA'
+        && get(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.inicioEpochMillis > request.time.toMillis()
+        && ((request.resource.data.tipo == 'CANCELACION'
+            && !request.resource.data.keys().hasAny([
+              'fechaSolicitada', 'horaSolicitada', 'inicioEpochMillisSolicitado',
+              'horarioIdSolicitado', 'bloqueIdSolicitado', 'duracionMinutosSolicitada'
+            ]))
+          || (request.resource.data.tipo == 'REPROGRAMACION'
+            && request.resource.data.keys().hasAll([
+              'fechaSolicitada', 'horaSolicitada', 'inicioEpochMillisSolicitado',
+              'horarioIdSolicitado', 'bloqueIdSolicitado', 'duracionMinutosSolicitada'
+            ])
+            && request.resource.data.fechaSolicitada is string
+            && request.resource.data.horaSolicitada is string
+            && request.resource.data.inicioEpochMillisSolicitado is int
+            && request.resource.data.inicioEpochMillisSolicitado > request.time.toMillis()
+            && request.resource.data.horarioIdSolicitado == request.resource.data.psicologoId + '~' + get(/databases/$(database)/documents/citas/$(solicitudId)).data.sedeId
+            && request.resource.data.bloqueIdSolicitado is string
+            && request.resource.data.duracionMinutosSolicitada == get(/databases/$(database)/documents/citas/$(solicitudId)).data.duracionMinutos
+            && request.resource.data.inicioEpochMillisSolicitado != get(/databases/$(database)/documents/citas/$(solicitudId)).data.inicioEpochMillis));
+      allow update: if (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'resueltaEn', 'resueltaPor', 'notaAdmin', 'pagoPendienteRevision'])
+          && request.resource.data.estado in ['ACEPTADA', 'RECHAZADA', 'ATENDIDA'])
+        || (isActivePatient(resource.data.pacienteId)
+          && resource.data.pacienteId == request.auth.uid
+          && resource.data.citaId == solicitudId
+          && resource.data.estado in ['ACEPTADA', 'RECHAZADA', 'ATENDIDA']
+          && request.resource.data.id == solicitudId
+          && request.resource.data.citaId == solicitudId
+          && request.resource.data.pacienteId == request.auth.uid
+          && request.resource.data.psicologoId == resource.data.psicologoId
+          && request.resource.data.tipo in ['CANCELACION', 'REPROGRAMACION']
+          && request.resource.data.estado == 'PENDIENTE'
+          && request.resource.data.creadaEn == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'tipo', 'estado', 'creadaEn', 'resueltaEn', 'resueltaPor', 'notaAdmin', 'pagoPendienteRevision',
+            'fechaSolicitada', 'horaSolicitada', 'inicioEpochMillisSolicitado',
+            'horarioIdSolicitado', 'bloqueIdSolicitado', 'duracionMinutosSolicitada'
+          ])
+          && exists(/databases/$(database)/documents/citas/$(solicitudId))
+          && get(/databases/$(database)/documents/citas/$(solicitudId)).data.pacienteId == request.auth.uid
+          && get(/databases/$(database)/documents/citas/$(solicitudId)).data.estado == 'PROGRAMADA'
+          && get(/databases/$(database)/documents/citas/$(solicitudId)).data.inicioEpochMillis > request.time.toMillis()
+          && ((request.resource.data.tipo == 'CANCELACION'
+              && !request.resource.data.keys().hasAny([
+                'fechaSolicitada', 'horaSolicitada', 'inicioEpochMillisSolicitado',
+                'horarioIdSolicitado', 'bloqueIdSolicitado', 'duracionMinutosSolicitada'
+              ]))
+            || (request.resource.data.tipo == 'REPROGRAMACION'
+              && request.resource.data.keys().hasAll([
+                'fechaSolicitada', 'horaSolicitada', 'inicioEpochMillisSolicitado',
+                'horarioIdSolicitado', 'bloqueIdSolicitado', 'duracionMinutosSolicitada'
+              ])
+              && request.resource.data.fechaSolicitada is string
+              && request.resource.data.horaSolicitada is string
+              && request.resource.data.inicioEpochMillisSolicitado is int
+              && request.resource.data.inicioEpochMillisSolicitado > request.time.toMillis()
+              && request.resource.data.horarioIdSolicitado == request.resource.data.psicologoId + '~' + get(/databases/$(database)/documents/citas/$(solicitudId)).data.sedeId
+              && request.resource.data.bloqueIdSolicitado is string
+              && request.resource.data.duracionMinutosSolicitada == get(/databases/$(database)/documents/citas/$(solicitudId)).data.duracionMinutos
+              && request.resource.data.inicioEpochMillisSolicitado != get(/databases/$(database)/documents/citas/$(solicitudId)).data.inicioEpochMillis)));
       allow delete: if false;
     }
 
@@ -338,6 +518,52 @@ service cloud.firestore {
               && request.resource.data.metodoPago == 'ONLINE_MERCADOPAGO'
               && request.resource.data.referenciaTransaccion is string)));
       allow delete: if false;
+    }
+
+    match /notificaciones/{notificacionId} {
+      allow get, list: if (isAdmin() && resource.data.destinatarioRol == 'admin')
+        || (signedIn() && resource.data.usuarioId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.id == notificacionId
+        && request.resource.data.keys().hasOnly([
+          'id', 'usuarioId', 'destinatarioRol', 'titulo', 'mensaje', 'tipo',
+          'citaId', 'pagoId', 'solicitudId', 'fechaCreacion', 'leida'
+        ])
+        && request.resource.data.titulo is string
+        && request.resource.data.mensaje is string
+        && request.resource.data.fechaCreacion == request.time
+        && request.resource.data.leida == false
+        && (
+          (request.resource.data.tipo == 'PAGO_CONFIRMADO'
+            && request.resource.data.destinatarioRol == 'paciente'
+            && request.resource.data.usuarioId == getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.pacienteId
+            && isAdminOrPaymentProfessional(request.resource.data.pagoId)
+            && getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.estado == 'PAGADO'
+            && getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.citaId == request.resource.data.citaId)
+          || (request.resource.data.tipo == 'PAGO_CONFIRMADO_ADMIN'
+            && request.resource.data.destinatarioRol == 'admin'
+            && isAdminOrPaymentProfessional(request.resource.data.pagoId)
+            && getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.estado == 'PAGADO'
+            && getAfter(/databases/$(database)/documents/pagos/$(request.resource.data.pagoId)).data.citaId == request.resource.data.citaId)
+          || (request.resource.data.tipo == 'SOLICITUD_GESTION'
+            && request.resource.data.destinatarioRol == 'admin'
+            && existsAfter(/databases/$(database)/documents/solicitudesGestionCitas/$(request.resource.data.solicitudId))
+            && getAfter(/databases/$(database)/documents/solicitudesGestionCitas/$(request.resource.data.solicitudId)).data.estado == 'PENDIENTE'
+            && getAfter(/databases/$(database)/documents/solicitudesGestionCitas/$(request.resource.data.solicitudId)).data.pacienteId == request.auth.uid)
+          || (request.resource.data.tipo == 'CITA_RESERVADA_PSICOLOGO'
+            && request.resource.data.destinatarioRol == 'psicologo'
+            && isActivePsychologist(request.resource.data.usuarioId)
+            && existsAfter(/databases/$(database)/documents/citas/$(request.resource.data.citaId))
+            && getAfter(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.psicologoId == request.resource.data.usuarioId
+            && getAfter(/databases/$(database)/documents/citas/$(request.resource.data.citaId)).data.pacienteId == request.auth.uid
+            && isActivePatient(request.auth.uid))
+          || (request.resource.data.tipo in ['GESTION_REPROGRAMADA', 'GESTION_CANCELADA', 'GESTION_RECHAZADA']
+            && request.resource.data.destinatarioRol == 'paciente'
+            && isAdmin()
+            && request.resource.data.usuarioId == getAfter(/databases/$(database)/documents/solicitudesGestionCitas/$(request.resource.data.solicitudId)).data.pacienteId
+            && getAfter(/databases/$(database)/documents/solicitudesGestionCitas/$(request.resource.data.solicitudId)).data.estado in ['ACEPTADA', 'RECHAZADA'])
+        );
+      allow update, delete: if false;
     }
 
     match /comprobantes/{comprobanteId} {

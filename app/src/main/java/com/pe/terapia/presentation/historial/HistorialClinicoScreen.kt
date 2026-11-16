@@ -40,16 +40,17 @@ fun HistorialClinicoScreen(
     pacienteId: String,
     pacienteNombre: String,
     onVolver: () -> Unit,
+    citaId: String? = null,
     viewModel: HistorialClinicoViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Estado para las pestañas
     val tabs = listOf("Resumen", "Sesiones", "Notas", "Etapas")
-    var tabSeleccionado by remember { mutableStateOf(0) }
+    var tabSeleccionado by remember(citaId) { mutableStateOf(if (citaId.isNullOrBlank()) 0 else 1) }
 
-    LaunchedEffect(pacienteId) {
-        viewModel.cargarHistorial(pacienteId)
+    LaunchedEffect(pacienteId, citaId) {
+        viewModel.cargarHistorial(pacienteId, citaId)
     }
 
     Scaffold(

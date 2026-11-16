@@ -5,6 +5,8 @@ import com.pe.terapia.data.repository.PagoRepositoryImpl
 import com.pe.terapia.domain.repository.PagoRepository
 import com.pe.terapia.domain.usecase.pagos.ConfirmarPagoClinicaUseCase
 import com.pe.terapia.domain.usecase.pagos.ObtenerComprobantePorCitaUseCase
+import com.pe.terapia.domain.usecase.pagos.ObtenerPagoPorCitaUseCase
+import com.pe.terapia.domain.usecase.pagos.SeleccionarPagoEnClinicaUseCase
 import com.pe.terapia.domain.usecase.pagos.ObtenerHistorialPagosUseCase
 import com.pe.terapia.domain.usecase.pagos.ObtenerPagosPendientesPsicologoUseCase
 import com.pe.terapia.domain.usecase.pagos.PagarOnlineUseCase
@@ -23,8 +25,10 @@ val pagoModule = module {
     factory { ConfirmarPagoClinicaUseCase(get()) }
     factory { PagarOnlineUseCase(get()) }
     factory { ObtenerComprobantePorCitaUseCase(get()) }
+    factory { ObtenerPagoPorCitaUseCase(get()) }
+    factory { SeleccionarPagoEnClinicaUseCase(get()) }
 
-    viewModel { HistorialPagosViewModel(get(), get(), get(), get(), get()) }
+    viewModel { HistorialPagosViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { (pagoId: String) -> PasarelaPagoViewModel(pagoId, get()) }
     viewModel { GestionPagosPsicologoViewModel(get(), get(), get()) }
 }

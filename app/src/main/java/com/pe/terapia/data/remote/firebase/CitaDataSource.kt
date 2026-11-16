@@ -1,11 +1,14 @@
 package com.pe.terapia.data.remote.firebase
 
+import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.BloqueHorario
 import com.pe.terapia.domain.model.Cita
+import com.pe.terapia.domain.model.CitaQrInfo
+import com.pe.terapia.domain.model.CitasPsicologoResumen
 import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
@@ -42,6 +45,180 @@ private class CacheRelaciones {
 }
 
 class CitaDataSource(private val firestore: FirebaseFirestore) {
+
+    suspend fun tieneSolicitudGestionPendiente(citaId: String, pacienteId: String): Boolean {
+        val request = firestore.collection("solicitudesGestionCitas").document(citaId).get().await()
+        return request.exists() && request.getString("pacienteId") == pacienteId &&
+            request.getString("estado") == "PENDIENTE"
+    }
+
+    suspend fun obtenerSolicitudGestionPendiente(citaId: String, pacienteId: String): DocumentSnapshot? {
+        val query = firestore.collection("solicitudesGestionCitas")
+            .whereEqualTo("citaId", citaId)
+            .whereEqualTo("pacienteId", pacienteId)
+            .whereEqualTo("estado", "PENDIENTE")
+            .limit(1)
+            .get()
+            .await()
+        return query.documents.firstOrNull()
+    }
+
+    suspend fun solicitarGestionCita(citaId: String, pacienteId: String, tipo: String, slotSolicitado: SlotDisponible?) {
+        require(citaId.isNotBlank() && pacienteId.isNotBlank()) { "Faltan datos de la cita." }
+        require(tipo in setOf("CANCELACION", "REPROGRAMACION")) { "Tipo de solicitud no válido." }
+        val cita = firestore.collection("citas").document(citaId).get().await()
+        check(cita.exists() && cita.getString("pacienteId") == pacienteId) { "No puedes gestionar esta cita." }
+        check(cita.getString("estado") == EstadoCita.PROGRAMADA.name) { "Solo se pueden gestionar citas programadas." }
+        check((cita.getLong("inicioEpochMillis") ?: 0L) > System.currentTimeMillis()) { "La fecha de la cita ya pasó." }
+        val psicologoId = cita.getString("psicologoId").orEmpty()
+        val sedeId = cita.getString("sedeId").orEmpty()
+        if (tipo == "REPROGRAMACION") {
+            val propuesta = requireNotNull(slotSolicitado) { "Selecciona una nueva fecha y hora." }
+            check(propuesta.psicologoId == psicologoId && propuesta.sedeId == sedeId) {
+                "La nueva propuesta debe ser con el mismo profesional y en la misma sede."
+            }
+            check(propuesta.inicioEpochMillis > System.currentTimeMillis()) { "El horario propuesto ya pasó." }
+        } else {
+            require(slotSolicitado == null) { "La solicitud de cancelación no debe incluir un nuevo horario." }
+        }
+        val legacyPending = firestore.collection("solicitudesGestionCitas")
+            .whereEqualTo("citaId", citaId)
+            .whereEqualTo("pacienteId", pacienteId)
+            .whereEqualTo("estado", "PENDIENTE")
+            .get().await().documents
+        check(legacyPending.isEmpty()) {
+            "Ya tienes una solicitud pendiente. El administrador debe rechazar o resolver esa solicitud antes de crear otra."
+        }
+        // Un documento estable por cita impide que reentrar a la pantalla cree
+        // una cola ilimitada de solicitudes iguales.
+        val requestRef = firestore.collection("solicitudesGestionCitas").document(citaId)
+        val adminNotificationRef = firestore.collection("notificaciones")
+            .document("admin_solicitud_${citaId}_${System.currentTimeMillis()}")
+        firestore.runTransaction { transaction ->
+            val existing = transaction.get(requestRef)
+            check(!existing.exists() || existing.getString("estado") !in setOf("PENDIENTE")) {
+                "Ya tienes una solicitud pendiente para esta cita."
+            }
+            val data = mutableMapOf<String, Any>(
+                "id" to citaId,
+                "citaId" to citaId,
+                "pacienteId" to pacienteId,
+                "psicologoId" to psicologoId,
+                "tipo" to tipo,
+                "estado" to "PENDIENTE",
+                "creadaEn" to FieldValue.serverTimestamp()
+            )
+            if (slotSolicitado != null) {
+                data["fechaSolicitada"] = slotSolicitado.fecha
+                data["horaSolicitada"] = slotSolicitado.hora
+                data["inicioEpochMillisSolicitado"] = slotSolicitado.inicioEpochMillis
+                data["horarioIdSolicitado"] = slotSolicitado.horarioId
+                data["bloqueIdSolicitado"] = slotSolicitado.bloqueId
+                data["duracionMinutosSolicitada"] = slotSolicitado.duracionMinutos
+            }
+            if (existing.exists()) {
+                transaction.update(requestRef, data + mapOf(
+                    "resueltaEn" to FieldValue.delete(),
+                    "resueltaPor" to FieldValue.delete(),
+                    "notaAdmin" to FieldValue.delete(),
+                    "pagoPendienteRevision" to FieldValue.delete(),
+                    "fechaSolicitada" to (slotSolicitado?.fecha ?: FieldValue.delete()),
+                    "horaSolicitada" to (slotSolicitado?.hora ?: FieldValue.delete()),
+                    "inicioEpochMillisSolicitado" to (slotSolicitado?.inicioEpochMillis ?: FieldValue.delete()),
+                    "horarioIdSolicitado" to (slotSolicitado?.horarioId ?: FieldValue.delete()),
+                    "bloqueIdSolicitado" to (slotSolicitado?.bloqueId ?: FieldValue.delete()),
+                    "duracionMinutosSolicitada" to (slotSolicitado?.duracionMinutos ?: FieldValue.delete())
+                ))
+            } else {
+                transaction.set(requestRef, data)
+            }
+            Unit
+        }.await()
+
+        // La solicitud es la operación de negocio principal. Un error al guardar
+        // su aviso no debe hacer que el paciente la vuelva a enviar ni bloquearla.
+        try {
+            adminNotificationRef.set(mapOf(
+                "id" to adminNotificationRef.id,
+                "destinatarioRol" to Rol.ADMIN.valor,
+                "titulo" to if (tipo == "REPROGRAMACION") "Solicitud de reprogramación" else "Solicitud de cancelación",
+                "mensaje" to if (slotSolicitado != null) {
+                    "Un paciente propuso ${slotSolicitado.fecha} a las ${slotSolicitado.hora}. Revisa la solicitud."
+                } else "Un paciente solicitó cancelar una cita. Revisa la solicitud.",
+                "tipo" to "SOLICITUD_GESTION",
+                "solicitudId" to citaId,
+                "citaId" to citaId,
+                "fechaCreacion" to FieldValue.serverTimestamp(),
+                "leida" to false
+            )).await()
+        } catch (error: Exception) {
+            Log.w("CitaDataSource", "La solicitud quedó guardada, pero no se pudo crear su aviso al administrador.", error)
+        }
+    }
+
+    suspend fun cancelarCitaPaciente(citaId: String, pacienteId: String) {
+        require(citaId.isNotBlank() && pacienteId.isNotBlank())
+        val citaRef = firestore.collection("citas").document(citaId)
+        firestore.runTransaction { transaction ->
+            val cita = transaction.get(citaRef)
+            check(cita.exists() && cita.getString("pacienteId") == pacienteId) { "No puedes cancelar esta cita." }
+            check(cita.getString("estado") == EstadoCita.PROGRAMADA.name) { "La cita ya no está programada." }
+            check(cita.getString("estadoPago") != "PAGADO" && cita.getBoolean("pagado") != true) {
+                "La cita pagada requiere revisión de la clínica."
+            }
+            val inicio = cita.getTimestamp("inicioAt")?.toDate()?.time ?: cita.getLong("inicioEpochMillis") ?: 0L
+            check(inicio - System.currentTimeMillis() > CANCELACION_CUTOFF_MILLIS) {
+                "Para cancelar con menos de 24 horas, contacta a la clínica."
+            }
+            val reservaId = cita.getString("reservaId").orEmpty()
+            check(reservaId.isNotBlank()) { "La cita no tiene una reserva asociada." }
+            val reservaRef = firestore.collection("reservas").document(reservaId)
+            val reserva = transaction.get(reservaRef)
+            check(reserva.exists() && reserva.getString("pacienteId") == pacienteId && reserva.getString("estado") == "CONFIRMADA") {
+                "No se encontró una reserva activa asociada a esta cita."
+            }
+            val horarioId = reserva.getString("horarioId").orEmpty()
+            val slotId = reserva.getString("slotId").orEmpty()
+            check(horarioId.isNotBlank() && slotId.isNotBlank()) { "La reserva no contiene la información del turno." }
+            val turnoRef = firestore.collection("horariosLaborales").document(horarioId).collection("turnos").document(slotId)
+            val turno = transaction.get(turnoRef)
+            check(turno.exists() && turno.getString("reservaId") == reservaId) { "El turno ya no corresponde a esta reserva." }
+
+            transaction.update(citaRef, mapOf("estado" to EstadoCita.CANCELADA.name, "canceladaEn" to FieldValue.serverTimestamp()))
+            transaction.update(reservaRef, "estado", "CANCELADA")
+            transaction.delete(turnoRef)
+            Unit
+        }.await()
+    }
+
+    suspend fun validarCitaQr(citaId: String, psicologoId: String): CitaQrInfo {
+        require(citaId.isNotBlank() && psicologoId.isNotBlank()) { "Faltan datos para validar el QR." }
+        val cita = firestore.collection("citas").document(citaId).get().await()
+        check(cita.exists()) { "No se encontró una cita asociada a este QR." }
+        check(cita.getString("psicologoId") == psicologoId) {
+            "Esta cita no está asignada a tu cuenta de psicólogo."
+        }
+
+        val pacienteId = cita.getString("pacienteId").orEmpty()
+        check(pacienteId.isNotBlank()) { "La cita no tiene un paciente asociado." }
+        // El nombre visible se guarda en la cita para que el psicólogo no necesite
+        // leer el perfil privado del paciente desde /usuarios.
+        val pacienteNombre = cita.getString("pacienteNombre").orEmpty().ifBlank { "Paciente" }
+        val inicioMillis = cita.getTimestamp("inicioAt")?.toDate()?.time
+            ?: cita.getLong("inicioEpochMillis")
+            ?: 0L
+
+        return CitaQrInfo(
+            citaId = cita.id,
+            pacienteId = pacienteId,
+            pacienteNombre = pacienteNombre,
+            fecha = cita.getString("fecha").orEmpty(),
+            hora = cita.getString("hora").orEmpty(),
+            especialidadId = cita.getString("especialidadId").orEmpty(),
+            estado = cita.getString("estado") ?: EstadoCita.PROGRAMADA.name,
+            inicioEpochMillis = inicioMillis
+        )
+    }
 
     suspend fun obtenerProximaCita(pacienteId: String): ProximaCita? {
         val ahora = System.currentTimeMillis()
@@ -105,7 +282,10 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
             inicioEpochMillis = getLong("inicioEpochMillis") ?: 0L,
             psicologoDescripcion = descripcion,
             sedeLatitud = sede.latitud,
-            sedeLongitud = sede.longitud
+            sedeLongitud = sede.longitud,
+            pagado = getBoolean("pagado") == true || getString("estadoPago") == "PAGADO",
+            psicologoId = psicologoId,
+            sedeId = sedeId
         )
     }
 
@@ -304,6 +484,8 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 hora = reserva.hora,
                 inicioEpochMillis = reserva.inicioEpochMillis,
                 duracionMinutos = duration,
+                pacienteNombre = listOfNotNull(profile.getString("nombres"), profile.getString("apellidos"))
+                    .filter(String::isNotBlank).joinToString(" "),
                 estado = EstadoCita.PROGRAMADA
             )
             val confirmedReservation = reserva.copy(
@@ -313,6 +495,20 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
             )
             transaction.set(reservationRef, confirmedReservation.toFirestore(startAt, appointmentRef.id))
             transaction.set(appointmentRef, cita.toFirestore(startAt))
+
+            val psychologistNotificationRef = firestore.collection("notificaciones")
+                .document("cita_reservada_${cita.id}")
+            transaction.set(psychologistNotificationRef, mapOf(
+                "id" to psychologistNotificationRef.id,
+                "usuarioId" to reserva.psicologoId,
+                "destinatarioRol" to Rol.PSICOLOGO.valor,
+                "titulo" to "Nueva cita reservada",
+                "mensaje" to "Se reservó una cita para el ${cita.fecha} a las ${cita.hora}.",
+                "tipo" to "CITA_RESERVADA_PSICOLOGO",
+                "citaId" to cita.id,
+                "fechaCreacion" to FieldValue.serverTimestamp(),
+                "leida" to false
+            ))
 
             transaction.set(lockRef, mapOf(
                 "reservaId" to reservationRef.id,
@@ -336,20 +532,49 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
 
         return snapshot.documents.mapNotNull { doc ->
             val pacienteId = doc.getString("pacienteId") ?: return@mapNotNull null
-            val pacienteSnapshot = firestore.collection("usuarios").document(pacienteId).get().await()
-            val nombres = pacienteSnapshot.getString("nombres") ?: ""
-            val apellidos = pacienteSnapshot.getString("apellidos") ?: ""
-            val nombreCompleto = "$nombres $apellidos".trim()
-
             CitaPacienteDetalle(
                 citaId = doc.id,
                 pacienteId = pacienteId,
                 hora = doc.getString("hora").orEmpty(),
-                nombrePaciente = nombreCompleto.ifBlank { "Paciente sin registrar" },
+                nombrePaciente = doc.getString("pacienteNombre").orEmpty().ifBlank { "Paciente sin registrar" },
                 fecha = doc.getString("fecha").orEmpty(),
                 inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L
             )
         }.sortedBy { it.hora }
+    }
+
+    suspend fun obtenerCitasPsicologoResumen(psicologoId: String, ahoraEpochMillis: Long): CitasPsicologoResumen {
+        require(psicologoId.isNotBlank()) { "No se pudo identificar al psicólogo." }
+        val documentos = firestore.collection("citas")
+            .whereEqualTo("psicologoId", psicologoId)
+            .get().await().documents
+        val documentosPorId = documentos.associateBy { it.id }
+        val programadas = documentos.mapNotNull { doc ->
+            if (doc.getString("estado") != EstadoCita.PROGRAMADA.name) return@mapNotNull null
+            val inicio = doc.getLong("inicioEpochMillis") ?: return@mapNotNull null
+            val pacienteId = doc.getString("pacienteId") ?: return@mapNotNull null
+            CitaPacienteDetalle(
+                citaId = doc.id,
+                pacienteId = pacienteId,
+                hora = doc.getString("hora").orEmpty(),
+                nombrePaciente = doc.getString("pacienteNombre").orEmpty().ifBlank { "Paciente sin registrar" },
+                fecha = doc.getString("fecha").orEmpty(),
+                inicioEpochMillis = inicio
+            )
+        }
+        val pendientes = programadas.filter { cita ->
+            val duration = documentosPorId[cita.citaId]
+                ?.getLong("duracionMinutos")?.toInt() ?: DURACION_CITA_MINUTOS
+            cita.inicioEpochMillis + duration * 60_000L <= ahoraEpochMillis
+        }.sortedBy { it.inicioEpochMillis }
+        val futuras = programadas.filter { it.inicioEpochMillis > ahoraEpochMillis }
+            .sortedBy { it.inicioEpochMillis }
+        val citasSinRecordatorio = documentos.mapNotNull { doc ->
+            val estado = doc.getString("estado")
+            val inicio = doc.getLong("inicioEpochMillis") ?: 0L
+            if (estado != EstadoCita.PROGRAMADA.name || inicio <= ahoraEpochMillis) doc.id else null
+        }
+        return CitasPsicologoResumen(pendientes, futuras, citasSinRecordatorio)
     }
 
     suspend fun obtenerCitasPendientesResultado(psicologoId: String, ahoraEpochMillis: Long): List<CitaPacienteDetalle> = coroutineScope {
@@ -367,14 +592,11 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         citas.map { doc ->
             async {
                 val pacienteId = doc.getString("pacienteId").orEmpty()
-                val profile = firestore.collection("usuarios").document(pacienteId).get().await()
-                val nombre = listOf(profile.getString("nombres"), profile.getString("apellidos"))
-                    .filterNotNull().filter(String::isNotBlank).joinToString(" ").ifBlank { "Paciente sin registrar" }
                 CitaPacienteDetalle(
                     citaId = doc.id,
                     pacienteId = pacienteId,
                     hora = doc.getString("hora").orEmpty(),
-                    nombrePaciente = nombre,
+                    nombrePaciente = doc.getString("pacienteNombre").orEmpty().ifBlank { "Paciente sin registrar" },
                     fecha = doc.getString("fecha").orEmpty(),
                     inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L
                 )
@@ -420,6 +642,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         "id" to id,
         "reservaId" to reservaId,
         "pacienteId" to pacienteId,
+        "pacienteNombre" to pacienteNombre,
         "psicologoId" to psicologoId,
         "sedeId" to sedeId,
         "especialidadId" to especialidadId,
@@ -496,6 +719,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
 
 
     companion object {
+        private const val CANCELACION_CUTOFF_MILLIS = 24L * 60 * 60 * 1000
         fun scheduleId(psicologoId: String, sedeId: String): String = "$psicologoId~$sedeId"
         fun slotId(inicioEpochMillis: Long): String = inicioEpochMillis.toString()
         fun exceptionId(scheduleId: String, slotId: String): String = "${scheduleId}~${slotId}"

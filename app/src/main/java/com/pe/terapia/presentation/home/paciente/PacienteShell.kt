@@ -42,6 +42,7 @@ import com.pe.terapia.presentation.home.paciente.chat.TerapiaChatScreen
 import com.pe.terapia.presentation.home.paciente.inicio.HomePacienteScreen
 import com.pe.terapia.presentation.home.paciente.miscitas.MisCitasScreen
 import com.pe.terapia.presentation.home.paciente.perfil.PerfilScreen
+import com.pe.terapia.presentation.notifications.NotificacionesScreen
 import com.pe.terapia.presentation.dashboard.DashboardPacienteScreen
 import kotlinx.serialization.Serializable
 
@@ -52,6 +53,7 @@ sealed class PacienteTab {
     @Serializable data object Progreso : PacienteTab()
     @Serializable data object Asistente : PacienteTab()
     @Serializable data object Perfil : PacienteTab()
+    @Serializable data object Notificaciones : PacienteTab()
 }
 
 private data class TabPaciente(
@@ -80,7 +82,9 @@ fun PacienteShell(
     val tabNavController = rememberNavController()
     val entradaActual by tabNavController.currentBackStackEntryAsState()
     val destinoActual = entradaActual?.destination
-    val mostrarBarra = destinoActual?.hierarchy?.any { it.hasRoute(PacienteTab.Progreso::class) } != true
+    val mostrarBarra = destinoActual?.hierarchy?.any {
+        it.hasRoute(PacienteTab.Progreso::class) || it.hasRoute(PacienteTab.Notificaciones::class)
+    } != true
 
     val irATab: (PacienteTab) -> Unit = { tab ->
         tabNavController.navigate(tab) {
@@ -133,6 +137,7 @@ fun PacienteShell(
                     onVerTodas = { irATab(PacienteTab.MisCitas) }, // Conectamos Ver Todas -> Mis Citas
                     onVerDetalle = onVerDetalleCita, // Conectamos el clic en la tarjeta
                     onVerProgreso = { irATab(PacienteTab.Progreso) },
+                    onVerNotificaciones = { irATab(PacienteTab.Notificaciones) },
                     mensajeError = mensajeError
                 )
             }
@@ -153,6 +158,14 @@ fun PacienteShell(
                     onVerHistorialClinico = onVerHistorial,
                     onVerPagos = onVerHistorialPagos,
                     onVerProgreso = { irATab(PacienteTab.Progreso) }
+                )
+            }
+            composable<PacienteTab.Notificaciones> {
+                NotificacionesScreen(
+                    onVolver = { irATab(PacienteTab.Inicio) },
+                    onVerCita = onVerDetalleCita,
+                    onVerPagos = onVerHistorialPagos,
+                    onRetomarAtencion = onReservarCita
                 )
             }
         }

@@ -32,9 +32,9 @@ val historiaClinicaModule = module {
     factory { ObtenerEtapasPorProcesoUseCase(get()) }
     factory { ObtenerProcesoActivoUseCase(get()) }
 
-    viewModel { RegistrarAtencionViewModel(get(), get(),get()) }
+    viewModel { RegistrarAtencionViewModel(get(), get(), get(), get()) }
     viewModel { HistorialClinicoViewModel(get(),get(),get(), get(), get()) }
     viewModel { BuscadorPacientesViewModel(get(), get()) }
     viewModel { GestionEtapasViewModel(get(),get(),get()) }
-    viewModel { SalaConsultaViewModel(get(),get(),get(),get(),get()) }
+    viewModel { SalaConsultaViewModel(get(), get(), get(), get(), get(), get()) }
 }

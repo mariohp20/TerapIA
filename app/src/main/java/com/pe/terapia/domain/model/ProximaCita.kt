@@ -13,5 +13,8 @@ data class ProximaCita(
     val inicioEpochMillis: Long = 0L,
     val psicologoDescripcion: String = "",
     val sedeLatitud: Double = 0.0,
-    val sedeLongitud: Double = 0.0
+    val sedeLongitud: Double = 0.0,
+    val pagado: Boolean = false,
+    val psicologoId: String = "",
+    val sedeId: String = ""
 )

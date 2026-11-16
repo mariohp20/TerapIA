@@ -89,7 +89,8 @@ sealed class Route {
     @Serializable
     data class HistorialClinico(
         val pacienteId: String,
-        val pacienteNombre: String
+        val pacienteNombre: String,
+        val citaId: String? = null
     ) : Route()
 
     @Serializable
@@ -100,5 +101,11 @@ sealed class Route {
 
     @Serializable
     data object DashboardAdmin : Route()
+
+    @Serializable
+    data object SolicitudesGestionCita : Route()
+
+    @Serializable
+    data object NotificacionesAdmin : Route()
 
 }

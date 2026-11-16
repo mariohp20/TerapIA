@@ -9,6 +9,7 @@ import com.pe.terapia.domain.usecase.historiaclinica.ObtenerProcesoActivoUseCase
 import com.pe.terapia.domain.usecase.historiaclinica.ObtenerEtapasPorProcesoUseCase
 import com.pe.terapia.domain.usecase.citas.MarcarCitaNoAsistioUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
+import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +32,8 @@ class SalaConsultaViewModel(
     private val obtenerEtapasPorProcesoUseCase: ObtenerEtapasPorProcesoUseCase,
     private val obtenerTiposEtapasUseCase: ObtenerTiposEtapasUseCase,
     private val marcarCitaNoAsistioUseCase: MarcarCitaNoAsistioUseCase,
-    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase
+    private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
+    private val recordatorioCitasScheduler: RecordatorioCitasScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SalaConsultaUiState())
@@ -92,7 +94,10 @@ class SalaConsultaViewModel(
                 return@launch
             }
             marcarCitaNoAsistioUseCase(citaId, usuario.uid).fold(
-                onSuccess = { _uiState.value = _uiState.value.copy(marcandoInasistencia = false, inasistenciaRegistrada = true) },
+                onSuccess = {
+                    runCatching { recordatorioCitasScheduler.cancelar(citaId) }
+                    _uiState.value = _uiState.value.copy(marcandoInasistencia = false, inasistenciaRegistrada = true)
+                },
                 onFailure = { error -> _uiState.value = _uiState.value.copy(marcandoInasistencia = false, error = error.message ?: "No se pudo registrar la inasistencia.") }
             )
         }
