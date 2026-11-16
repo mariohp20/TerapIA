@@ -76,6 +76,7 @@ class HomePacienteViewModel(
                 obtenerUsuarioActual().onSuccess { usuario ->
                     if (usuario != null) {
                         _uiState.update { it.copy(nombrePaciente = usuario.nombres.ifBlank { "" }) }
+                        if (usuario.rol == Rol.PACIENTE) recordatorioCitasScheduler.programarFidelizacionLocal(usuario.uid)
                     }
                 }
             }
@@ -92,6 +93,7 @@ class HomePacienteViewModel(
                             } else {
                                 recordatorioCitasScheduler.cancelar(cita.id)
                             }
+                        }
                         val cita = citas.firstOrNull {
                             it.estado == EstadoCita.PROGRAMADA.name && it.inicioEpochMillis > ahora
                         }

@@ -43,6 +43,11 @@ class RecordatoriosSettingsViewModel(
             rol = usuario.rol
             preferencias.observarActivas(usuario.uid).collect { activo ->
                 _uiState.value = _uiState.value.copy(cargando = false, activos = activo)
+                if (activo) {
+                    if (usuario.rol == Rol.PACIENTE) recordatorioCitasScheduler.programarFidelizacionLocal(usuario.uid)
+                } else {
+                    recordatorioCitasScheduler.cancelarDeUsuario(usuario.uid)
+                }
             }
         }
     }
@@ -61,6 +66,7 @@ class RecordatoriosSettingsViewModel(
                 recordatorioCitasScheduler.cancelarDeUsuario(uid)
                 return@launch
             }
+            if (rolActual == Rol.PACIENTE) recordatorioCitasScheduler.programarFidelizacionLocal(uid)
             sincronizarRecordatorios(uid, rolActual)
         }
     }
@@ -76,6 +82,7 @@ class RecordatoriosSettingsViewModel(
                         } else {
                             recordatorioCitasScheduler.cancelar(cita.id)
                         }
+                    }
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(error = error.message ?: "No se pudieron sincronizar las próximas citas.")
