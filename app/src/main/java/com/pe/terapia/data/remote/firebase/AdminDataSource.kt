@@ -26,12 +26,13 @@ class AdminDataSource(
 
     suspend fun obtenerPsicologos(): List<Psicologo> {
         val snapshot = firestore.collection("psicologos")
+            // Las reglas de Firestore solo permiten listar perfiles activos.
+            // La consulta debe incluir el mismo filtro; las reglas no filtran resultados.
+            .whereEqualTo("activo", true)
             .get()
             .await()
 
         return snapshot.documents.mapNotNull { doc ->
-            val activo = doc.getBoolean("activo") ?: false
-
             Psicologo(
                 id = doc.id,
                 usuarioId = doc.getString("usuarioId") ?: "",
@@ -40,7 +41,7 @@ class AdminDataSource(
                 descripcionProfesional = doc.getString("descripcionProfesional") ?: "",
                 especialidadIds = (doc.get("especialidadIds") as? List<String>) ?: emptyList(),
                 sedeIds = (doc.get("sedeIds") as? List<String>) ?: emptyList(),
-                activo = activo
+                activo = true
             )
         }
     }

@@ -66,7 +66,16 @@ fun GestionarPsicologoScreen(
                 contentPadding = PaddingValues(24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (uiState.psicologos.isEmpty()) {
+                uiState.error?.let { error ->
+                    item {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                if (uiState.psicologos.isEmpty() && uiState.error == null) {
                     item { Text("No hay psicólogos registrados.") }
                 }
                 items(uiState.psicologos) { psicologo ->

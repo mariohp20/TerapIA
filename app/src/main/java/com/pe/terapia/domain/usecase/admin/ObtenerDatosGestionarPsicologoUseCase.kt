@@ -25,16 +25,28 @@ class ObtenerDatosGestionarPsicologoUseCase(
         val sedes = sedesDef.await()
         val especialidades = especialidadesDef.await()
 
-        if (psicologos.isFailure || sedes.isFailure || especialidades.isFailure) {
-            Result.failure(Exception("Error al cargar los datos para gestionar psicólogos."))
-        } else {
-            Result.success(
-                DatosGestionarPsicologo(
-                    psicologos = psicologos.getOrThrow(),
-                    sedes = sedes.getOrThrow(),
-                    especialidades = especialidades.getOrThrow()
-                )
+        psicologos.exceptionOrNull()?.let { error ->
+            return@coroutineScope Result.failure(
+                IllegalStateException("No se pudieron cargar los psicólogos: ${error.message.orEmpty()}", error)
             )
         }
+        sedes.exceptionOrNull()?.let { error ->
+            return@coroutineScope Result.failure(
+                IllegalStateException("No se pudieron cargar las sedes: ${error.message.orEmpty()}", error)
+            )
+        }
+        especialidades.exceptionOrNull()?.let { error ->
+            return@coroutineScope Result.failure(
+                IllegalStateException("No se pudieron cargar las especialidades: ${error.message.orEmpty()}", error)
+            )
+        }
+
+        Result.success(
+            DatosGestionarPsicologo(
+                psicologos = psicologos.getOrThrow(),
+                sedes = sedes.getOrThrow(),
+                especialidades = especialidades.getOrThrow()
+            )
+        )
     }
 }

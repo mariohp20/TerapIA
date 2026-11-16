@@ -21,15 +21,22 @@ class ObtenerDatosAsignarHorarioUseCase(
         val psicologos = psicologosDef.await()
         val sedes = sedesDef.await()
 
-        if (psicologos.isFailure || sedes.isFailure) {
-            Result.failure(Exception("Error al cargar los datos para asignar horarios."))
-        } else {
-            Result.success(
-                DatosAsignarHorario(
-                    psicologos = psicologos.getOrThrow(),
-                    sedes = sedes.getOrThrow()
-                )
+        psicologos.exceptionOrNull()?.let { error ->
+            return@coroutineScope Result.failure(
+                IllegalStateException("No se pudieron cargar los psicólogos: ${error.message.orEmpty()}", error)
             )
         }
+        sedes.exceptionOrNull()?.let { error ->
+            return@coroutineScope Result.failure(
+                IllegalStateException("No se pudieron cargar las sedes: ${error.message.orEmpty()}", error)
+            )
+        }
+
+        Result.success(
+            DatosAsignarHorario(
+                psicologos = psicologos.getOrThrow(),
+                sedes = sedes.getOrThrow()
+            )
+        )
     }
 }
