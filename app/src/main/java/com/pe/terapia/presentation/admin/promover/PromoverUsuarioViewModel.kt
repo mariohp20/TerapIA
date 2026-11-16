@@ -5,11 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Especialidad
 import com.pe.terapia.domain.model.Sede
 import com.pe.terapia.domain.model.Usuario
-import com.pe.terapia.domain.usecase.admin.ObtenerEspecialidadesUseCase
-import com.pe.terapia.domain.usecase.admin.ObtenerPacientesUseCase
-import com.pe.terapia.domain.usecase.admin.ObtenerSedesUseCase
+import com.pe.terapia.domain.usecase.admin.ObtenerDatosPromoverUsuarioUseCase
 import com.pe.terapia.domain.usecase.admin.PromoverUsuarioUseCase
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,9 +23,7 @@ data class PromoverUsuarioUiState(
 )
 
 class PromoverUsuarioViewModel(
-    private val obtenerPacientes: ObtenerPacientesUseCase,
-    private val obtenerSedes: ObtenerSedesUseCase,
-    private val obtenerEspecialidades: ObtenerEspecialidadesUseCase,
+    private val obtenerDatosPromoverUsuarioUseCase: ObtenerDatosPromoverUsuarioUseCase,
     private val promoverUsuarioUseCase: PromoverUsuarioUseCase
 ) : ViewModel() {
 
@@ -43,28 +38,21 @@ class PromoverUsuarioViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cargandoInicial = true, error = null)
 
-            // Ejecutamos las 3 peticiones en paralelo para cargar más rápido
-            val pacientesDeffered = async { obtenerPacientes() }
-            val sedesDeffered = async { obtenerSedes() }
-            val especialidadesDeffered = async { obtenerEspecialidades() }
-
-            val resultPacientes = pacientesDeffered.await()
-            val resultSedes = sedesDeffered.await()
-            val resultEspecialidades = especialidadesDeffered.await()
-
-            if (resultPacientes.isFailure || resultSedes.isFailure || resultEspecialidades.isFailure) {
-                _uiState.value = _uiState.value.copy(
-                    cargandoInicial = false,
-                    error = "Hubo un error al cargar los datos del sistema. Intente nuevamente."
-                )
-                return@launch
-            }
-
-            _uiState.value = _uiState.value.copy(
-                cargandoInicial = false,
-                pacientes = resultPacientes.getOrNull().orEmpty(),
-                sedes = resultSedes.getOrNull().orEmpty(),
-                especialidades = resultEspecialidades.getOrNull().orEmpty()
+            obtenerDatosPromoverUsuarioUseCase().fold(
+                onSuccess = { datos ->
+                    _uiState.value = _uiState.value.copy(
+                        cargandoInicial = false,
+                        pacientes = datos.pacientes,
+                        sedes = datos.sedes,
+                        especialidades = datos.especialidades
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        cargandoInicial = false,
+                        error = error.message ?: "Hubo un error al cargar los datos del sistema. Intente nuevamente."
+                    )
+                }
             )
         }
     }

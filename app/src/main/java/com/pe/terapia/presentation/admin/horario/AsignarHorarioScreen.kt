@@ -26,14 +26,12 @@ fun AsignarHorarioScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
 
-    // Estados Locales para la UI
     var psicologoSeleccionado by remember { mutableStateOf<Psicologo?>(null) } // <-- Cambiado a Psicologo
     var sedesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
     var diaSeleccionado by remember { mutableStateOf(1) } // 1 = Lunes
     var horaInicioSeleccionada by remember { mutableStateOf(8) }
     var horaFinSeleccionada by remember { mutableStateOf(9) }
 
-    // Estados para los menús desplegables
     var expandedPsicologos by remember { mutableStateOf(false) }
     var expandedDias by remember { mutableStateOf(false) }
     var expandedHoraInicio by remember { mutableStateOf(false) }
@@ -78,7 +76,7 @@ fun AsignarHorarioScreen(
             uiState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 1. Selector de Psicólogo
+            // Selector de Psicólogo
             Text("Psicólogo", style = MaterialTheme.typography.titleMedium)
             ExposedDropdownMenuBox(
                 expanded = expandedPsicologos,
@@ -114,13 +112,12 @@ fun AsignarHorarioScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 2. Selección de Sedes (FILTRADA POR EL PSICÓLOGO)
+            // Selección de Sedes
             Text("Sedes Disponibles", style = MaterialTheme.typography.titleMedium)
 
             if (psicologoSeleccionado == null) {
                 Text("Seleccione un psicólogo primero", color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
             } else {
-                // Filtramos las sedes generales para mostrar solo aquellas cuyos IDs estén en la lista sedeIds del psicólogo
                 val sedesDelPsicologo = uiState.sedes.filter { psicologoSeleccionado!!.sedeIds.contains(it.id) }
 
                 if (sedesDelPsicologo.isEmpty()) {
@@ -144,7 +141,7 @@ fun AsignarHorarioScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 3. Selector de Día de la Semana
+            // Selector de Día de la Semana
             Text("Día de la semana", style = MaterialTheme.typography.titleMedium)
             ExposedDropdownMenuBox(
                 expanded = expandedDias,
@@ -173,11 +170,10 @@ fun AsignarHorarioScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 4. Selectores de Horas (Solo Horas Exactas)
+            // Selectores de Horas
             Text("Rango de horas (Intervalos de 1 hora)", style = MaterialTheme.typography.titleMedium)
             Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                // Inicio
                 ExposedDropdownMenuBox(
                     expanded = expandedHoraInicio,
                     onExpandedChange = { expandedHoraInicio = !expandedHoraInicio },
@@ -205,7 +201,6 @@ fun AsignarHorarioScreen(
                     }
                 }
 
-                // Fin
                 ExposedDropdownMenuBox(
                     expanded = expandedHoraFin,
                     onExpandedChange = { expandedHoraFin = !expandedHoraFin },
@@ -235,12 +230,12 @@ fun AsignarHorarioScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Botón Guardar
+            // Guardar
             Button(
                 onClick = {
                     if (psicologoSeleccionado != null) {
                         viewModel.guardarHorario(
-                            psicologoId = psicologoSeleccionado!!.id, // <-- Usamos .id propio del psicologo (Documento en Firebase)
+                            psicologoId = psicologoSeleccionado!!.id,
                             sedesIds = sedesSeleccionadas,
                             diaSemana = diaSeleccionado,
                             horaInicio = horaInicioSeleccionada,

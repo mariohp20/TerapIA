@@ -32,11 +32,10 @@ fun GestionarPsicologoScreen(
     LaunchedEffect(uiState.exito) {
         if (uiState.exito) {
             Toast.makeText(context, "Psicólogo actualizado", Toast.LENGTH_SHORT).show()
-            viewModel.seleccionarPsicologo(null) // Volver al directorio
+            viewModel.seleccionarPsicologo(null)
         }
     }
 
-    // Interceptar el botón de "atrás" del sistema Android si estamos editando
     BackHandler(enabled = uiState.psicologoSeleccionado != null) {
         viewModel.seleccionarPsicologo(null)
     }
@@ -61,7 +60,7 @@ fun GestionarPsicologoScreen(
         }
 
         if (uiState.psicologoSeleccionado == null) {
-            // VISTA 1: DIRECTORIO DE PSICÓLOGOS
+            // VISTA 1: DIRECTORIO
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(24.dp),
@@ -83,7 +82,7 @@ fun GestionarPsicologoScreen(
                 }
             }
         } else {
-            // VISTA 2: FORMULARIO DE EDICIÓN (State Hoisting)
+            // VISTA 2: FORMULARIO
             Column(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState())

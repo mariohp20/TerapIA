@@ -26,14 +26,12 @@ fun PromoverUsuarioScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Variables de estado locales para los formularios
     var pacienteSeleccionado by remember { mutableStateOf<Usuario?>(null) }
     var descripcion by remember { mutableStateOf("") }
     var especialidadesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
     var sedesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
     var expandedPacientes by remember { mutableStateOf(false) }
 
-    // Reaccionar al estado de éxito
     LaunchedEffect(uiState.promocionExitosa) {
         if (uiState.promocionExitosa) {
             Toast.makeText(context, "Usuario promovido exitosamente", Toast.LENGTH_SHORT).show()
@@ -74,7 +72,7 @@ fun PromoverUsuarioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 1. Selector de Paciente
+            // Selector de Paciente
             Text("Seleccionar Paciente", style = MaterialTheme.typography.titleMedium)
             ExposedDropdownMenuBox(
                 expanded = expandedPacientes,
@@ -110,7 +108,7 @@ fun PromoverUsuarioScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 2. Descripción Profesional
+            // Descripción Profesional
             Text("Descripción Profesional", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = descripcion,
@@ -122,7 +120,7 @@ fun PromoverUsuarioScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 3. Especialidades
+            // Especialidades
             Text("Especialidades", style = MaterialTheme.typography.titleMedium)
             uiState.especialidades.forEach { especialidad ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,7 +138,7 @@ fun PromoverUsuarioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 4. Sedes
+            // Sedes
             Text("Sedes de Atención", style = MaterialTheme.typography.titleMedium)
             uiState.sedes.forEach { sede ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -158,7 +156,7 @@ fun PromoverUsuarioScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Botón Guardar
+            // Guardar
             Button(
                 onClick = {
                     if (pacienteSeleccionado != null) {
