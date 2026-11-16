@@ -11,12 +11,9 @@ import com.pe.terapia.domain.model.EstadoEtapa
 import com.pe.terapia.domain.model.CitaAdminResumen
 import com.pe.terapia.domain.model.PagoAdminResumen
 import com.pe.terapia.domain.model.PsicologoAdminResumen
-import com.pe.terapia.domain.model.DashboardAdminData
 import com.pe.terapia.domain.model.EstadoProceso
 import com.pe.terapia.domain.model.EtapaPsicologoResumen
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 
 class DashboardDataSource(
     private val firestore: FirebaseFirestore

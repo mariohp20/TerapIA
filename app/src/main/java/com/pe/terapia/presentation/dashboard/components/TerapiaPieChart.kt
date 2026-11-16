@@ -23,17 +23,11 @@ fun TerapiaPieChart(
     modifier: Modifier = Modifier,
     mostrarLeyenda: Boolean = true
 ) {
-    // 1. Paleta de colores automática enlazada a tu Theme
-    val colores = listOf(
-        MaterialTheme.colorScheme.primary, // Turquesa
-        MaterialTheme.colorScheme.tertiary, // Coral
-        MaterialTheme.colorScheme.secondary, // Lavanda
-        MaterialTheme.colorScheme.error, // Rojo
-        MaterialTheme.colorScheme.primaryContainer // Verde oscuro/claro
-    )
+    val colores = obtenerPaletaGraficos()
+
     val colorSeleccionado = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
 
-    // 2. Mapeo automático de los objetos Pie
+
     val pieData = remember(datos, colores) {
         datos.entries.mapIndexed { index, (etiqueta, cantidad) ->
             Pie(
@@ -45,7 +39,6 @@ fun TerapiaPieChart(
         }
     }
 
-    // 3. Dibujado de Gráfico + Leyenda en un solo bloque
     Column(modifier = modifier) {
         PieChart(
             modifier = Modifier.fillMaxWidth().weight(1f),

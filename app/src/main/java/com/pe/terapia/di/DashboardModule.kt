@@ -21,8 +21,8 @@ val dashboardModule = module {
     factory { ObtenerDashboardPacienteUseCase(get()) }
     factory { ObtenerDashboardAdminUseCase(get()) }
 
-    // Psicologo
-    viewModel {DashboardPsicologoViewModel(get(),get()) }
+
+    viewModel { DashboardPsicologoViewModel(get(), get()) }
     viewModel { DashboardPacienteViewModel(get(), get()) }
     viewModel { DashboardAdminViewModel(get()) }
 }

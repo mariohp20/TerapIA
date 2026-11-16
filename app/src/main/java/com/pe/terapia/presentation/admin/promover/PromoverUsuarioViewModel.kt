@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import android.util.Log
 
 data class PromoverUsuarioUiState(
     val cargandoInicial: Boolean = true,
@@ -52,16 +51,6 @@ class PromoverUsuarioViewModel(
             val resultPacientes = pacientesDeffered.await()
             val resultSedes = sedesDeffered.await()
             val resultEspecialidades = especialidadesDeffered.await()
-
-            if (resultPacientes.isFailure) {
-                Log.e("PromoverAdmin", "Error cargando pacientes", resultPacientes.exceptionOrNull())
-            }
-            if (resultSedes.isFailure) {
-                Log.e("PromoverAdmin", "Error cargando sedes", resultSedes.exceptionOrNull())
-            }
-            if (resultEspecialidades.isFailure) {
-                Log.e("PromoverAdmin", "Error cargando especialidades", resultEspecialidades.exceptionOrNull())
-            }
 
             if (resultPacientes.isFailure || resultSedes.isFailure || resultEspecialidades.isFailure) {
                 _uiState.value = _uiState.value.copy(

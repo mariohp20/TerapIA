@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.presentation.dashboard.components.TerapiaColumnChart
 import com.pe.terapia.presentation.dashboard.components.TerapiaLineChart
 import com.pe.terapia.presentation.dashboard.components.TerapiaRowChart
+import com.pe.terapia.presentation.dashboard.components.obtenerPaletaGraficos
 import ir.ehsannarmani.compose_charts.models.Bars
 import ir.ehsannarmani.compose_charts.models.Line
 import org.koin.androidx.compose.koinViewModel
@@ -175,24 +176,23 @@ fun DashboardAdminScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(12.dp))
-                            if (state.citasPorMes.all { it.second.first == 0 }) TextoSinDatos("No hay citas en este período.")
+                            if (state.citasPorMes.all { it.programadas == 0 }) TextoSinDatos("No hay citas en este período.")
                             else {
-                                val colorPrimario = MaterialTheme.colorScheme.primary
-                                val colorSecundario = MaterialTheme.colorScheme.outline
+                                val paleta = obtenerPaletaGraficos()
                                 TerapiaLineChart(
                                     modifier = Modifier.fillMaxWidth().height(220.dp),
-                                    labels = state.citasPorMes.map { it.first },
-                                    data = remember(state.citasPorMes, colorPrimario, colorSecundario) {
+                                    labels = state.citasPorMes.map { it.etiqueta },
+                                    data = remember(state.citasPorMes, paleta) {
                                         listOf(
                                             Line(
                                                 label = "Programadas",
-                                                values = state.citasPorMes.map { it.second.first.toDouble() },
-                                                color = SolidColor(colorSecundario)
+                                                values = state.citasPorMes.map { it.programadas.toDouble() },
+                                                color = SolidColor(paleta[2])
                                             ),
                                             Line(
                                                 label = "Atendidas",
-                                                values = state.citasPorMes.map { it.second.second.toDouble() },
-                                                color = SolidColor(colorPrimario)
+                                                values = state.citasPorMes.map { it.atendidas.toDouble() },
+                                                color = SolidColor(paleta[0])
                                             )
                                         )
                                     }
@@ -294,3 +294,23 @@ private fun TextoSinDatos(texto: String) {
         Text(texto, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+// Si se piensa cambiar a 12 meses
+/*
+@Composable
+private fun DeslizadorGrafico(scrollState: androidx.compose.foundation.ScrollState, visible: Boolean) {
+    if (!visible) return
+    val scope = rememberCoroutineScope()
+    val maximo = scrollState.maxValue.coerceAtLeast(1)
+    Column {
+        Slider(
+            value = scrollState.value.toFloat().coerceIn(0f, maximo.toFloat()),
+            onValueChange = { valor -> scope.launch { scrollState.scrollTo(valor.roundToInt()) } },
+            valueRange = 0f..maximo.toFloat(),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Más antiguo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Más reciente", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}*/

@@ -6,7 +6,6 @@ import com.pe.terapia.domain.repository.DashboardRepository
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.AtencionResumenDashboard
 import com.pe.terapia.domain.model.CitaAdminResumen
-import com.pe.terapia.domain.model.DashboardAdminData
 import com.pe.terapia.domain.model.EtapaPsicologoResumen
 import com.pe.terapia.domain.model.PagoAdminResumen
 import com.pe.terapia.domain.model.PsicologoAdminResumen

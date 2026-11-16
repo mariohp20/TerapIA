@@ -3,7 +3,6 @@ package com.pe.terapia.presentation.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.presentation.dashboard.components.TerapiaColumnChart
 import com.pe.terapia.presentation.dashboard.components.TerapiaLineChart
 import com.pe.terapia.presentation.dashboard.components.TerapiaPieChart
+import com.pe.terapia.presentation.dashboard.components.obtenerPaletaGraficos
 import ir.ehsannarmani.compose_charts.models.Bars
 import ir.ehsannarmani.compose_charts.models.Line
 import org.koin.androidx.compose.koinViewModel
@@ -98,7 +98,7 @@ fun DashboardPsicologoScreen(
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     // TARJETA 0: Resumen Global
-                    val totalAtenciones = uiState.atencionesPorMes.values.sum()
+                    val totalAtenciones = uiState.atencionesPorMes.sumOf { it.cantidad }
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
@@ -137,13 +137,13 @@ fun DashboardPsicologoScreen(
                                 TerapiaColumnChart(
                                     modifier = Modifier.fillMaxWidth().height(250.dp),
                                     data = remember(uiState.atencionesPorMes, primaryColor) {
-                                        uiState.atencionesPorMes.map { (mes, cantidad) ->
+                                        uiState.atencionesPorMes.map { item ->
                                             Bars(
-                                                label = mes,
+                                                label = item.etiqueta,
                                                 values = listOf(
                                                     Bars.Data(
                                                         label = "Atenciones",
-                                                        value = cantidad.toDouble(),
+                                                        value = item.cantidad.toDouble(),
                                                         color = SolidColor(primaryColor)
                                                     )
                                                 )
@@ -170,9 +170,12 @@ fun DashboardPsicologoScreen(
                             if (uiState.pacientesPorEtapa.isEmpty()) {
                                 SinDatosPlaceholder("No hay pacientes en progreso")
                             } else {
+                                val datosPieChart = remember(uiState.pacientesPorEtapa) {
+                                    uiState.pacientesPorEtapa.associate { it.etapa to it.cantidad }
+                                }
                                 TerapiaPieChart(
                                     modifier = Modifier.fillMaxWidth().height(260.dp),
-                                    datos = uiState.pacientesPorEtapa
+                                    datos = datosPieChart
                                 )
                             }
                         }
@@ -190,26 +193,24 @@ fun DashboardPsicologoScreen(
                             Text("Citas programadas vs. Atenciones realizadas", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            val colorAtenciones = MaterialTheme.colorScheme.primary
-                            val colorCitas = MaterialTheme.colorScheme.outline
-
                             if (uiState.comparativaAsistencia.all { it.programadas == 0 }) {
                                 SinDatosPlaceholder("Faltan datos de citas para generar la comparativa")
                             } else {
+                                val paleta = obtenerPaletaGraficos()
                                 TerapiaLineChart(
                                     modifier = Modifier.fillMaxWidth().height(220.dp),
                                     labels = uiState.comparativaAsistencia.map { it.mes },
-                                    data = remember(uiState.comparativaAsistencia, colorAtenciones, colorCitas) {
+                                    data = remember(uiState.comparativaAsistencia, paleta) {
                                         listOf(
                                             Line(
                                                 label = "Programadas",
                                                 values = uiState.comparativaAsistencia.map { it.programadas.toDouble() },
-                                                color = SolidColor(colorCitas)
+                                                color = SolidColor(paleta[2])
                                             ),
                                             Line(
                                                 label = "Realizadas",
                                                 values = uiState.comparativaAsistencia.map { it.realizadas.toDouble() },
-                                                color = SolidColor(colorAtenciones)
+                                                color = SolidColor(paleta[0])
                                             )
                                         )
                                     }

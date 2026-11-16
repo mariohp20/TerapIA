@@ -67,7 +67,7 @@ class DashboardPacienteViewModel(
                     }
                     val mesesDeDatos = (mesActual.year - primerMesBase.year) * 12 + mesActual.monthValue - primerMesBase.monthValue + 1
                     val primerMes = if (meses == 0 && mesesDeDatos > 60) mesActual.minusMonths(59) else primerMesBase
-                    val formatoMes = DateTimeFormatter.ofPattern("MMM", Locale.forLanguageTag("es-PE"))
+                    val formatoMes = DateTimeFormatter.ofPattern("MMM yy", Locale.forLanguageTag("es-PE"))
 
                     val atencionesRecientes = datos.atenciones.filter { atencion ->
                         val mes = YearMonth.from(atencion.fechaAtencion.atZone(zona))

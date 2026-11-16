@@ -2,8 +2,6 @@ package com.pe.terapia.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pe.terapia.domain.model.CargaPsicologoAdmin
-import com.pe.terapia.domain.model.DatoMensualAdmin
 import com.pe.terapia.domain.usecase.dashboard.ObtenerDashboardAdminUseCase
 import java.time.Instant
 import java.time.YearMonth
@@ -15,6 +13,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class DatoMensualAdmin(
+    val etiqueta: String,
+    val cantidad: Double
+)
+
+data class CitasMensualesAdmin(
+    val etiqueta: String,
+    val programadas: Int,
+    val atendidas: Int
+)
+data class CargaPsicologoAdmin(
+    val nombre: String,
+    val atenciones: Int
+)
 data class DashboardAdminUiState(
     val cargando: Boolean = true,
     val error: String? = null,
@@ -23,7 +35,7 @@ data class DashboardAdminUiState(
     val citasCompletadas: Int = 0,
     val ingresosPen: Double = 0.0,
     val ingresosPorMes: List<DatoMensualAdmin> = emptyList(),
-    val citasPorMes: List<Pair<String, Pair<Int, Int>>> = emptyList(),
+    val citasPorMes: List<CitasMensualesAdmin> = emptyList(),
     val cargaPorPsicologo: List<CargaPsicologoAdmin> = emptyList()
 )
 
@@ -77,8 +89,11 @@ class DashboardAdminViewModel(
                             Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona).toLocalDate()
                                 .let { d -> YearMonth.from(d) == mes }
                         }
-                        mes.format(formato).replaceFirstChar(Char::uppercase) to
-                                (filas.size to filas.count { it.estado == "COMPLETADA" })
+                        CitasMensualesAdmin(
+                            etiqueta = mes.format(formato).replaceFirstChar(Char::uppercase),
+                            programadas = filas.size,
+                            atendidas = filas.count { it.estado == "COMPLETADA" }
+                        )
                     }
 
                     val ingresosPorMes = mesesLista.map { mes ->

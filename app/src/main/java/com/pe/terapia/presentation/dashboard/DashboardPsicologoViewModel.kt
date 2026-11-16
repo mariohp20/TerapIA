@@ -14,17 +14,24 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+data class AtencionMensualPsicologo(
+    val etiqueta: String,
+    val cantidad: Int
+)
+data class DistribucionEtapaPsicologo(
+    val etapa: String,
+    val cantidad: Int
+)
 data class ComparativaAsistenciaPsicologo(
     val mes: String,
     val programadas: Int,
     val realizadas: Int
 )
-
 data class DashboardPsicologoUiState(
     val cargando: Boolean = true,
     val error: String? = null,
-    val atencionesPorMes: Map<String, Int> = emptyMap(),
-    val pacientesPorEtapa: Map<String, Int> = emptyMap(),
+    val atencionesPorMes: List<AtencionMensualPsicologo> = emptyList(),
+    val pacientesPorEtapa: List<DistribucionEtapaPsicologo> = emptyList(),
     val comparativaAsistencia: List<ComparativaAsistenciaPsicologo> = emptyList(),
     val mesesFiltro: Int = 6
 )
@@ -33,7 +40,6 @@ class DashboardPsicologoViewModel(
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
     private val obtenerDashboardPsicologoUseCase: ObtenerDashboardPsicologoUseCase
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(DashboardPsicologoUiState())
     val uiState: StateFlow<DashboardPsicologoUiState> = _uiState.asStateFlow()
 
@@ -60,7 +66,9 @@ class DashboardPsicologoViewModel(
                     val mapaNombresEtapas = datos.tiposEtapas.associate { it.id to it.nombre }
                     val agrupadoPorEtapa = datos.etapasActivas
                         .groupBy { mapaNombresEtapas[it.tipoEtapaId] ?: "Desconocido" }
-                        .mapValues { it.value.size }
+                        .map { (etiqueta, lista) ->
+                            DistribucionEtapaPsicologo(etiqueta, lista.size)
+                        }
 
                     val fechasDisponibles = datos.atenciones.map { YearMonth.from(Instant.ofEpochMilli(it.fechaAtencionEpochMillis).atZone(zona)) } +
                             datos.citas.filter { it.inicioEpochMillis > 0 }.map { YearMonth.from(Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)) }
@@ -87,8 +95,11 @@ class DashboardPsicologoViewModel(
                         .groupingBy { YearMonth.from(Instant.ofEpochMilli(it.fechaAtencionEpochMillis).atZone(zona)) }
                         .eachCount()
 
-                    val agrupadoAtenciones = mesesGrafico.associate { mes ->
-                        mes.format(formateadorMes).replaceFirstChar { it.uppercase() } to (atencionesPorYearMonth[mes] ?: 0)
+                    val agrupadoAtenciones = mesesGrafico.map { mes ->
+                        AtencionMensualPsicologo(
+                            etiqueta = mes.format(formateadorMes).replaceFirstChar { it.uppercase() },
+                            cantidad = atencionesPorYearMonth[mes] ?: 0
+                        )
                     }
 
                     // LINE CHART: Comparativa

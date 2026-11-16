@@ -47,8 +47,6 @@ class GestionEtapasViewModel(
                     ?: catalogoResult.exceptionOrNull()?.message
                     ?: "Error desconocido"
 
-                android.util.Log.e("EtapasDebug", "Fallo al cargar: $errorReal")
-
                 _uiState.value = _uiState.value.copy(
                     cargando = false,
                     error = "Detalle del error: $errorReal"

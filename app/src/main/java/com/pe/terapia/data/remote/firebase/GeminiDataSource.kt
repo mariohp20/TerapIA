@@ -4,7 +4,10 @@ import com.google.firebase.Firebase
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.RequestOptions
+import com.google.firebase.ai.type.ThinkingLevel
 import com.google.firebase.ai.type.content
+import com.google.firebase.ai.type.generationConfig
+import com.google.firebase.ai.type.thinkingConfig
 import com.pe.terapia.domain.model.ChatMessagge
 
 class GeminiDataSource {
@@ -56,11 +59,18 @@ class GeminiDataSource {
 
     private val model by lazy {
         Firebase.ai(
-            backend = GenerativeBackend.googleAI()
+            backend = GenerativeBackend.googleAI(),
+            useLimitedUseAppCheckTokens = true
         ).generativeModel(
-            modelName = "gemini-3.8-flash",
+            modelName = "gemini-3.5-flash-lite",
+            generationConfig = generationConfig {
+                maxOutputTokens = 300
+                thinkingConfig = thinkingConfig {
+                    thinkingLevel = ThinkingLevel.MINIMAL
+                }
+            },
             systemInstruction = content { text(systemInstructionText) },
-            requestOptions = RequestOptions(timeoutInMillis = 300_000L)
+            requestOptions = RequestOptions(timeoutInMillis = 60_000L)
         )
     }
 
