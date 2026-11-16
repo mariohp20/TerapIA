@@ -117,7 +117,7 @@ fun BiometricoGate(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Usa tu huella, rostro o clave del celular para continuar.",
+            "Usa tu huella o clave del celular para continuar.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

@@ -73,7 +73,9 @@ fun PsicologoShell(
     onCerrarSesion: () -> Unit,
     onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
     onIrAHistorialClinico: () -> Unit,
-    onDashboardPsicologo: () -> Unit
+    onDashboardPsicologo: () -> Unit,
+    onAbrirAtencionDesdeQr: (String, String) -> Unit,
+    onAbrirHistorialDesdeQr: (String, String, String) -> Unit
 ) {
     val tabNavController = rememberNavController()
     val entradaActual by tabNavController.currentBackStackEntryAsState()
@@ -147,7 +149,9 @@ fun PsicologoShell(
             }
             composable<PsicologoTab.Escanear> {
                 EscannerScreen(
-                    onVolver = { irATab(PsicologoTab.Inicio) }
+                    onVolver = { irATab(PsicologoTab.Inicio) },
+                    onAbrirAtencion = onAbrirAtencionDesdeQr,
+                    onAbrirHistorial = onAbrirHistorialDesdeQr
                 )
             }
         }

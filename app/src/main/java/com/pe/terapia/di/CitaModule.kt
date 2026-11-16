@@ -3,14 +3,18 @@ package com.pe.terapia.di
 import com.pe.terapia.data.remote.firebase.CitaDataSource
 import com.pe.terapia.data.repository.CitaRepositoryImpl
 import com.pe.terapia.domain.repository.CitaRepository
-import com.pe.terapia.domain.repository.PagoRepository
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
+import com.pe.terapia.domain.usecase.auth.ObtenerUidSesionActualUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasHoyPsicologoUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerCitasPacienteUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
 import com.pe.terapia.domain.usecase.citas.MarcarCitaNoAsistioUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasPendientesResultadoUseCase
+import com.pe.terapia.domain.usecase.citas.ValidarCitaQrUseCase
+import com.pe.terapia.domain.usecase.citas.GuardarProximaCitaEnCacheUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaDeCacheUseCase
 import com.pe.terapia.presentation.citas.confirmacion.ConfirmacionCitaViewModel
 import com.pe.terapia.presentation.citas.detalle.DetalleCitaViewModel
 import com.pe.terapia.presentation.citas.reserva.ReservaCitaViewModel
@@ -29,18 +33,22 @@ val citaModule = module {
     // 2. Casos de Uso (Use Cases)
     factory { ObtenerDisponibilidadUseCase(get()) }
     factory { ObtenerProximaCitaUseCase(get()) }
+    factory { ObtenerCitasPacienteUseCase(get()) }
     factory { ReservarCitaUseCase(get()) }
     factory { ObtenerCitasHoyPsicologoUseCase(get()) }
     factory { MarcarCitaNoAsistioUseCase(get()) }
     factory { ObtenerCitasPendientesResultadoUseCase(get()) }
+    factory { ValidarCitaQrUseCase(get()) }
+    factory { GuardarProximaCitaEnCacheUseCase(get()) }
+    factory { ObtenerProximaCitaDeCacheUseCase(get()) }
     // IMPORTANTE: Se eliminó ObtenerUsuarioActualUseCase porque Koin ya lo toma del AuthModule automáticamente.
 
     // 3. ViewModels simples
     viewModel { ReservaCitaViewModel(get()) }
-    viewModel { HomePacienteViewModel(get(), get(), get()) }
+    viewModel { HomePacienteViewModel(get(), get(), get(), get(), get()) }
     viewModel { MisCitasViewModel(get(), get()) }
     viewModel { HomePsicologoViewModel(get(), get(), get()) }
-    viewModel { EscannerViewModel(get()) }
+    viewModel { EscannerViewModel(get(), get()) }
 
     // 4. ViewModels con parámetros dinámicos
     viewModel { parameters ->
@@ -59,7 +67,8 @@ val citaModule = module {
             parameters[11],
             get(),
             get<ObtenerUsuarioActualUseCase>(),
-            get<PagoRepository>()
+            get(),
+            get()
         )
     }
 
@@ -67,7 +76,7 @@ val citaModule = module {
         DetalleCitaViewModel(
             citaId = parameters[0],
             obtenerUsuarioActualUseCase = get(),
-            citaRepository = get()
+            obtenerCitasPacienteUseCase = get()
         )
     }
 }

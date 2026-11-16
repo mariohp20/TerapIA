@@ -136,7 +136,10 @@ fun NavGraph(
             com.pe.terapia.presentation.citas.detalle.DetalleCitaScreen(
                 citaId = ruta.citaId,
                 onVolver = { navController.popBackStack() },
-                onVerPagos = { navController.navigate(Route.HistorialPagos) }
+                onVerPagos = { navController.navigate(Route.HistorialPagos) },
+                onVerHistorial = { pacienteId, pacienteNombre, citaId ->
+                    navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre, citaId))
+                }
             )
         }
 
@@ -280,6 +283,12 @@ fun NavGraph(
                     },
                     onDashboardPsicologo = {
                         navController.navigate(Route.DashboardPsicologo)
+                    },
+                    onAbrirAtencionDesdeQr = { citaId, pacienteId ->
+                        navController.navigate(Route.RegistrarAtencion(citaId, pacienteId))
+                    },
+                    onAbrirHistorialDesdeQr = { pacienteId, pacienteNombre, citaId ->
+                        navController.navigate(Route.HistorialClinico(pacienteId, pacienteNombre, citaId))
                     }
 
                 )
@@ -368,6 +377,7 @@ fun NavGraph(
                 HistorialClinicoScreen(
                     pacienteId = args.pacienteId,
                     pacienteNombre = args.pacienteNombre,
+                    citaId = args.citaId,
                     onVolver = { navController.popBackStack() }
                 )
             } else {

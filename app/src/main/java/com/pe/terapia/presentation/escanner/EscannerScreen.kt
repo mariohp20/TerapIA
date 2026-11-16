@@ -21,12 +21,13 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import org.koin.androidx.compose.koinViewModel
-import org.koin.androidx.viewmodel.factory.KoinViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EscannerScreen(
     onVolver: () -> Unit,
+    onAbrirAtencion: (String, String) -> Unit,
+    onAbrirHistorial: (String, String, String) -> Unit,
     viewModel: EscannerViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -107,7 +108,7 @@ fun EscannerScreen(
                             Spacer(Modifier.height(16.dp))
                             Text(text = "Escáner de Asistencia", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(8.dp))
-                            Text(text = "Escanea el código QR del paciente para validar su cita y registrar su asistencia.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Text(text = "Escanea el QR para validar una cita asignada a ti. La asistencia se completa al guardar el registro de atención.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(24.dp))
                             Button(
                                 onClick = { iniciarEscaneo() },
@@ -125,19 +126,30 @@ fun EscannerScreen(
                         is EscannerUiState.CitaEscaneada -> {
                             Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
                             Spacer(Modifier.height(16.dp))
-                            Text(text = "¡Cita Encontrada!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(text = "Cita validada", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(12.dp))
-                            Text(text = "ID Cita: ${state.citaId}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Text(text = "Paciente ID: ${state.pacienteId}", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = state.pacienteNombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text(text = "Fecha: ${state.fecha} - Hora: ${state.hora}", style = MaterialTheme.typography.bodyMedium)
-                            Text(text = "Estado actual: ${state.estado}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
+                            Text(text = "Estado: ${state.estado}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.height(8.dp))
+                            Text(text = state.mensaje, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(24.dp))
-                            Button(
-                                onClick = { viewModel.confirmarAsistencia(state.citaId) },
-                                modifier = Modifier.fillMaxWidth().height(50.dp),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text("Confirmar Asistencia (Completar Cita)")
+                            if (state.puedeRegistrarAtencion) {
+                                Button(
+                                    onClick = { onAbrirAtencion(state.citaId, state.pacienteId) },
+                                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text("Registrar atención")
+                                }
+                            } else if (state.estado == "COMPLETADA") {
+                                OutlinedButton(
+                                    onClick = { onAbrirHistorial(state.pacienteId, state.pacienteNombre, state.citaId) },
+                                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text("Ver historial clínico")
+                                }
                             }
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(
@@ -146,21 +158,6 @@ fun EscannerScreen(
                                 shape = RoundedCornerShape(16.dp)
                             ) {
                                 Text("Escanear Otro QR")
-                            }
-                        }
-                        is EscannerUiState.AsistenciaConfirmada -> {
-                            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
-                            Spacer(Modifier.height(16.dp))
-                            Text(text = "¡Asistencia Confirmada!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.height(8.dp))
-                            Text(text = state.mensaje, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(24.dp))
-                            Button(
-                                onClick = { viewModel.reiniciar() },
-                                modifier = Modifier.fillMaxWidth().height(50.dp),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text("Escanear Siguiente Cita")
                             }
                         }
                         is EscannerUiState.Error -> {

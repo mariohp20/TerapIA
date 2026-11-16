@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.BloqueHorario
 import com.pe.terapia.domain.model.Cita
+import com.pe.terapia.domain.model.CitaQrInfo
 import com.pe.terapia.domain.model.CitaPacienteDetalle
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoCita
@@ -42,6 +43,35 @@ private class CacheRelaciones {
 }
 
 class CitaDataSource(private val firestore: FirebaseFirestore) {
+
+    suspend fun validarCitaQr(citaId: String, psicologoId: String): CitaQrInfo {
+        require(citaId.isNotBlank() && psicologoId.isNotBlank()) { "Faltan datos para validar el QR." }
+        val cita = firestore.collection("citas").document(citaId).get().await()
+        check(cita.exists()) { "No se encontró una cita asociada a este QR." }
+        check(cita.getString("psicologoId") == psicologoId) {
+            "Esta cita no está asignada a tu cuenta de psicólogo."
+        }
+
+        val pacienteId = cita.getString("pacienteId").orEmpty()
+        check(pacienteId.isNotBlank()) { "La cita no tiene un paciente asociado." }
+        // El nombre visible se guarda en la cita para que el psicólogo no necesite
+        // leer el perfil privado del paciente desde /usuarios.
+        val pacienteNombre = cita.getString("pacienteNombre").orEmpty().ifBlank { "Paciente" }
+        val inicioMillis = cita.getTimestamp("inicioAt")?.toDate()?.time
+            ?: cita.getLong("inicioEpochMillis")
+            ?: 0L
+
+        return CitaQrInfo(
+            citaId = cita.id,
+            pacienteId = pacienteId,
+            pacienteNombre = pacienteNombre,
+            fecha = cita.getString("fecha").orEmpty(),
+            hora = cita.getString("hora").orEmpty(),
+            especialidadId = cita.getString("especialidadId").orEmpty(),
+            estado = cita.getString("estado") ?: EstadoCita.PROGRAMADA.name,
+            inicioEpochMillis = inicioMillis
+        )
+    }
 
     suspend fun obtenerProximaCita(pacienteId: String): ProximaCita? {
         val ahora = System.currentTimeMillis()
@@ -304,6 +334,8 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
                 hora = reserva.hora,
                 inicioEpochMillis = reserva.inicioEpochMillis,
                 duracionMinutos = duration,
+                pacienteNombre = listOfNotNull(profile.getString("nombres"), profile.getString("apellidos"))
+                    .filter(String::isNotBlank).joinToString(" "),
                 estado = EstadoCita.PROGRAMADA
             )
             val confirmedReservation = reserva.copy(
@@ -336,16 +368,11 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
 
         return snapshot.documents.mapNotNull { doc ->
             val pacienteId = doc.getString("pacienteId") ?: return@mapNotNull null
-            val pacienteSnapshot = firestore.collection("usuarios").document(pacienteId).get().await()
-            val nombres = pacienteSnapshot.getString("nombres") ?: ""
-            val apellidos = pacienteSnapshot.getString("apellidos") ?: ""
-            val nombreCompleto = "$nombres $apellidos".trim()
-
             CitaPacienteDetalle(
                 citaId = doc.id,
                 pacienteId = pacienteId,
                 hora = doc.getString("hora").orEmpty(),
-                nombrePaciente = nombreCompleto.ifBlank { "Paciente sin registrar" },
+                nombrePaciente = doc.getString("pacienteNombre").orEmpty().ifBlank { "Paciente sin registrar" },
                 fecha = doc.getString("fecha").orEmpty(),
                 inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L
             )
@@ -367,14 +394,11 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         citas.map { doc ->
             async {
                 val pacienteId = doc.getString("pacienteId").orEmpty()
-                val profile = firestore.collection("usuarios").document(pacienteId).get().await()
-                val nombre = listOf(profile.getString("nombres"), profile.getString("apellidos"))
-                    .filterNotNull().filter(String::isNotBlank).joinToString(" ").ifBlank { "Paciente sin registrar" }
                 CitaPacienteDetalle(
                     citaId = doc.id,
                     pacienteId = pacienteId,
                     hora = doc.getString("hora").orEmpty(),
-                    nombrePaciente = nombre,
+                    nombrePaciente = doc.getString("pacienteNombre").orEmpty().ifBlank { "Paciente sin registrar" },
                     fecha = doc.getString("fecha").orEmpty(),
                     inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L
                 )
@@ -420,6 +444,7 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         "id" to id,
         "reservaId" to reservaId,
         "pacienteId" to pacienteId,
+        "pacienteNombre" to pacienteNombre,
         "psicologoId" to psicologoId,
         "sedeId" to sedeId,
         "especialidadId" to especialidadId,

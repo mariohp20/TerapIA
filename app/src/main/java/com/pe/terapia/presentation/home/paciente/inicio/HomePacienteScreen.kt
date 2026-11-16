@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,13 +47,21 @@ fun HomePacienteScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is HomePacienteUiEvent.AbrirHistorial -> onVerHistorial(event.pacienteId, event.pacienteNombre)
+            }
+        }
+    }
+
     HomePacienteContent(
         uiState = uiState,
         mensajeError = mensajeError,
         onReservarCita = onReservarCita,
         onVerHistorialPagos = onVerHistorialPagos,
         onCerrarSesion = onCerrarSesion,
-        onVerHistorial = { viewModel.verHistorial(onVerHistorial) },
+        onVerHistorial = viewModel::verHistorial,
         onVerTodas = onVerTodas,
         onVerDetalle = onVerDetalle,
         onVerProgreso = onVerProgreso,

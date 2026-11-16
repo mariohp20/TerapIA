@@ -82,6 +82,8 @@ class AuthRepositoryImpl(private val dataSource: AuthDataSource) : AuthRepositor
         dataSource.recuperarPassword(NormalizacionPerfil.correo(email))
     }
 
+    override fun obtenerUidSesionActual(): String? = dataSource.obtenerUsuarioActual()?.uid
+
     override suspend fun obtenerUsuarioActual(): Result<Usuario?> = capture {
         val user = dataSource.obtenerUsuarioActual() ?: return@capture null
         if (dataSource.obtenerDatosUsuario(user.uid) == null && user.providerData.any { it.providerId == "google.com" }) {

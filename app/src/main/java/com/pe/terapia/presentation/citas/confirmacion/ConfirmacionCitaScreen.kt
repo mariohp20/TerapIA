@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,7 +22,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.pe.terapia.R
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
-import com.pe.terapia.domain.usecase.citas.GenerarCodigoQrCitaUseCase
+import com.pe.terapia.presentation.citas.components.CitaQrCodeImage
 
 @Composable
 fun ConfirmacionCitaScreen(
@@ -58,16 +56,20 @@ fun ConfirmacionCitaScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is ConfirmacionCitaUiEvent.IrAPagoEnClinica -> onPagarEnClinica(event.pagoId)
+            }
+        }
+    }
+
     ConfirmacionCitaContent(
         resumen = viewModel.resumen.copy(sedeDireccion = sedeDireccion),
         uiState = uiState,
         onConfirmar = viewModel::confirmar,
         onPagarOnline = onPagarOnline,
-        onPagarEnClinica = { pagoId ->
-            viewModel.seleccionarPagoEnClinica(pagoId) {
-                onPagarEnClinica(pagoId)
-            }
-        },
+        onPagarEnClinica = viewModel::seleccionarPagoEnClinica,
         onVolver = onVolver,
         onFinalizar = onFinalizar
     )
@@ -85,8 +87,9 @@ fun ConfirmacionCitaContent(
     onFinalizar: () -> Unit
 ) {
     val colorFondoTurquesaClaro = MaterialTheme.colorScheme.primaryContainer
-    val isConfirmada = uiState is ConfirmacionCitaUiState.Confirmada
-    val pagoId = (uiState as? ConfirmacionCitaUiState.Confirmada)?.pagoId.orEmpty()
+    val estadoConfirmacion = uiState as? ConfirmacionCitaUiState.Confirmada
+    val isConfirmada = estadoConfirmacion != null
+    val pagoId = estadoConfirmacion?.pagoId.orEmpty()
 
     Scaffold(
         topBar = {
@@ -114,6 +117,7 @@ fun ConfirmacionCitaContent(
                     if (isConfirmada) {
                         Button(
                             onClick = { onPagarOnline(pagoId) },
+                            enabled = estadoConfirmacion?.seleccionandoPagoEnClinica != true,
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
@@ -123,11 +127,20 @@ fun ConfirmacionCitaContent(
 
                         OutlinedButton(
                             onClick = { onPagarEnClinica(pagoId) },
+                            enabled = estadoConfirmacion?.seleccionandoPagoEnClinica != true,
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
                         ) {
-                            Text(text = "Pagar Físicamente en Clínica", style = MaterialTheme.typography.titleMedium)
+                            if (estadoConfirmacion?.seleccionandoPagoEnClinica == true) {
+                                CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(text = "Pagar Físicamente en Clínica", style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+
+                        estadoConfirmacion?.errorPagoEnClinica?.let { mensaje ->
+                            Text(mensaje, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
 
                         TextButton(
@@ -308,7 +321,7 @@ fun ConfirmacionCitaContent(
                                         letterSpacing = 1.sp
                                     )
                                     Spacer(Modifier.height(8.dp))
-                                    CitaQRCode((uiState as ConfirmacionCitaUiState.Confirmada).citaId)
+                                    CitaQrCodeImage((uiState as ConfirmacionCitaUiState.Confirmada).citaId)
                                 }
                             }
                         }
@@ -330,20 +343,6 @@ fun ConfirmacionCitaContent(
             Spacer(Modifier.height(30.dp))
         }
     }
-}
-
-@Composable
-fun CitaQRCode(token: String) {
-    var codigoqrUseCase = GenerarCodigoQrCitaUseCase()
-    val bitmap = remember(token) {
-        codigoqrUseCase.generarBitmapQR(token)
-    }
-
-    Image(
-        bitmap = bitmap.asImageBitmap(),
-        contentDescription = "QR de la cita",
-        modifier = Modifier.size(240.dp)
-    )
 }
 
 private fun String.toFechaLegible(): String = runCatching {

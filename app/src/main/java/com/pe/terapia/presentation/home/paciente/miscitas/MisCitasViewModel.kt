@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.EstadoCita
 import com.pe.terapia.domain.model.ProximaCita
-import com.pe.terapia.domain.repository.CitaRepository
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerCitasPacienteUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +21,7 @@ data class MisCitasUiState(
 
 class MisCitasViewModel(
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
-    private val citaRepository: CitaRepository
+    private val obtenerCitasPacienteUseCase: ObtenerCitasPacienteUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MisCitasUiState())
     val uiState: StateFlow<MisCitasUiState> = _uiState.asStateFlow()
@@ -33,7 +33,7 @@ class MisCitasViewModel(
                 _uiState.value = MisCitasUiState(cargando = false, error = "Usuario no identificado.")
                 return@launch
             }
-            citaRepository.obtenerCitasPaciente(usuario.uid)
+            obtenerCitasPacienteUseCase(usuario.uid)
                 .onSuccess { _uiState.value = clasificar(it) }
                 .onFailure { _uiState.value = MisCitasUiState(cargando = false, error = it.message) }
         }

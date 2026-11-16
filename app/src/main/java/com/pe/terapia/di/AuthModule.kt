@@ -9,6 +9,7 @@ import com.pe.terapia.domain.usecase.auth.CompletarPerfilUseCase
 import com.pe.terapia.domain.usecase.auth.LoginConGoogleUseCase
 import com.pe.terapia.domain.usecase.auth.LoginUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
+import com.pe.terapia.domain.usecase.auth.ObtenerUidSesionActualUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerBorradorPerfilUseCase
 import com.pe.terapia.domain.usecase.auth.RecuperarPasswordUseCase
 import com.pe.terapia.domain.usecase.auth.RegistroUseCase
@@ -29,6 +30,7 @@ val authModule = module {
     factory { CompletarPerfilUseCase(get()) }
     factory { CerrarSesionUseCase(get()) }
     factory { ObtenerUsuarioActualUseCase(get()) }
+    factory { ObtenerUidSesionActualUseCase(get()) }
     factory { ObtenerBorradorPerfilUseCase(get()) }
     factory { RecuperarPasswordUseCase(get()) }
     factory { VerificarSesionUseCase(get()) }

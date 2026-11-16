@@ -13,5 +13,7 @@ data class CitaEntity(
     val sedeDireccion: String,
     val fecha: String,
     val hora: String,
-    val inicioEpochMillis: Long
+    val inicioEpochMillis: Long,
+    val estado: String = "",
+    val estadoPago: String = "PENDIENTE"
 )

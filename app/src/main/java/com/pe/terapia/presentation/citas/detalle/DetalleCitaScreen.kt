@@ -10,10 +10,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pe.terapia.domain.model.EstadoPago
 import com.pe.terapia.domain.model.ProximaCita
 import com.pe.terapia.presentation.home.paciente.inicio.components.EstadoCitaChip
+import com.pe.terapia.presentation.home.paciente.inicio.components.CitaQrDialog
+import com.pe.terapia.domain.model.EstadoCita
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -32,10 +38,10 @@ fun DetalleCitaScreen(
     citaId: String,
     onVolver: () -> Unit,
     onVerPagos: () -> Unit,
+    onVerHistorial: (String, String, String) -> Unit,
     viewModel: DetalleCitaViewModel = koinViewModel(parameters = { parametersOf(citaId) })
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val cita = uiState.cita
 
     Scaffold(
         topBar = {
@@ -48,20 +54,33 @@ fun DetalleCitaScreen(
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(padding)) {
-            when {
-                uiState.cargando -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                cita == null -> Text(
-                    uiState.error ?: "No se encontró la cita.", color = MaterialTheme.colorScheme.error,
+            when (val state = uiState) {
+                DetalleCitaUiState.Cargando -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                is DetalleCitaUiState.Error -> Text(
+                    state.mensaje, color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.align(Alignment.Center).padding(24.dp)
                 )
-                else -> DetalleCitaContenido(cita, onVerPagos)
+                is DetalleCitaUiState.Contenido -> DetalleCitaContenido(
+                    cita = state.cita,
+                    pacienteId = state.pacienteId,
+                    pacienteNombre = state.pacienteNombre,
+                    onVerPagos = onVerPagos,
+                    onVerHistorial = onVerHistorial
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DetalleCitaContenido(cita: ProximaCita, onVerPagos: () -> Unit) {
+private fun DetalleCitaContenido(
+    cita: ProximaCita,
+    pacienteId: String,
+    pacienteNombre: String,
+    onVerPagos: () -> Unit,
+    onVerHistorial: (String, String, String) -> Unit
+) {
+    var mostrarQr by remember(cita.id) { mutableStateOf(false) }
     val iniciales = cita.psicologoNombre.split(" ").filter(String::isNotBlank).take(2)
         .mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("")
 
@@ -115,6 +134,44 @@ private fun DetalleCitaContenido(cita: ProximaCita, onVerPagos: () -> Unit) {
                 Text("Ver mis pagos y comprobantes")
             }
         }
+
+        SeccionCard("Código QR de la cita") {
+            Text(
+                text = when (cita.estado) {
+                    EstadoCita.COMPLETADA.name -> "Esta cita figura como atendida. Puedes mostrar el QR para consultar su registro."
+                    EstadoCita.CANCELADA.name -> "Esta cita fue cancelada. El QR solo permite consultar su estado; no registra asistencia."
+                    EstadoCita.NO_ASISTIO.name -> "Esta cita figura como inasistencia. El QR solo permite consultar su estado."
+                    else -> "Muestra este código al psicólogo para validar tu cita al llegar."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedButton(onClick = { mostrarQr = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.QrCode2, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Ver QR de esta cita")
+            }
+            if (cita.estado == EstadoCita.COMPLETADA.name) {
+                TextButton(
+                    onClick = { onVerHistorial(pacienteId, pacienteNombre, cita.id) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Ver mi historial clínico")
+                }
+            }
+        }
+    }
+
+    if (mostrarQr) {
+        CitaQrDialog(
+            token = cita.id,
+            onDismiss = { mostrarQr = false },
+            mensaje = if (cita.estado == EstadoCita.PROGRAMADA.name) {
+                "Muestra este código al psicólogo para validar la cita."
+            } else {
+                "Este código consulta la cita y su estado. No cambia ni registra la asistencia."
+            }
+        )
     }
 }
 

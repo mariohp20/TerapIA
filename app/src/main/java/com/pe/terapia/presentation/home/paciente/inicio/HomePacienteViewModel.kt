@@ -2,12 +2,15 @@ package com.pe.terapia.presentation.home.paciente.inicio
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pe.terapia.data.local.room.CitaDao
-import com.pe.terapia.data.local.room.CitaEntity
 import com.pe.terapia.domain.model.ProximaCita
+import com.pe.terapia.domain.usecase.auth.ObtenerUidSesionActualUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
+import com.pe.terapia.domain.usecase.citas.GuardarProximaCitaEnCacheUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaDeCacheUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -21,13 +24,21 @@ data class HomePacienteUiState(
     val mostrarQr: Boolean = false
 )
 
+sealed interface HomePacienteUiEvent {
+    data class AbrirHistorial(val pacienteId: String, val pacienteNombre: String) : HomePacienteUiEvent
+}
+
 class HomePacienteViewModel(
+    private val obtenerUidSesionActual: ObtenerUidSesionActualUseCase,
     private val obtenerUsuarioActual: ObtenerUsuarioActualUseCase,
     private val obtenerProximaCita: ObtenerProximaCitaUseCase,
-    private val citaDao: CitaDao
+    private val guardarProximaCitaEnCache: GuardarProximaCitaEnCacheUseCase,
+    private val obtenerProximaCitaDeCache: ObtenerProximaCitaDeCacheUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomePacienteUiState())
     val uiState: StateFlow<HomePacienteUiState> = _uiState.asStateFlow()
+    private val _uiEvents = MutableSharedFlow<HomePacienteUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<HomePacienteUiEvent> = _uiEvents
 
     init {
         cargarHome()
@@ -35,63 +46,62 @@ class HomePacienteViewModel(
 
     private fun cargarHome() {
         viewModelScope.launch {
-            _uiState.update { it.copy(cargando = true) }
-            obtenerUsuarioActual().fold(
-                onSuccess = { usuario ->
-                    if (usuario == null) {
-                        _uiState.update { it.copy(cargando = false, error = "No se pudo identificar la sesión del paciente.") }
-                        return@fold
+            _uiState.update { it.copy(cargando = true, error = null) }
+            val pacienteId = obtenerUidSesionActual()
+            if (pacienteId.isNullOrBlank()) {
+                _uiState.update { it.copy(cargando = false, error = "No se pudo identificar la sesión del paciente.") }
+                return@launch
+            }
+
+            // Room se consulta primero con el UID local de Firebase Auth, sin esperar a Firestore.
+            val cacheLocal = obtenerProximaCitaDeCache(
+                pacienteId,
+                System.currentTimeMillis()
+            ).getOrNull()
+            _uiState.update {
+                it.copy(
+                    proximaCita = cacheLocal,
+                    cargando = cacheLocal == null,
+                    error = null
+                )
+            }
+
+            // El perfil y la cita se refrescan de manera independiente; si la red está lenta,
+            // el dato local ya está visible y no bloquea la pantalla de Inicio.
+            launch {
+                obtenerUsuarioActual().onSuccess { usuario ->
+                    if (usuario != null) {
+                        _uiState.update { it.copy(nombrePaciente = usuario.nombres.ifBlank { "" }) }
                     }
-                    val currentName = usuario.nombres.ifBlank { "" }
-                    obtenerProximaCita(usuario.uid).fold(
-                        onSuccess = { cita ->
-                            if (cita != null) {
-                                runCatching {
-                                    val entity = CitaEntity(
-                                        id = cita.id.ifBlank { "${usuario.uid}_${cita.fecha}_${cita.hora}" },
-                                        pacienteId = usuario.uid,
-                                        psicologoNombre = cita.psicologoNombre,
-                                        especialidadNombre = cita.especialidadNombre,
-                                        sedeNombre = cita.sedeNombre,
-                                        sedeDireccion = cita.sedeDireccion,
-                                        fecha = cita.fecha,
-                                        hora = cita.hora,
-                                        inicioEpochMillis = System.currentTimeMillis() + 86400000
-                                    )
-                                    citaDao.insertarCita(entity)
-                                }
-                            }
-                            _uiState.update { it.copy(nombrePaciente = currentName, proximaCita = cita, cargando = false) }
-                        },
-                        onFailure = { _ ->
-                            // Fallback a Room (Caché local) cuando no hay internet
-                            val local = runCatching { citaDao.obtenerProximaCitaLocal(usuario.uid, 0L) }.getOrNull()
-                            val proximaLocal = local?.let {
-                                ProximaCita(
-                                    id = it.id,
-                                    psicologoNombre = it.psicologoNombre,
-                                    especialidadNombre = it.especialidadNombre,
-                                    fecha = it.fecha,
-                                    hora = it.hora,
-                                    sedeNombre = it.sedeNombre,
-                                    sedeDireccion = it.sedeDireccion
-                                )
-                            }
-                            _uiState.update {
-                                it.copy(
-                                    nombrePaciente = currentName,
-                                    proximaCita = proximaLocal,
-                                    cargando = false,
-                                    error = if (proximaLocal == null) "Sin conexión a internet y sin citas en caché local." else "Modo sin conexión (Datos de caché local Room)"
-                                )
-                            }
-                        }
-                    )
-                },
-                onFailure = { error ->
-                    _uiState.update { it.copy(cargando = false, error = error.message) }
                 }
-            )
+            }
+
+            launch {
+                obtenerProximaCita(pacienteId).fold(
+                    onSuccess = { cita ->
+                        guardarProximaCitaEnCache(pacienteId, cita)
+                        _uiState.update {
+                            it.copy(
+                                proximaCita = cita,
+                                cargando = false,
+                                error = null
+                            )
+                        }
+                    },
+                    onFailure = {
+                        _uiState.update { state ->
+                            state.copy(
+                                cargando = false,
+                                error = if (state.proximaCita == null) {
+                                    "Sin conexión y sin una cita guardada localmente."
+                                } else {
+                                    "Sin conexión. Mostrando la última cita guardada en este dispositivo."
+                                }
+                            )
+                        }
+                    }
+                )
+            }
         }
     }
 
@@ -99,15 +109,27 @@ class HomePacienteViewModel(
         _uiState.update { it.copy(mostrarQr = mostrar) }
     }
 
-    fun verHistorial(onNavegarAHistorial: (String, String) -> Unit) {
+    fun verHistorial() {
         viewModelScope.launch {
-            val usuario = obtenerUsuarioActual().getOrNull()
-            if (usuario != null) {
-                onNavegarAHistorial(
-                    usuario.uid,
-                    "${usuario.nombres} ${usuario.apellidos}"
-                )
-            }
+            obtenerUsuarioActual().fold(
+                onSuccess = { usuario ->
+                    if (usuario == null) {
+                        _uiState.update { it.copy(error = "No se pudo identificar la sesión del paciente.") }
+                    } else {
+                        _uiEvents.emit(
+                            HomePacienteUiEvent.AbrirHistorial(
+                                usuario.uid,
+                                "${usuario.nombres} ${usuario.apellidos}"
+                            )
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(error = error.message ?: "No se pudo abrir el historial clínico.")
+                    }
+                }
+            )
         }
     }
 }

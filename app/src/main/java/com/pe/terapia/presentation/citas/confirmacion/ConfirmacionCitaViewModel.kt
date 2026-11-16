@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pe.terapia.domain.model.Reserva
 import com.pe.terapia.domain.model.Rol
-import com.pe.terapia.domain.repository.PagoRepository
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.citas.ReservarCitaUseCase
+import com.pe.terapia.domain.usecase.pagos.ObtenerPagoPorCitaUseCase
+import com.pe.terapia.domain.usecase.pagos.SeleccionarPagoEnClinicaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -15,8 +18,17 @@ import kotlinx.coroutines.launch
 sealed interface ConfirmacionCitaUiState {
     data object Idle : ConfirmacionCitaUiState
     data object Cargando : ConfirmacionCitaUiState
-    data class Confirmada(val citaId: String, val pagoId: String) : ConfirmacionCitaUiState
+    data class Confirmada(
+        val citaId: String,
+        val pagoId: String,
+        val seleccionandoPagoEnClinica: Boolean = false,
+        val errorPagoEnClinica: String? = null
+    ) : ConfirmacionCitaUiState
     data class Error(val mensaje: String) : ConfirmacionCitaUiState
+}
+
+sealed interface ConfirmacionCitaUiEvent {
+    data class IrAPagoEnClinica(val pagoId: String) : ConfirmacionCitaUiEvent
 }
 
 data class ResumenCita(
@@ -44,11 +56,14 @@ class ConfirmacionCitaViewModel(
     private val inicioEpochMillis: Long,
     private val reservarCitaUseCase: ReservarCitaUseCase,
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
-    private val pagoRepository: PagoRepository
+    private val obtenerPagoPorCitaUseCase: ObtenerPagoPorCitaUseCase,
+    private val seleccionarPagoEnClinicaUseCase: SeleccionarPagoEnClinicaUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ConfirmacionCitaUiState>(ConfirmacionCitaUiState.Idle)
     val uiState: StateFlow<ConfirmacionCitaUiState> = _uiState.asStateFlow()
+    private val _uiEvents = MutableSharedFlow<ConfirmacionCitaUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<ConfirmacionCitaUiEvent> = _uiEvents
 
     val resumen = ResumenCita(psicologoNombre, especialidadNombre, sedeNombre, fecha, hora,"", costo_cita)
 
@@ -82,7 +97,7 @@ class ConfirmacionCitaViewModel(
 
             reservarCitaUseCase(reserva)
                 .onSuccess { cita ->
-                    val pago = pagoRepository.obtenerPagoPorCita(cita.id).getOrNull()
+                    val pago = obtenerPagoPorCitaUseCase(cita.id).getOrNull()
                     _uiState.value = ConfirmacionCitaUiState.Confirmada(
                         citaId = cita.id,
                         pagoId = pago?.id.orEmpty()
@@ -92,12 +107,26 @@ class ConfirmacionCitaViewModel(
         }
     }
 
-    fun seleccionarPagoEnClinica(pagoId: String, onCompletado: () -> Unit) {
+    fun seleccionarPagoEnClinica(pagoId: String) {
         viewModelScope.launch {
-            if (pagoId.isNotBlank()) {
-                pagoRepository.seleccionarPagoEnClinica(pagoId)
+            val confirmada = _uiState.value as? ConfirmacionCitaUiState.Confirmada ?: return@launch
+            if (confirmada.seleccionandoPagoEnClinica) return@launch
+            if (pagoId.isBlank()) {
+                _uiState.value = confirmada.copy(errorPagoEnClinica = "No se pudo identificar el pago.")
+                return@launch
             }
-            onCompletado()
+            _uiState.value = confirmada.copy(seleccionandoPagoEnClinica = true, errorPagoEnClinica = null)
+            seleccionarPagoEnClinicaUseCase(pagoId)
+                .onSuccess {
+                    _uiState.value = confirmada.copy(seleccionandoPagoEnClinica = false)
+                    _uiEvents.emit(ConfirmacionCitaUiEvent.IrAPagoEnClinica(pagoId))
+                }
+                .onFailure {
+                    _uiState.value = confirmada.copy(
+                        seleccionandoPagoEnClinica = false,
+                        errorPagoEnClinica = it.message ?: "No se pudo seleccionar el pago en clínica."
+                    )
+                }
         }
     }
 }

@@ -261,11 +261,14 @@ service cloud.firestore {
       );
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
-          'id', 'reservaId', 'pacienteId', 'psicologoId', 'sedeId', 'especialidadId',
+          'id', 'reservaId', 'pacienteId', 'pacienteNombre', 'psicologoId', 'sedeId', 'especialidadId',
           'slotId', 'fecha', 'hora', 'inicioEpochMillis', 'inicioAt',
           'duracionMinutos', 'estado', 'creadaEn'
         ])
         && request.resource.data.id == citaId
+        && request.resource.data.pacienteNombre is string
+        && request.resource.data.pacienteNombre.size() > 0
+        && request.resource.data.pacienteNombre.size() <= 201
         && request.resource.data.estado == 'PROGRAMADA'
         && request.resource.data.creadaEn == request.time
         && request.resource.data.pacienteId == request.auth.uid
