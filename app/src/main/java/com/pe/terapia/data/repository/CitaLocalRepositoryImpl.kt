@@ -22,7 +22,10 @@ class CitaLocalRepositoryImpl(private val citaDao: CitaDao) : CitaLocalRepositor
                 hora = it.hora,
                 inicioEpochMillis = it.inicioEpochMillis,
                 estado = it.estado,
-                estadoPago = it.estadoPago
+                estadoPago = it.estadoPago,
+                sedeLatitud = it.sedeLatitud,
+                sedeLongitud = it.sedeLongitud,
+                pagado = it.pagado
             )
         }
         citaDao.reemplazarProximaCita(pacienteId, citaEntity)
@@ -41,7 +44,10 @@ class CitaLocalRepositoryImpl(private val citaDao: CitaDao) : CitaLocalRepositor
                 sedeDireccion = local.sedeDireccion,
                 inicioEpochMillis = local.inicioEpochMillis,
                 estado = local.estado,
-                estadoPago = local.estadoPago
+                estadoPago = local.estadoPago,
+                sedeLatitud = local.sedeLatitud,
+                sedeLongitud = local.sedeLongitud,
+                pagado = local.pagado
             )
         }
     }

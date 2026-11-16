@@ -8,6 +8,7 @@ import com.pe.terapia.domain.usecase.citas.ObtenerCitasHoyPsicologoUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasPsicologoResumenUseCase
 import com.pe.terapia.domain.model.Rol
 import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
+import com.pe.terapia.domain.repository.AgendaPsicologoLocalRepository
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,8 @@ class HomePsicologoViewModel(
     private val obtenerCitasHoyPsicologoUseCase: ObtenerCitasHoyPsicologoUseCase,
     private val obtenerUsuarioActualUseCase: ObtenerUsuarioActualUseCase,
     private val obtenerCitasPsicologoResumenUseCase: ObtenerCitasPsicologoResumenUseCase,
-    private val recordatorioCitasScheduler: RecordatorioCitasScheduler
+    private val recordatorioCitasScheduler: RecordatorioCitasScheduler,
+    private val agendaLocalRepository: AgendaPsicologoLocalRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomePsicologoUiState())
@@ -58,6 +60,19 @@ class HomePsicologoViewModel(
 
                 val primerNombre = usuarioActual.nombres.split(" ").firstOrNull() ?: ""
                 val fechaHoy = LocalDate.now(ZoneId.of("America/Lima")).toString()
+                val agendaLocal = runCatching { agendaLocalRepository.obtener(usuarioActual.uid, fechaHoy) }.getOrDefault(emptyList())
+                if (agendaLocal.isNotEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        cargando = false,
+                        datosCargados = true,
+                        nombrePsicologo = primerNombre,
+                        proximasCitas = agendaLocal,
+                        citasHoy = agendaLocal.size,
+                        pendientes = agendaLocal.size,
+                        pacientesActivos = agendaLocal.map { it.pacienteId }.distinct().size,
+                        error = "Mostrando agenda guardada. Se actualizará al recuperar conexión."
+                    )
+                }
 
                 val citasHoyDeferred = async {
                     obtenerCitasHoyPsicologoUseCase(usuarioActual.uid, fechaHoy)
@@ -70,6 +85,7 @@ class HomePsicologoViewModel(
 
                 resultado.fold(
                     onSuccess = { citas ->
+                        runCatching { agendaLocalRepository.guardar(usuarioActual.uid, fechaHoy, citas) }
                         resumenPsicologo?.citasSinRecordatorio?.forEach(recordatorioCitasScheduler::cancelar)
                         resumenPsicologo?.futurasProgramadas?.forEach { cita ->
                             runCatching {
@@ -96,7 +112,7 @@ class HomePsicologoViewModel(
                     onFailure = { error ->
                         _uiState.value = _uiState.value.copy(
                             cargando = false,
-                            error = "No se pudieron cargar las citas: ${error.message}"
+                            error = if (agendaLocal.isNotEmpty()) "Mostrando agenda guardada. Sin conexión con Firestore." else "No se pudieron cargar las citas: ${error.message}"
                         )
                     }
                 )
