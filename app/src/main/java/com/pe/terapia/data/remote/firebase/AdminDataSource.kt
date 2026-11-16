@@ -10,46 +10,6 @@ import com.pe.terapia.domain.model.Usuario
 class AdminDataSource(
     private val firestore: FirebaseFirestore
 ) {
-    suspend fun promoverPacienteAPsicologo(
-        usuarioId: String,
-        nombres: String,
-        apellidos: String,
-        descripcionProfesional: String,
-        especialidadIds: List<String>,
-        sedeIds: List<String>
-    ): Result<Unit> = runCatching {
-
-        val usuarioRef = firestore.collection("usuarios").document(usuarioId)
-        val psicologoRef = firestore.collection("psicologos").document(usuarioId)
-
-        val usuarioSnapshot = usuarioRef.get().await()
-        if (!usuarioSnapshot.exists()) {
-            throw Exception("El usuario no existe en la base de datos.")
-        }
-
-        // Creamos el batch (lote de escritura)
-        val batch = firestore.batch()
-
-        // 1. Actualizamos el rol en la colección de usuarios
-        batch.update(usuarioRef, "rol", "psicologo")
-
-        // 2. Creamos el nuevo documento en la colección de psicólogos
-        // Nota: Usamos el mismo ID de usuario para el documento
-        val psicologoData = hashMapOf(
-            "nombres" to nombres,
-            "apellidos" to apellidos,
-            "activo" to true,
-            "descripcionProfesional" to descripcionProfesional,
-            "usuarioId" to usuarioId,
-            "especialidadIds" to especialidadIds,
-            "sedeIds" to sedeIds
-        )
-        batch.set(psicologoRef, psicologoData)
-
-        // Ejecutamos ambas operaciones de forma atómica
-        batch.commit().await()
-    }
-
     suspend fun obtenerPacientes(): List<Usuario> {
         val snapshot = firestore.collection("usuarios")
             .whereEqualTo("rol", "paciente")
@@ -122,6 +82,40 @@ class AdminDataSource(
             )
         }
     }
+    suspend fun promoverPacienteAPsicologo(
+        usuarioId: String,
+        nombres: String,
+        apellidos: String,
+        descripcionProfesional: String,
+        especialidadIds: List<String>,
+        sedeIds: List<String>
+    ): Result<Unit> = runCatching {
+
+        val usuarioRef = firestore.collection("usuarios").document(usuarioId)
+        val psicologoRef = firestore.collection("psicologos").document(usuarioId)
+
+        val usuarioSnapshot = usuarioRef.get().await()
+        if (!usuarioSnapshot.exists()) {
+            throw Exception("El usuario no existe en la base de datos.")
+        }
+
+        val batch = firestore.batch()
+
+        batch.update(usuarioRef, "rol", "psicologo")
+
+        val psicologoData = hashMapOf(
+            "nombres" to nombres,
+            "apellidos" to apellidos,
+            "activo" to true,
+            "descripcionProfesional" to descripcionProfesional,
+            "usuarioId" to usuarioId,
+            "especialidadIds" to especialidadIds,
+            "sedeIds" to sedeIds
+        )
+        batch.set(psicologoRef, psicologoData)
+
+        batch.commit().await()
+    }
     suspend fun asignarHorarioPsicologo(
         psicologoId: String,
         sedeId: String,
@@ -134,7 +128,6 @@ class AdminDataSource(
 
         val batch = firestore.batch()
 
-        // 1. Crear el documento principal del horario
         val horarioData = mapOf(
             "activo" to true,
             "duracionMinutos" to 60,
@@ -144,7 +137,6 @@ class AdminDataSource(
         )
         batch.set(horarioRef, horarioData)
 
-        // 2. Crear el bloque de disponibilidad
         val bloqueRef = horarioRef.collection("bloques").document()
         val bloqueData = mapOf(
             "activo" to true,
@@ -154,10 +146,8 @@ class AdminDataSource(
         )
         batch.set(bloqueRef, bloqueData)
 
-        // Subimos todo a Firebase al mismo tiempo
         batch.commit().await()
     }
-    // Dentro de AdminDataSource.kt
     suspend fun actualizarPsicologo(
         psicologoId: String,
         descripcionProfesional: String,

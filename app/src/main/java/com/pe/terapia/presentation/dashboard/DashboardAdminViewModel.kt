@@ -2,8 +2,6 @@ package com.pe.terapia.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pe.terapia.domain.model.CargaPsicologoAdmin
-import com.pe.terapia.domain.model.DatoMensualAdmin
 import com.pe.terapia.domain.usecase.dashboard.ObtenerDashboardAdminUseCase
 import java.time.Instant
 import java.time.YearMonth
@@ -15,6 +13,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class DatoMensualAdmin(
+    val etiqueta: String,
+    val cantidad: Double
+)
+
+data class CitasMensualesAdmin(
+    val etiqueta: String,
+    val programadas: Int,
+    val atendidas: Int
+)
+data class CargaPsicologoAdmin(
+    val nombre: String,
+    val atenciones: Int
+)
 data class DashboardAdminUiState(
     val cargando: Boolean = true,
     val error: String? = null,
@@ -23,11 +35,9 @@ data class DashboardAdminUiState(
     val citasCompletadas: Int = 0,
     val ingresosPen: Double = 0.0,
     val ingresosPorMes: List<DatoMensualAdmin> = emptyList(),
-    val citasPorMes: List<ComparativaMensualAdmin> = emptyList(),
+    val citasPorMes: List<CitasMensualesAdmin> = emptyList(),
     val cargaPorPsicologo: List<CargaPsicologoAdmin> = emptyList()
 )
-
-data class ComparativaMensualAdmin(val periodo: String, val etiqueta: String, val citasProgramadas: Int, val citasCompletadas: Int)
 
 class DashboardAdminViewModel(
     private val obtenerDashboardAdmin: ObtenerDashboardAdminUseCase
@@ -36,59 +46,95 @@ class DashboardAdminViewModel(
     private val _uiState = MutableStateFlow(DashboardAdminUiState())
     val uiState: StateFlow<DashboardAdminUiState> = _uiState.asStateFlow()
 
-    fun cargar(meses: Int = _uiState.value.meses) {
+    fun cargarDashboard(meses: Int = _uiState.value.meses) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cargando = true, error = null, meses = meses)
             val actual = YearMonth.now(zona)
-            val primerMesConsulta = if (meses == 0) YearMonth.of(2000, 1) else actual.minusMonths((meses - 1).toLong())
+            val primerMesConsulta =
+                if (meses == 0) YearMonth.of(2000, 1) else actual.minusMonths((meses - 1).toLong())
             val desde = primerMesConsulta.atDay(1).atStartOfDay(zona).toInstant().toEpochMilli()
-            val hasta = actual.plusMonths(1).atDay(1).atStartOfDay(zona).toInstant().toEpochMilli() - 1
+            val hasta =
+                actual.plusMonths(1).atDay(1).atStartOfDay(zona).toInstant().toEpochMilli() - 1
+
             obtenerDashboardAdmin(desde, hasta).fold(
-                onSuccess = { data ->
-                    val format = DateTimeFormatter.ofPattern("MMM yy", Locale("es", "PE"))
-                    val primerMesDatos = (data.citas.map { YearMonth.from(Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)) } +
-                        data.pagos.map { YearMonth.from(Instant.ofEpochMilli(it.fechaMillis).atZone(zona)) })
+                onSuccess = { datos ->
+                    val formato = DateTimeFormatter.ofPattern("MMM yy", Locale("es", "PE"))
+                    val primerMesDatos = (datos.citas.map {
+                        YearMonth.from(
+                            Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)
+                        )
+                    } +
+                            datos.pagos.map {
+                                YearMonth.from(
+                                    Instant.ofEpochMilli(it.fechaMillis).atZone(zona)
+                                )
+                            })
                         .filter { it <= actual }
                         .minOrNull() ?: actual
+
                     val primerMesGrafico = if (meses == 0) {
-                        val mesesDeDatos = (actual.year - primerMesDatos.year) * 12 + actual.monthValue - primerMesDatos.monthValue + 1
+                        val mesesDeDatos =
+                            (actual.year - primerMesDatos.year) * 12 + actual.monthValue - primerMesDatos.monthValue + 1
                         if (mesesDeDatos > 60) actual.minusMonths(59) else primerMesDatos
                     } else actual.minusMonths((meses - 1).toLong())
-                    val cantidadMeses = ((actual.year - primerMesGrafico.year) * 12 + actual.monthValue - primerMesGrafico.monthValue + 1).coerceIn(1, 60)
-                    val months = (0 until cantidadMeses).map { primerMesGrafico.plusMonths(it.toLong()) }
-                    val citasMonth = months.map { month ->
-                        val rows = data.citas.filter { Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona).toLocalDate().let { d -> YearMonth.from(d) == month } }
-                        ComparativaMensualAdmin(
-                            periodo = month.toString(),
-                            etiqueta = month.format(format).replaceFirstChar(Char::uppercase),
-                            // La serie representa citas que fueron agendadas y llegaron a tener resultado.
-                            // CANCELADA se excluye del volumen de agenda; COMPLETADA y NO_ASISTIO
-                            // siguen contando como citas programadas para comparar adherencia.
-                            citasProgramadas = rows.count { it.estado != "CANCELADA" },
-                            citasCompletadas = rows.count { it.estado == "COMPLETADA" }
+
+                    val cantidadMeses =
+                        ((actual.year - primerMesGrafico.year) * 12 + actual.monthValue - primerMesGrafico.monthValue + 1).coerceIn(1,60)
+
+                    val mesesLista =
+                        (0 until cantidadMeses).map { primerMesGrafico.plusMonths(it.toLong()) }
+
+                    val citasPorMes = mesesLista.map { mes ->
+                        val filas = datos.citas.filter {
+                            Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona).toLocalDate()
+                                .let { d -> YearMonth.from(d) == mes }
+                        }
+                        CitasMensualesAdmin(
+                            etiqueta = mes.format(formato).replaceFirstChar(Char::uppercase),
+                            programadas = filas.size,
+                            atendidas = filas.count { it.estado == "COMPLETADA" }
                         )
                     }
-                    val ingresosMonth = months.map { month ->
-                        val amount = data.pagos.filter { it.moneda == "PEN" && Instant.ofEpochMilli(it.fechaMillis).atZone(zona).let { d -> YearMonth.from(d) == month } }.sumOf { it.monto }
-                        DatoMensualAdmin(month.format(format).replaceFirstChar(Char::uppercase), amount)
+
+                    val ingresosPorMes = mesesLista.map { mes ->
+                        val monto = datos.pagos.filter {
+                            it.moneda == "PEN" && Instant.ofEpochMilli(it.fechaMillis).atZone(zona)
+                                .let { d -> YearMonth.from(d) == mes }
+                        }.sumOf { it.monto }
+                        DatoMensualAdmin(
+                            mes.format(formato).replaceFirstChar(Char::uppercase),
+                            monto
+                        )
                     }
-                    val names = data.psicologos.associate { it.id to it.nombre }
-                    val workload = data.citas.filter { it.estado == "COMPLETADA" }
+
+                    val nombres = datos.psicologos.associate { it.id to it.nombre }
+                    val cargaLaboral = datos.citas.filter { it.estado == "COMPLETADA" }
                         .groupingBy { it.psicologoId }.eachCount()
-                        .map { (id, count) -> CargaPsicologoAdmin(names[id] ?: "Psicólogo ${id.take(6)}", count) }
+                        .map { (id, cantidad) ->
+                            CargaPsicologoAdmin(
+                                nombres[id] ?: "Psicólogo ${id.take(6)}",
+                                cantidad
+                            )
+                        }
                         .sortedByDescending { it.atenciones }
+
                     _uiState.value = DashboardAdminUiState(
                         cargando = false,
                         meses = meses,
-                        totalCitas = data.citas.size,
-                        citasCompletadas = data.citas.count { it.estado == "COMPLETADA" },
-                        ingresosPen = data.pagos.filter { it.moneda == "PEN" }.sumOf { it.monto },
-                        ingresosPorMes = ingresosMonth,
-                        citasPorMes = citasMonth,
-                        cargaPorPsicologo = workload
+                        totalCitas = datos.citas.size,
+                        citasCompletadas = datos.citas.count { it.estado == "COMPLETADA" },
+                        ingresosPen = datos.pagos.filter { it.moneda == "PEN" }.sumOf { it.monto },
+                        ingresosPorMes = ingresosPorMes,
+                        citasPorMes = citasPorMes,
+                        cargaPorPsicologo = cargaLaboral
                     )
                 },
-                onFailure = { error -> _uiState.value = _uiState.value.copy(cargando = false, error = error.message ?: "No se pudo cargar el dashboard.") }
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        cargando = false,
+                        error = error.message ?: "No se pudo cargar el dashboard."
+                    )
+                }
             )
         }
     }

@@ -22,6 +22,3 @@ data class DashboardAdminData(
     val pagos: List<PagoAdminResumen>,
     val psicologos: List<PsicologoAdminResumen>
 )
-
-data class DatoMensualAdmin(val etiqueta: String, val cantidad: Double)
-data class CargaPsicologoAdmin(val nombre: String, val atenciones: Int)

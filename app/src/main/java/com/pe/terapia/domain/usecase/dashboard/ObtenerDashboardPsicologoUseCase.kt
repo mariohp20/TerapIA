@@ -1,60 +1,48 @@
 package com.pe.terapia.domain.usecase.dashboard
 
-import com.pe.terapia.domain.model.*
+import com.pe.terapia.domain.model.AtencionPsicologoResumen
+import com.pe.terapia.domain.model.CitaAdminResumen
+import com.pe.terapia.domain.model.EtapaPsicologoResumen
+import com.pe.terapia.domain.model.TipoEtapa
 import com.pe.terapia.domain.repository.DashboardRepository
-import com.pe.terapia.domain.repository.HistoriaClinicaRepository
+import com.pe.terapia.domain.usecase.historiaclinica.ObtenerTiposEtapasUseCase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import java.time.Instant
-import java.time.YearMonth
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+
+data class DatosDashboardPsicologo(
+    val atenciones: List<AtencionPsicologoResumen>,
+    val etapasActivas: List<EtapaPsicologoResumen>,
+    val citas: List<CitaAdminResumen>,
+    val tiposEtapas: List<TipoEtapa>
+)
 
 class ObtenerDashboardPsicologoUseCase(
-    private val dashboardRepository: DashboardRepository,
-    private val historiaRepository: HistoriaClinicaRepository
+    private val repository: DashboardRepository,
+    private val obtenerTiposEtapasUseCase: ObtenerTiposEtapasUseCase
 ) {
-    suspend operator fun invoke(psicologoId: String, mesesFiltro: Int = 6): Result<DashboardPsicologoData> = runCatching {
-        require(psicologoId.isNotBlank()) { "No se pudo identificar al psicólogo." }
-        coroutineScope {
-            val atenciones = async { dashboardRepository.obtenerAtencionesPsicologo(psicologoId) }
-            val etapas = async { dashboardRepository.obtenerEtapasActivasPsicologo(psicologoId) }
-            val citas = async { dashboardRepository.obtenerCitasPorPsicologo(psicologoId) }
-            val tiposEtapas = async { historiaRepository.obtenerTiposEtapas() }
-            val atencionesResult = atenciones.await().getOrThrow()
-            val etapasResult = etapas.await().getOrThrow()
-            val citasResult = citas.await().getOrThrow()
-            val tiposResult = tiposEtapas.await().getOrThrow()
+    suspend operator fun invoke(psicologoId: String): Result<DatosDashboardPsicologo> = coroutineScope {
 
-            val zona = ZoneId.of("America/Lima")
-            val actual = YearMonth.now(zona)
-            val fechas = atencionesResult.map { YearMonth.from(it.fechaAtencion.atZone(zona)) } +
-                citasResult.filter { it.inicioEpochMillis > 0 }.map { YearMonth.from(Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)) }
-            val primerMes = if (mesesFiltro > 0) {
-                actual.minusMonths((mesesFiltro - 1).coerceAtLeast(0).toLong())
-            } else {
-                maxOf(fechas.minOrNull() ?: actual, actual.minusMonths(59))
-            }
-            val formato = DateTimeFormatter.ofPattern("MMM yy", Locale.forLanguageTag("es-PE"))
-            val cantidadMeses = ((actual.year - primerMes.year) * 12 + actual.monthValue - primerMes.monthValue + 1).coerceIn(1, 60)
-            val meses = (0 until cantidadMeses).map { primerMes.plusMonths(it.toLong()) }
-            val atencionesEnPeriodo = atencionesResult.filter { YearMonth.from(it.fechaAtencion.atZone(zona)) in primerMes..actual }
-            val citasEnPeriodo = citasResult.filter { it.inicioEpochMillis > 0 && YearMonth.from(Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)) in primerMes..actual }
-            val atencionesPorMes = atencionesEnPeriodo
-                .groupingBy { YearMonth.from(it.fechaAtencion.atZone(zona)) }.eachCount()
-            val citasPorMes = citasEnPeriodo
-                .groupingBy { YearMonth.from(Instant.ofEpochMilli(it.inicioEpochMillis).atZone(zona)) }.eachCount()
 
-            val nombresEtapas = tiposResult.associate { it.id to it.nombre }
-            val etapasPorNombre = etapasResult.groupingBy { nombresEtapas[it.tipoEtapaId] ?: "Etapa sin nombre" }.eachCount()
+        val atencionesDef = async { repository.obtenerAtencionesPsicologo(psicologoId) }
+        val etapasDef = async { repository.obtenerEtapasActivasPsicologo(psicologoId) }
+        val citasDef = async { repository.obtenerCitasPorPsicologo(psicologoId) }
+        val tiposDef = async { obtenerTiposEtapasUseCase() }
 
-            DashboardPsicologoData(
-                atencionesPorMes = meses.map { mes -> ConteoMensualPsicologo(mes.toString(), mes.format(formato).replaceFirstChar(Char::uppercase), atencionesPorMes[mes] ?: 0) },
-                pacientesPorEtapa = etapasPorNombre.map { (nombre, cantidad) -> ConteoEtapaPsicologo(nombre, cantidad) },
-                comparativaAsistencia = meses.map { mes ->
-                    ComparativaMensualPsicologo(mes.toString(), mes.format(formato).replaceFirstChar(Char::uppercase), citasPorMes[mes] ?: 0, atencionesPorMes[mes] ?: 0)
-                }
+        val atenciones = atencionesDef.await()
+        val etapas = etapasDef.await()
+        val citas = citasDef.await()
+        val tipos = tiposDef.await()
+
+        if (atenciones.isFailure || etapas.isFailure || citas.isFailure || tipos.isFailure) {
+            Result.failure(Exception("Error al cargar uno o más componentes del dashboard del psicólogo."))
+        } else {
+            Result.success(
+                DatosDashboardPsicologo(
+                    atenciones = atenciones.getOrThrow(),
+                    etapasActivas = etapas.getOrThrow(),
+                    citas = citas.getOrThrow(),
+                    tiposEtapas = tipos.getOrThrow()
+                )
             )
         }
     }

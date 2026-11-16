@@ -2,21 +2,18 @@ package com.pe.terapia.data.remote.firebase
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
-import com.pe.terapia.domain.model.Atencion
+import com.pe.terapia.domain.model.AtencionPsicologoResumen
 import com.pe.terapia.domain.model.AtencionResumenDashboard
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.EstadoCita
 import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoEtapa
-import com.pe.terapia.domain.model.EstadoProceso
-import com.pe.terapia.domain.model.EtapaClinica
 import com.pe.terapia.domain.model.CitaAdminResumen
 import com.pe.terapia.domain.model.PagoAdminResumen
 import com.pe.terapia.domain.model.PsicologoAdminResumen
-import com.pe.terapia.domain.model.DashboardAdminData
+import com.pe.terapia.domain.model.EstadoProceso
+import com.pe.terapia.domain.model.EtapaPsicologoResumen
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 
 class DashboardDataSource(
     private val firestore: FirebaseFirestore
@@ -25,37 +22,23 @@ class DashboardDataSource(
     // 1. PSICOLOGO
 
     // 1.1 ColumnChar: Volumen de Atenciones
-    suspend fun obtenerAtencionesPorPsicologo(psicologoId: String): List<Atencion> {
+    suspend fun obtenerAtencionesPorPsicologo(psicologoId: String): List<AtencionPsicologoResumen> {
         val snapshot = firestore.collection("atenciones")
             .whereEqualTo("psicologoId", psicologoId)
             .get()
             .await()
 
         return snapshot.documents.mapNotNull { doc ->
-            val data = doc.data ?: return@mapNotNull null
-
-            val timestamp = data["fechaAtencion"] as? com.google.firebase.Timestamp
-            val fechaInstant = timestamp?.let {
-                java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong())
-            } ?: java.time.Instant.now()
-
-            Atencion(
-                citaId = data["citaId"] as? String ?: "",
-                pacienteId = data["pacienteId"] as? String ?: "",
-                psicologoId = data["psicologoId"] as? String ?: "",
-                historiaClinicaId = data["historiaClinicaId"] as? String ?: "",
-                fechaAtencion = fechaInstant,
-                motivoConsulta = data["motivoConsulta"] as? String ?: "",
-                observaciones = data["observaciones"] as? String ?: "",
-                evaluacion = data["evaluacion"] as? String ?: "",
-                evolucion = data["evolucion"] as? String ?: "",
-                indicaciones = data["indicaciones"] as? String ?: ""
+            val timestamp = doc.getTimestamp("fechaAtencion") ?: return@mapNotNull null
+            AtencionPsicologoResumen(
+                citaId = doc.getString("citaId").orEmpty(),
+                fechaAtencionEpochMillis = timestamp.toDate().time
             )
         }
     }
 
     // 1.2 PieChart: Estado de Pacientes Activos
-    suspend fun obtenerEtapasActivasPorPsicologo(psicologoId: String): List<EtapaClinica> {
+    suspend fun obtenerEtapasActivasPorPsicologo(psicologoId: String): List<EtapaPsicologoResumen> {
         val procesosSnapshot = firestore.collection("procesosTerapeuticos")
             .whereEqualTo("psicologoId", psicologoId)
             .whereEqualTo("estado", EstadoProceso.EN_CURSO.name)
@@ -66,7 +49,7 @@ class DashboardDataSource(
 
         if (procesoIds.isEmpty()) return emptyList()
 
-        val etapasActivas = mutableListOf<EtapaClinica>()
+        val etapasActivasResumen = mutableListOf<EtapaPsicologoResumen>()
 
         procesoIds.chunked(10).forEach { chunk ->
             val etapasSnapshot = firestore.collection("etapasClinicas")
@@ -76,53 +59,29 @@ class DashboardDataSource(
                 .await()
 
             etapasSnapshot.documents.forEach { doc ->
-                val data = doc.data ?: return@forEach
-
-                val timestampInicio = data["fechaInicio"] as? com.google.firebase.Timestamp
-                val fechaInicioInstant = timestampInicio?.let {
-                    java.time.Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong())
-                }
-
-                etapasActivas.add(
-                    EtapaClinica(
-                        id = doc.id,
-                        procesoTerapeuticoId = data["procesoTerapeuticoId"] as? String ?: "",
-                        tipoEtapaId = data["tipoEtapaId"] as? String ?: "",
-                        estado = EstadoEtapa.valueOf(data["estado"] as? String ?: EstadoEtapa.PENDIENTE.name),
-                        fechaInicio = fechaInicioInstant,
-                        fechaFin = null,
-                        objetivosEspecificos = data["objetivosEspecificos"] as? String,
-                        observaciones = data["observaciones"] as? String
+                etapasActivasResumen.add(
+                    EtapaPsicologoResumen(
+                        tipoEtapaId = doc.getString("tipoEtapaId").orEmpty()
                     )
                 )
             }
         }
 
-        return etapasActivas
+        return etapasActivasResumen
     }
+
     // 1.3 LineChart: Adherencia y Ausentismo
-    suspend fun obtenerCitasPorPsicologo(psicologoId: String): List<Cita> {
+    suspend fun obtenerCitasPorPsicologo(psicologoId: String): List<CitaAdminResumen> {
         val snapshot = firestore.collection("citas")
             .whereEqualTo("psicologoId", psicologoId)
             .get()
             .await()
 
         return snapshot.documents.mapNotNull { doc ->
-            val data = doc.data ?: return@mapNotNull null
-
-            Cita(
-                id = doc.id,
-                reservaId = data["reservaId"] as? String ?: "",
-                pacienteId = data["pacienteId"] as? String ?: "",
-                psicologoId = data["psicologoId"] as? String ?: "",
-                sedeId = data["sedeId"] as? String ?: "",
-                especialidadId = data["especialidadId"] as? String ?: "",
-                fecha = data["fecha"] as? String ?: "",
-                hora = data["hora"] as? String ?: "",
-                inicioEpochMillis = data["inicioEpochMillis"] as? Long ?: 0L,
-                duracionMinutos = (data["duracionMinutos"] as? Number)?.toInt() ?: DURACION_CITA_MINUTOS,
-                estado = runCatching { EstadoCita.valueOf(data["estado"] as? String ?: "") }
-                    .getOrDefault(EstadoCita.PROGRAMADA)
+            CitaAdminResumen(
+                psicologoId = doc.getString("psicologoId") ?: return@mapNotNull null,
+                inicioEpochMillis = (doc.getLong("inicioEpochMillis")) ?: return@mapNotNull null,
+                estado = doc.getString("estado").orEmpty()
             )
         }
     }
@@ -175,42 +134,57 @@ class DashboardDataSource(
 
     // 3. ADMIN
 
-    suspend fun obtenerDatosAdmin(desdeEpochMillis: Long, hastaEpochMillis: Long): DashboardAdminData = coroutineScope {
-        val citasDeferred = async {
-            firestore.collection("citas")
-                .whereGreaterThanOrEqualTo("inicioEpochMillis", desdeEpochMillis)
-                .whereLessThanOrEqualTo("inicioEpochMillis", hastaEpochMillis)
-                .get().await().documents.mapNotNull { doc ->
-                    CitaAdminResumen(
-                        psicologoId = doc.getString("psicologoId") ?: return@mapNotNull null,
-                        inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: return@mapNotNull null,
-                        estado = doc.getString("estado").orEmpty()
-                    )
-                }
+    suspend fun obtenerCitasAdmin(desdeEpochMillis: Long, hastaEpochMillis: Long): List<CitaAdminResumen> {
+        val snapshot = firestore.collection("citas")
+            .whereGreaterThanOrEqualTo("inicioEpochMillis", desdeEpochMillis)
+            .whereLessThanOrEqualTo("inicioEpochMillis", hastaEpochMillis)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            CitaAdminResumen(
+                psicologoId = doc.getString("psicologoId") ?: return@mapNotNull null,
+                inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: return@mapNotNull null,
+                estado = doc.getString("estado").orEmpty()
+            )
         }
-        val pagosDeferred = async {
-            val inicio = Timestamp(java.util.Date(desdeEpochMillis))
-            val fin = Timestamp(java.util.Date(hastaEpochMillis))
-            firestore.collection("pagos")
-                .whereEqualTo("estado", "PAGADO")
-                .whereGreaterThanOrEqualTo("creadaEn", inicio)
-                .whereLessThanOrEqualTo("creadaEn", fin)
-                .get().await().documents.mapNotNull { doc ->
-                    val monto = doc.getDouble("monto") ?: return@mapNotNull null
-                    val timestamp = doc.getTimestamp("creadaEn") ?: return@mapNotNull null
-                    PagoAdminResumen(timestamp.toDate().time, monto, doc.getString("moneda") ?: "PEN")
-                }
+    }
+
+    suspend fun obtenerPagosAdmin(desdeEpochMillis: Long, hastaEpochMillis: Long): List<PagoAdminResumen> {
+        val inicio = Timestamp(java.util.Date(desdeEpochMillis))
+        val fin = Timestamp(java.util.Date(hastaEpochMillis))
+
+        val snapshot = firestore.collection("pagos")
+            .whereEqualTo("estado", "PAGADO")
+            .whereGreaterThanOrEqualTo("creadaEn", inicio)
+            .whereLessThanOrEqualTo("creadaEn", fin)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            val monto = doc.getDouble("monto") ?: return@mapNotNull null
+            val timestamp = doc.getTimestamp("creadaEn") ?: return@mapNotNull null
+            PagoAdminResumen(timestamp.toDate().time, monto, doc.getString("moneda") ?: "PEN")
         }
-        val psicologosDeferred = async {
-            firestore.collection("psicologos").whereEqualTo("activo", true).get().await().documents.map { doc ->
-                val usuarioId = doc.getString("usuarioId") ?: doc.id
-                val usuario = firestore.collection("usuarios").document(usuarioId).get().await()
-                val nombres = usuario.getString("nombres").orEmpty()
-                val apellidos = usuario.getString("apellidos").orEmpty()
-                PsicologoAdminResumen(usuarioId, "$nombres $apellidos".trim().ifBlank { "Psicólogo ${usuarioId.take(6)}" })
-            }
+    }
+    suspend fun obtenerPsicologosAdmin(): List<PsicologoAdminResumen> {
+        val snapshot = firestore.collection("psicologos")
+            .whereEqualTo("activo", true)
+            .get()
+            .await()
+
+        return snapshot.documents.map { doc ->
+            val usuarioId = doc.getString("usuarioId") ?: doc.id
+            val usuario = firestore.collection("usuarios").document(usuarioId).get().await()
+
+            val nombres = usuario.getString("nombres").orEmpty()
+            val apellidos = usuario.getString("apellidos").orEmpty()
+
+            PsicologoAdminResumen(
+                id = usuarioId,
+                nombre = "$nombres $apellidos".trim().ifBlank { "Psicólogo ${usuarioId.take(6)}" }
+            )
         }
-        DashboardAdminData(citasDeferred.await(), pagosDeferred.await(), psicologosDeferred.await())
     }
 
 }

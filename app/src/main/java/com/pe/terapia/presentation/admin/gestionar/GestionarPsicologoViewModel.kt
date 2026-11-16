@@ -6,10 +6,7 @@ import com.pe.terapia.domain.model.Especialidad
 import com.pe.terapia.domain.model.Psicologo
 import com.pe.terapia.domain.model.Sede
 import com.pe.terapia.domain.usecase.admin.ActualizarPsicologoUseCase
-import com.pe.terapia.domain.usecase.admin.ObtenerEspecialidadesUseCase
-import com.pe.terapia.domain.usecase.admin.ObtenerPsicologosUseCase
-import com.pe.terapia.domain.usecase.admin.ObtenerSedesUseCase
-import kotlinx.coroutines.async
+import com.pe.terapia.domain.usecase.admin.ObtenerDatosGestionarPsicologoUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,16 +26,14 @@ data class GestionarPsicologoUiState(
     // Estado de la UI
     val psicologoSeleccionado: Psicologo? = null,
 
-    // State Hoisting para el formulario de edición
+    // Formulario de edicion
     val formDescripcion: String = "",
     val formEspecialidades: Set<String> = emptySet(),
     val formSedes: Set<String> = emptySet()
 )
 
 class GestionarPsicologoViewModel(
-    private val obtenerPsicologos: ObtenerPsicologosUseCase,
-    private val obtenerSedes: ObtenerSedesUseCase,
-    private val obtenerEspecialidades: ObtenerEspecialidadesUseCase,
+    val obtenerDatosGestionarPsicologoUseCase: ObtenerDatosGestionarPsicologoUseCase,
     private val actualizarPsicologoUseCase: ActualizarPsicologoUseCase
 ) : ViewModel() {
 
@@ -51,29 +46,25 @@ class GestionarPsicologoViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cargandoInicial = true, error = null)
 
-            val psicologosDef = async { obtenerPsicologos() }
-            val sedesDef = async { obtenerSedes() }
-            val especialidadesDef = async { obtenerEspecialidades() }
-
-            val resPsicologos = psicologosDef.await()
-            val resSedes = sedesDef.await()
-            val resEsp = especialidadesDef.await()
-
-            if (resPsicologos.isFailure || resSedes.isFailure || resEsp.isFailure) {
-                _uiState.value = _uiState.value.copy(cargandoInicial = false, error = "Error al cargar datos del sistema.")
-                return@launch
-            }
-
-            _uiState.value = _uiState.value.copy(
-                cargandoInicial = false,
-                psicologos = resPsicologos.getOrNull().orEmpty(),
-                sedes = resSedes.getOrNull().orEmpty(),
-                especialidades = resEsp.getOrNull().orEmpty()
+            obtenerDatosGestionarPsicologoUseCase().fold(
+                onSuccess = { datos ->
+                    _uiState.value = _uiState.value.copy(
+                        cargandoInicial = false,
+                        psicologos = datos.psicologos,
+                        sedes = datos.sedes,
+                        especialidades = datos.especialidades
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        cargandoInicial = false,
+                        error = error.message ?: "Error al cargar datos del sistema."
+                    )
+                }
             )
         }
     }
 
-    // Funciones del State Hoisting
     fun seleccionarPsicologo(psicologo: Psicologo?) {
         _uiState.value = if (psicologo == null) {
             _uiState.value.copy(psicologoSeleccionado = null, formDescripcion = "", formEspecialidades = emptySet(), formSedes = emptySet(), exito = false)
@@ -117,7 +108,7 @@ class GestionarPsicologoViewModel(
 
             result.fold(
                 onSuccess = {
-                    cargarDatos() // Recargamos para actualizar la lista
+                    cargarDatos()
                     _uiState.value = _uiState.value.copy(guardando = false, exito = true)
                 },
                 onFailure = { _uiState.value = _uiState.value.copy(guardando = false, error = it.message) }

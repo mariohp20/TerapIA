@@ -42,6 +42,7 @@ android {
 dependencies {
     // Firebase usando el BoM desde el catálogo
     implementation(platform(libs.firebase.bom))
+    implementation(libs.androidx.compose.ui.geometry)
     implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
