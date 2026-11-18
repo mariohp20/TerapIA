@@ -11,9 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ir.ehsannarmani.compose_charts.PieChart
+import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
 import ir.ehsannarmani.compose_charts.models.Pie
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -42,7 +44,10 @@ fun TerapiaPieChart(
     Column(modifier = modifier) {
         PieChart(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            data = pieData
+            data = pieData,
+            labelHelperProperties = LabelHelperProperties(
+                enabled = false
+            )
         )
 
         if (mostrarLeyenda) {

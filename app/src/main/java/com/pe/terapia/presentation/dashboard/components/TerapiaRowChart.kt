@@ -33,10 +33,11 @@ fun TerapiaRowChart(
         ),
         barProperties = BarProperties(
             cornerRadius = Bars.Data.Radius.Rectangle(topRight = 6.dp, bottomRight = 6.dp),
-            thickness = 24.dp,
+            thickness = 28.dp,
             spacing = 2.dp
         ),
         gridProperties = GridProperties(
+            enabled = false,
             xAxisProperties = GridProperties.AxisProperties(
                 color = SolidColor(colorLineas),
                 thickness = 1.dp
