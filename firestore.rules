@@ -200,6 +200,19 @@ service cloud.firestore {
           && request.resource.data.rol == 'psicologo'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rol']))
         || (ownsProfile(uid)
+          && resource.data.rol == 'psicologo'
+          && resource.data.activo == true
+          && request.resource.data.rol == resource.data.rol
+          && request.resource.data.activo == resource.data.activo
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombres', 'apellidos', 'telefono'])
+          && request.resource.data.nombres is string
+          && request.resource.data.nombres.size() > 0
+          && request.resource.data.nombres.size() <= 100
+          && request.resource.data.apellidos is string
+          && request.resource.data.apellidos.size() > 0
+          && request.resource.data.apellidos.size() <= 100
+          && request.resource.data.telefono is string)
+        || (ownsProfile(uid)
         && allowedPatientProfileKeys(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'nombres', 'apellidos', 'correo', 'telefono', 'fotoUrl', 'fechaRegistro', 'dni', 'rol', 'activo'
@@ -231,7 +244,20 @@ service cloud.firestore {
 
     match /psicologos/{psicologoId} {
       allow get, list: if signedIn() && resource.data.activo == true;
-      allow create, update: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn()
+          && request.auth.uid == psicologoId
+          && resource.data.usuarioId == request.auth.uid
+          && resource.data.activo == true
+          && request.resource.data.activo == resource.data.activo
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombres', 'apellidos'])
+          && request.resource.data.nombres is string
+          && request.resource.data.nombres.size() > 0
+          && request.resource.data.nombres.size() <= 100
+          && request.resource.data.apellidos is string
+          && request.resource.data.apellidos.size() > 0
+          && request.resource.data.apellidos.size() <= 100);
       allow delete: if false;
     }
 

@@ -6,5 +6,6 @@ data class CitaPacienteDetalle(
     val hora: String,
     val nombrePaciente: String,
     val fecha: String = "",
-    val inicioEpochMillis: Long = 0L
+    val inicioEpochMillis: Long = 0L,
+    val estado: String = "PROGRAMADA"
 )

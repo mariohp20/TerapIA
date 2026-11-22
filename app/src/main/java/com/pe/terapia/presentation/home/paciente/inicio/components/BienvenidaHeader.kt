@@ -9,10 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +27,6 @@ import com.pe.terapia.R
 @Composable
 internal fun BienvenidaHeader(
     nombre: String,
-    onCerrarSesion: () -> Unit,
     onVerNotificaciones: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -53,9 +49,6 @@ internal fun BienvenidaHeader(
                 Text("TerapIA", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
             Row {
-                IconButton(onClick = { /* TODO: Buscar */ }) {
-                    Icon(Icons.Outlined.Search, contentDescription = "Buscar")
-                }
                 IconButton(onClick = onVerNotificaciones) {
                     Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones")
                 }

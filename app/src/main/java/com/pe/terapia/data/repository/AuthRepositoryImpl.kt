@@ -74,6 +74,20 @@ class AuthRepositoryImpl(private val dataSource: AuthDataSource) : AuthRepositor
         obtenerPerfilConLimpieza(uid)
     }
 
+    override suspend fun actualizarDatosPersonales(
+        nombres: String,
+        apellidos: String,
+        telefono: String?
+    ): Result<Usuario> = capture {
+        val uid = dataSource.obtenerUsuarioActual()?.uid
+            ?: throw IllegalStateException("La sesión expiró. Inicia sesión nuevamente.")
+        require(nombres.trim().isNotEmpty() && nombres.trim().length <= 100) { "Ingresa nombres válidos (máximo 100 caracteres)." }
+        require(apellidos.trim().isNotEmpty() && apellidos.trim().length <= 100) { "Ingresa apellidos válidos (máximo 100 caracteres)." }
+        require(telefono.isNullOrBlank() || telefono.trim().length in 7..20) { "Revisa el número de teléfono." }
+        dataSource.actualizarDatosPersonales(nombres, apellidos, telefono)
+        obtenerPerfilConLimpieza(uid)
+    }
+
     override suspend fun obtenerBorradorPerfil(): Result<PerfilPacienteBorrador> = capture {
         dataSource.obtenerBorradorPerfil()
     }

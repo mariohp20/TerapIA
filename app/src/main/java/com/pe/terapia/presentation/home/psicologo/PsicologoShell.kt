@@ -43,6 +43,11 @@ import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoScreen
 import kotlinx.serialization.Serializable
 import com.pe.terapia.presentation.home.psicologo.perfil.PerfilPsicologoScreen
 import com.pe.terapia.presentation.notifications.NotificacionesScreen
+import com.pe.terapia.presentation.cuenta.ConfiguracionScreen
+import com.pe.terapia.presentation.cuenta.EditarDatosScreen
+import com.pe.terapia.presentation.cuenta.AyudaSoporteScreen
+import com.pe.terapia.presentation.home.psicologo.agenda.AgendaPsicologoScreen
+import com.pe.terapia.presentation.home.psicologo.disponibilidad.DisponibilidadPsicologoScreen
 
 @Serializable
 sealed class PsicologoTab {
@@ -52,6 +57,9 @@ sealed class PsicologoTab {
     @Serializable data object Perfil : PsicologoTab()
     @Serializable data object Escanear : PsicologoTab()
     @Serializable data object Notificaciones : PsicologoTab()
+    @Serializable data object EditarDatos : PsicologoTab()
+    @Serializable data object Configuracion : PsicologoTab()
+    @Serializable data object Ayuda : PsicologoTab()
 }
 
 private data class TabPsicologoItem(
@@ -135,22 +143,24 @@ fun PsicologoShell(
                 )
             }
             composable<PsicologoTab.Agenda> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Mi Agenda", style = MaterialTheme.typography.titleMedium)
-                }
+                AgendaPsicologoScreen(onAbrirSala = onAbrirSalaConsulta)
             }
             composable<PsicologoTab.Disponibilidad> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Disponibilidad de Horarios", style = MaterialTheme.typography.titleMedium)
-                }
+                DisponibilidadPsicologoScreen()
             }
             composable<PsicologoTab.Perfil> {
                 PerfilPsicologoScreen(
                     onCerrarSesion = onCerrarSesion,
                     onGestionarPagos = onGestionarPagos,
-                    onIrAHistorialClinico = onIrAHistorialClinico
+                    onIrAHistorialClinico = onIrAHistorialClinico,
+                    onEditarDatos = { irATab(PsicologoTab.EditarDatos) },
+                    onConfiguracion = { irATab(PsicologoTab.Configuracion) },
+                    onAyuda = { irATab(PsicologoTab.Ayuda) }
                 )
             }
+            composable<PsicologoTab.EditarDatos> { EditarDatosScreen(onVolver = { irATab(PsicologoTab.Perfil) }) }
+            composable<PsicologoTab.Configuracion> { ConfiguracionScreen(onVolver = { irATab(PsicologoTab.Perfil) }) }
+            composable<PsicologoTab.Ayuda> { AyudaSoporteScreen(onVolver = { irATab(PsicologoTab.Perfil) }) }
             composable<PsicologoTab.Escanear> {
                 EscannerScreen(
                     onVolver = { irATab(PsicologoTab.Inicio) },

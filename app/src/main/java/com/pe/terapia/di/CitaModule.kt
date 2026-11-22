@@ -14,6 +14,7 @@ import com.pe.terapia.domain.repository.RecordatorioCitasScheduler
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUidSesionActualUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasHoyPsicologoUseCase
+import com.pe.terapia.domain.usecase.citas.ObtenerAgendaPsicologoPorFechaUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerCitasPsicologoResumenUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerDisponibilidadUseCase
 import com.pe.terapia.domain.usecase.citas.ObtenerProximaCitaUseCase
@@ -35,6 +36,8 @@ import com.pe.terapia.presentation.escanner.EscannerViewModel
 import com.pe.terapia.presentation.home.paciente.inicio.HomePacienteViewModel
 import com.pe.terapia.presentation.home.paciente.miscitas.MisCitasViewModel
 import com.pe.terapia.presentation.home.psicologo.inicio.HomePsicologoViewModel
+import com.pe.terapia.presentation.home.psicologo.agenda.AgendaPsicologoViewModel
+import com.pe.terapia.presentation.home.psicologo.disponibilidad.DisponibilidadPsicologoViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
@@ -58,6 +61,7 @@ val citaModule = module {
     factory { ResolverSolicitudGestionCitaUseCase(get()) }
     factory { ReservarCitaUseCase(get()) }
     factory { ObtenerCitasHoyPsicologoUseCase(get()) }
+    factory { ObtenerAgendaPsicologoPorFechaUseCase(get()) }
     factory { ObtenerCitasPsicologoResumenUseCase(get()) }
     factory { MarcarCitaNoAsistioUseCase(get()) }
     factory { ObtenerCitasPendientesResultadoUseCase(get()) }
@@ -71,6 +75,8 @@ val citaModule = module {
     viewModel { HomePacienteViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { MisCitasViewModel(get(), get()) }
     viewModel { HomePsicologoViewModel(get(), get(), get(), get(), get()) }
+    viewModel { AgendaPsicologoViewModel(get(), get()) }
+    viewModel { DisponibilidadPsicologoViewModel(get(), get()) }
     viewModel { EscannerViewModel(get(), get()) }
     viewModel { SolicitudesGestionCitaViewModel(get(), get(), get()) }
 

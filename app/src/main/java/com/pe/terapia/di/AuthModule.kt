@@ -6,6 +6,8 @@ import com.pe.terapia.domain.repository.AuthRepository
 import com.pe.terapia.domain.model.Rol
 import com.pe.terapia.domain.usecase.auth.CerrarSesionUseCase
 import com.pe.terapia.domain.usecase.auth.CompletarPerfilUseCase
+import com.pe.terapia.domain.usecase.auth.ActualizarDatosPersonalesUseCase
+import com.pe.terapia.presentation.cuenta.EditarDatosViewModel
 import com.pe.terapia.domain.usecase.auth.LoginConGoogleUseCase
 import com.pe.terapia.domain.usecase.auth.LoginUseCase
 import com.pe.terapia.domain.usecase.auth.ObtenerUsuarioActualUseCase
@@ -28,6 +30,7 @@ val authModule = module {
     factory { LoginConGoogleUseCase(get()) }
     factory { RegistroUseCase(get()) }
     factory { CompletarPerfilUseCase(get()) }
+    factory { ActualizarDatosPersonalesUseCase(get()) }
     factory { CerrarSesionUseCase(get()) }
     factory { ObtenerUsuarioActualUseCase(get()) }
     factory { ObtenerUidSesionActualUseCase(get()) }
@@ -36,6 +39,7 @@ val authModule = module {
     factory { VerificarSesionUseCase(get()) }
     viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
     viewModel { CompletarPerfilViewModel(get(), get(), get()) }
+    viewModel { EditarDatosViewModel(get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { (rol: Rol) -> HomeAccessViewModel(get(), rol) }
 }

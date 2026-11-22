@@ -37,7 +37,6 @@ import org.koin.androidx.compose.koinViewModel
 fun HomePacienteScreen(
     onReservarCita: () -> Unit,
     onVerHistorialPagos: () -> Unit,
-    onCerrarSesion: () -> Unit,
     onVerHistorial: (String, String) -> Unit,
     onVerTodas: () -> Unit,
     onVerDetalle: (String) -> Unit,
@@ -61,7 +60,6 @@ fun HomePacienteScreen(
         mensajeError = mensajeError,
         onReservarCita = onReservarCita,
         onVerHistorialPagos = onVerHistorialPagos,
-        onCerrarSesion = onCerrarSesion,
         onVerHistorial = viewModel::verHistorial,
         onVerTodas = onVerTodas,
         onVerDetalle = onVerDetalle,
@@ -77,7 +75,6 @@ private fun HomePacienteContent(
     mensajeError: String?,
     onReservarCita: () -> Unit,
     onVerHistorialPagos: () -> Unit,
-    onCerrarSesion: () -> Unit,
     onVerHistorial: () -> Unit,
     onVerTodas: () -> Unit,
     onVerDetalle: (String) -> Unit,
@@ -96,7 +93,6 @@ private fun HomePacienteContent(
     ) {
         BienvenidaHeader(
             nombre = uiState.nombrePaciente,
-            onCerrarSesion = onCerrarSesion,
             onVerNotificaciones = onVerNotificaciones
         )
 

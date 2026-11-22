@@ -83,6 +83,34 @@ class AuthDataSource(
         return if (snapshot.exists()) snapshot.data else null
     }
 
+    suspend fun actualizarDatosPersonales(nombres: String, apellidos: String, telefono: String?) {
+        val user = auth.currentUser ?: throw IllegalStateException("La sesión expiró. Inicia sesión nuevamente.")
+        val profileRef = firestore.collection("usuarios").document(user.uid)
+        val data = mutableMapOf<String, Any>(
+            "nombres" to nombres.trim(),
+            "apellidos" to apellidos.trim()
+        )
+        if (telefono.isNullOrBlank()) data["telefono"] = "" else data["telefono"] = telefono.trim()
+        val psychologistRef = firestore.collection("psicologos").document(user.uid)
+        firestore.runTransaction { transaction ->
+            val profile = transaction.get(profileRef)
+            check(profile.exists() && profile.getBoolean("activo") != false) { "La cuenta está desactivada o no tiene perfil." }
+            when (profile.getString("rol")) {
+                "paciente" -> transaction.update(profileRef, data)
+                "psicologo" -> {
+                    val psychologist = transaction.get(psychologistRef)
+                    check(psychologist.exists() && psychologist.getBoolean("activo") == true) {
+                        "No se encontró un perfil profesional activo. Contacta con el administrador."
+                    }
+                    transaction.update(profileRef, data)
+                    transaction.update(psychologistRef, mapOf("nombres" to nombres.trim(), "apellidos" to apellidos.trim()))
+                }
+                else -> error("Este tipo de cuenta no puede editar estos datos.")
+            }
+            null
+        }.await()
+    }
+
     suspend fun obtenerBorradorPerfil(): PerfilPacienteBorrador {
         val user = auth.currentUser ?: throw IllegalStateException("La sesión expiró. Inicia sesión nuevamente.")
         val fields = obtenerDatosUsuario(user.uid).orEmpty()

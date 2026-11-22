@@ -543,6 +543,26 @@ class CitaDataSource(private val firestore: FirebaseFirestore) {
         }.sortedBy { it.hora }
     }
 
+    suspend fun obtenerAgendaPsicologoPorFecha(psicologoId: String, fechaText: String): List<CitaPacienteDetalle> {
+        val snapshot = firestore.collection("citas")
+            .whereEqualTo("psicologoId", psicologoId)
+            .whereEqualTo("fecha", fechaText)
+            .get()
+            .await()
+        return snapshot.documents.mapNotNull { doc ->
+            val pacienteId = doc.getString("pacienteId") ?: return@mapNotNull null
+            CitaPacienteDetalle(
+                citaId = doc.id,
+                pacienteId = pacienteId,
+                hora = doc.getString("hora").orEmpty(),
+                nombrePaciente = doc.getString("pacienteNombre").orEmpty().ifBlank { "Paciente sin registrar" },
+                fecha = doc.getString("fecha").orEmpty(),
+                inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: 0L,
+                estado = doc.getString("estado").orEmpty().ifBlank { "PROGRAMADA" }
+            )
+        }.sortedBy { it.hora }
+    }
+
     suspend fun obtenerCitasPsicologoResumen(psicologoId: String, ahoraEpochMillis: Long): CitasPsicologoResumen {
         require(psicologoId.isNotBlank()) { "No se pudo identificar al psicólogo." }
         val documentos = firestore.collection("citas")
