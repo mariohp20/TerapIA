@@ -2,6 +2,8 @@ package com.pe.terapia.presentation.pagos
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -15,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.pe.terapia.ui.theme.TerapiaTheme
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -42,17 +43,18 @@ fun PasarelaPagoScreen(
             )
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).background(MaterialTheme.colorScheme.background)
         ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().heightIn(min = maxHeight).verticalScroll(rememberScrollState()).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .widthIn(max = 520.dp),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -110,6 +112,7 @@ fun PasarelaPagoScreen(
                         }
                     }
                 }
+            }
             }
         }
     }
