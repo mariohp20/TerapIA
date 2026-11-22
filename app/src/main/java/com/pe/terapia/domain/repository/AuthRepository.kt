@@ -15,6 +15,7 @@ interface AuthRepository {
     ): Result<Usuario>
     suspend fun loginConGoogle(idToken: String): Result<Usuario>
     suspend fun completarPerfil(nombres: String, apellidos: String, telefono: String?, dni: String): Result<Usuario>
+    suspend fun actualizarDatosPersonales(nombres: String, apellidos: String, telefono: String?): Result<Usuario>
     suspend fun obtenerBorradorPerfil(): Result<PerfilPacienteBorrador>
     suspend fun recuperarPassword(email: String): Result<Unit>
     fun obtenerUidSesionActual(): String? = null

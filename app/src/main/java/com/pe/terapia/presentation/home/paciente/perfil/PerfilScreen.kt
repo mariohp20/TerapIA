@@ -13,6 +13,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,11 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pe.terapia.ui.components.BiometricoSwitchItem
 import com.pe.terapia.ui.components.PerfilOpcionItem
-import com.pe.terapia.ui.components.NotificacionesSwitchItem
-import com.pe.terapia.presentation.notifications.RecordatoriosSettingsViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -33,11 +31,13 @@ fun PerfilScreen(
     onVerHistorialClinico: (String, String) -> Unit,
     onVerPagos: () -> Unit,
     onVerProgreso: () -> Unit,
+    onEditarDatos: () -> Unit,
+    onConfiguracion: () -> Unit,
+    onAyuda: () -> Unit,
     viewModel: PerfilViewModel = koinViewModel()
 ) {
+    LaunchedEffect(Unit) { viewModel.cargar() }
     val usuario by viewModel.usuario.collectAsStateWithLifecycle()
-    val recordatoriosViewModel: RecordatoriosSettingsViewModel = koinViewModel()
-    val recordatorios by recordatoriosViewModel.uiState.collectAsStateWithLifecycle()
 
     val iniciales = usuario?.let { user ->
         user.nombres.split(" ").filter { it.isNotBlank() }
@@ -56,7 +56,7 @@ fun PerfilScreen(
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Mi Perfil", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Icon(Icons.Outlined.Settings, contentDescription = "Configuración")
+            IconButton(onClick = onConfiguracion) { Icon(Icons.Outlined.Settings, contentDescription = "Configuración") }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -72,23 +72,14 @@ fun PerfilScreen(
 
         Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                PerfilOpcionItem(Icons.Outlined.PersonOutline, "Mis datos", onClick = {})
+                PerfilOpcionItem(Icons.Outlined.PersonOutline, "Mis datos", onClick = onEditarDatos)
                 PerfilOpcionItem(Icons.Outlined.Description, "Mi historial clínico", onClick = { usuario?.let { onVerHistorialClinico(it.uid, "${it.nombres} ${it.apellidos}") } })
                 PerfilOpcionItem(Icons.Outlined.ReceiptLong, "Mis pagos y comprobantes", onClick = onVerPagos)
                 PerfilOpcionItem(Icons.Outlined.BarChart, "Mi progreso", onClick = onVerProgreso)
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
-                // COMPONENTE COMPARTIDO DEL SWITCH BIOMÉTRICO
-                BiometricoSwitchItem()
-                NotificacionesSwitchItem(
-                    activas = recordatorios.activos,
-                    cargando = recordatorios.cargando,
-                    error = recordatorios.error,
-                    onCambio = recordatoriosViewModel::establecerActivos
-                )
-
-                PerfilOpcionItem(Icons.AutoMirrored.Outlined.Help, "Ayuda y soporte", onClick = {})
+                PerfilOpcionItem(Icons.AutoMirrored.Outlined.Help, "Ayuda y soporte", onClick = onAyuda)
                 PerfilOpcionItem(Icons.AutoMirrored.Outlined.ExitToApp, "Cerrar sesión", esRojo = true, onClick = onCerrarSesion)
             }
         }

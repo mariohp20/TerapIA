@@ -44,6 +44,9 @@ import com.pe.terapia.presentation.home.paciente.miscitas.MisCitasScreen
 import com.pe.terapia.presentation.home.paciente.perfil.PerfilScreen
 import com.pe.terapia.presentation.notifications.NotificacionesScreen
 import com.pe.terapia.presentation.dashboard.DashboardPacienteScreen
+import com.pe.terapia.presentation.cuenta.ConfiguracionScreen
+import com.pe.terapia.presentation.cuenta.EditarDatosScreen
+import com.pe.terapia.presentation.cuenta.AyudaSoporteScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -54,6 +57,9 @@ sealed class PacienteTab {
     @Serializable data object Asistente : PacienteTab()
     @Serializable data object Perfil : PacienteTab()
     @Serializable data object Notificaciones : PacienteTab()
+    @Serializable data object EditarDatos : PacienteTab()
+    @Serializable data object Configuracion : PacienteTab()
+    @Serializable data object Ayuda : PacienteTab()
 }
 
 private data class TabPaciente(
@@ -132,7 +138,6 @@ fun PacienteShell(
                 HomePacienteScreen(
                     onReservarCita = onReservarCita,
                     onVerHistorialPagos = onVerHistorialPagos,
-                    onCerrarSesion = onCerrarSesion,
                     onVerHistorial = onVerHistorial,
                     onVerTodas = { irATab(PacienteTab.MisCitas) }, // Conectamos Ver Todas -> Mis Citas
                     onVerDetalle = onVerDetalleCita, // Conectamos el clic en la tarjeta
@@ -157,9 +162,15 @@ fun PacienteShell(
                     onCerrarSesion = onCerrarSesion,
                     onVerHistorialClinico = onVerHistorial,
                     onVerPagos = onVerHistorialPagos,
-                    onVerProgreso = { irATab(PacienteTab.Progreso) }
+                    onVerProgreso = { irATab(PacienteTab.Progreso) },
+                    onEditarDatos = { irATab(PacienteTab.EditarDatos) },
+                    onConfiguracion = { irATab(PacienteTab.Configuracion) },
+                    onAyuda = { irATab(PacienteTab.Ayuda) }
                 )
             }
+            composable<PacienteTab.EditarDatos> { EditarDatosScreen(onVolver = { irATab(PacienteTab.Perfil) }) }
+            composable<PacienteTab.Configuracion> { ConfiguracionScreen(onVolver = { irATab(PacienteTab.Perfil) }) }
+            composable<PacienteTab.Ayuda> { AyudaSoporteScreen(onVolver = { irATab(PacienteTab.Perfil) }) }
             composable<PacienteTab.Notificaciones> {
                 NotificacionesScreen(
                     onVolver = { irATab(PacienteTab.Inicio) },

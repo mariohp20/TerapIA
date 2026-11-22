@@ -16,7 +16,7 @@ class PerfilViewModel(
     private val _usuario = MutableStateFlow<Usuario?>(null)
     val usuario: StateFlow<Usuario?> = _usuario.asStateFlow()
 
-    init {
+    fun cargar() {
         viewModelScope.launch {
             _usuario.value = obtenerUsuarioActualUseCase().getOrNull()
         }

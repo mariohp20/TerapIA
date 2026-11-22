@@ -83,6 +83,10 @@ class CitaRepositoryImpl(private val dataSource: CitaDataSource) : CitaRepositor
         dataSource.obtenerCitasPsicologoHoy(psicologoId, fechaText)
     }
 
+    override suspend fun obtenerAgendaPsicologoPorFecha(psicologoId: String, fechaText: String): Result<List<CitaPacienteDetalle>> = capture {
+        dataSource.obtenerAgendaPsicologoPorFecha(psicologoId, fechaText)
+    }
+
     override suspend fun obtenerCitasPsicologoResumen(psicologoId: String, ahoraEpochMillis: Long): Result<CitasPsicologoResumen> = capture {
         dataSource.obtenerCitasPsicologoResumen(psicologoId, ahoraEpochMillis)
     }
