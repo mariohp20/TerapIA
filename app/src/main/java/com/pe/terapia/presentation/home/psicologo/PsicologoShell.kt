@@ -134,6 +134,7 @@ fun PsicologoShell(
         ) {
             composable<PsicologoTab.Inicio> {
                 HomePsicologoScreen(
+                    onAbrirAgenda = { irATab(PsicologoTab.Agenda) },
                     onGestionarPagos = onGestionarPagos,
                     onCerrarSesion = onCerrarSesion,
                     onAbrirSalaConsulta = onAbrirSalaConsulta,

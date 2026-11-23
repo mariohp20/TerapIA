@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun PsicologoAccionesRapidas(
+    onAbrirAgenda: () -> Unit,
     onDashboardPsicologo: () -> Unit,
     onIrAHistorialClinico: () -> Unit,
     onGestionarPagos: () -> Unit,
@@ -30,7 +31,7 @@ internal fun PsicologoAccionesRapidas(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        AccionBoton(icon = Icons.Outlined.CalendarMonth, texto = "Mi agenda", onClick = { /* TODO: Navegar a agenda (HU futura) */ })
+        AccionBoton(icon = Icons.Outlined.CalendarMonth, texto = "Mi agenda", onClick = onAbrirAgenda)
         AccionBoton(icon = Icons.Outlined.BarChart, texto = "Progreso", onClick = onDashboardPsicologo)
         AccionBoton(icon = Icons.Outlined.Payments, texto = "Pagos", onClick = onGestionarPagos)
         AccionBoton(icon = Icons.Outlined.PeopleAlt, texto = "Historiales", onClick = onIrAHistorialClinico)
