@@ -31,6 +31,7 @@ fun HomePsicologoScreen(
     onGestionarPagos: () -> Unit,
     onCerrarSesion: () -> Unit,
     onAbrirSalaConsulta: (citaId: String, pacienteId: String, pacienteNombre: String) -> Unit,
+    onAbrirAgenda: () -> Unit,
     onIrAHistorialClinico: () -> Unit,
     onDashboardPsicologo: () -> Unit,
     onVerNotificaciones: () -> Unit,
@@ -111,6 +112,7 @@ fun HomePsicologoScreen(
             }
 
             PsicologoAccionesRapidas(
+                onAbrirAgenda = onAbrirAgenda,
                 onDashboardPsicologo = onDashboardPsicologo,
                 onIrAHistorialClinico = onIrAHistorialClinico,
                 onGestionarPagos = onGestionarPagos
