@@ -1,4 +1,7 @@
 <resources>
+    <string name="dictado_iniciar">Dictar</string>
+    <string name="dictado_detener">Detener</string>
+    <string name="dictado_privacidad">El audio se procesa mediante el servicio de voz del dispositivo. Solo se guarda el texto cuando confirmas la atención.</string>
 
     <string name="app_name">TerapIA</string>
     <string name="home_saludo">Hola,</string>

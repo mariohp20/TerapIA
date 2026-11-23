@@ -1,11 +1,18 @@
 package com.pe.terapia.presentation.atencion
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +35,48 @@ fun RegistrarAtencionScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
+    val reconocedor = remember(contexto) { ReconocedorVoz(contexto) }
+    var campoActivo by remember { mutableStateOf("motivo") }
+    var escuchando by remember { mutableStateOf(false) }
+    var procesandoDictado by remember { mutableStateOf(false) }
+    var dictadoDetenidoManualmente by remember { mutableStateOf(false) }
+    val permisoMicrofono = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
+        if (concedido) {
+            escuchando = true
+            procesandoDictado = false
+            reconocedor.iniciar(
+                alResultado = { viewModel.agregarTranscripcion(campoActivo, it) },
+                alParcial = viewModel::actualizarTranscripcionParcial,
+                alError = { viewModel.mostrarErrorDictado(it) },
+                alFin = { escuchando = false; procesandoDictado = false; viewModel.finalizarDictado() }
+            )
+        } else viewModel.mostrarErrorDictado("Se necesita permiso para usar el micrófono.")
+    }
+    val iniciarDictado: (String) -> Unit = { campo ->
+        campoActivo = campo
+        viewModel.limpiarErrorDictado()
+        if (ContextCompat.checkSelfPermission(contexto, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            escuchando = true
+            procesandoDictado = false
+            reconocedor.iniciar(
+                alResultado = { viewModel.agregarTranscripcion(campo, it) },
+                alParcial = viewModel::actualizarTranscripcionParcial,
+                alError = { mensaje ->
+                    if (!dictadoDetenidoManualmente || mensaje != "No se reconoció voz. Puedes intentarlo otra vez.") {
+                        viewModel.mostrarErrorDictado(mensaje)
+                    }
+                },
+                alFin = { escuchando = false; procesandoDictado = false; dictadoDetenidoManualmente = false; viewModel.finalizarDictado() }
+            )
+        } else permisoMicrofono.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    val detenerDictado: () -> Unit = {
+        dictadoDetenidoManualmente = true
+        procesandoDictado = true
+        reconocedor.detener()
+    }
+
+    DisposableEffect(reconocedor) { onDispose { reconocedor.detener() } }
 
     LaunchedEffect(citaId) {
         viewModel.cargarDatosPrevios(citaId)
@@ -66,8 +115,26 @@ fun RegistrarAtencionScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             uiState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (!uiState.puedeGuardar) {
+                Text("Puedes preparar y dictar las notas, pero solo podrás guardarlas desde la hora programada de la cita.", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall)
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            uiState.errorDictado?.let { mensaje ->
+                Text(mensaje, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            if (escuchando) {
+                Text(
+                    when {
+                        procesandoDictado -> "Procesando el dictado…"
+                        !uiState.transcripcionParcial.isNullOrBlank() -> uiState.transcripcionParcial!!
+                        else -> "Escuchando… habla y luego toca detener para insertar el texto."
+                    },
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             OutlinedTextField(
                 value = uiState.motivoConsulta,
@@ -75,7 +142,11 @@ fun RegistrarAtencionScreen(
                 label = { Text(stringResource(R.string.motivo_de_consulta)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(100.dp),
+                trailingIcon = {
+                    AccionMicrofono(escuchando && campoActivo == "motivo", procesandoDictado, !uiState.guardando,
+                        { iniciarDictado("motivo") }, { detenerDictado() })
+                }
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -85,7 +156,11 @@ fun RegistrarAtencionScreen(
                 label = { Text(stringResource(R.string.observaciones_generales)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(100.dp),
+                trailingIcon = {
+                    AccionMicrofono(escuchando && campoActivo == "observaciones", procesandoDictado, !uiState.guardando,
+                        { iniciarDictado("observaciones") }, { detenerDictado() })
+                }
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -95,7 +170,11 @@ fun RegistrarAtencionScreen(
                 label = { Text(stringResource(R.string.evaluacion_psicologica)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(100.dp),
+                trailingIcon = {
+                    AccionMicrofono(escuchando && campoActivo == "evaluacion", procesandoDictado, !uiState.guardando,
+                        { iniciarDictado("evaluacion") }, { detenerDictado() })
+                }
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -105,7 +184,11 @@ fun RegistrarAtencionScreen(
                 label = { Text(stringResource(R.string.evolucion_del_paciente)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(100.dp),
+                trailingIcon = {
+                    AccionMicrofono(escuchando && campoActivo == "evolucion", procesandoDictado, !uiState.guardando,
+                        { iniciarDictado("evolucion") }, { detenerDictado() })
+                }
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -115,7 +198,11 @@ fun RegistrarAtencionScreen(
                 label = { Text(stringResource(R.string.indicaciones_tareas)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(100.dp),
+                trailingIcon = {
+                    AccionMicrofono(escuchando && campoActivo == "indicaciones", procesandoDictado, !uiState.guardando,
+                        { iniciarDictado("indicaciones") }, { detenerDictado() })
+                }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -125,7 +212,7 @@ fun RegistrarAtencionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = !uiState.guardando
+                enabled = !uiState.guardando && uiState.puedeGuardar
             ) {
                 if (uiState.guardando) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -134,6 +221,19 @@ fun RegistrarAtencionScreen(
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun AccionMicrofono(escuchando: Boolean, procesando: Boolean, habilitado: Boolean, onIniciar: () -> Unit, onDetener: () -> Unit) {
+    if (procesando) {
+        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+    } else if (escuchando) {
+        IconButton(onClick = onDetener) { Icon(Icons.Outlined.Stop, contentDescription = "Finalizar y transcribir") }
+    } else {
+        IconButton(onClick = onIniciar, enabled = habilitado) {
+            Icon(Icons.Outlined.Mic, contentDescription = "Dictar en este campo")
         }
     }
 }
