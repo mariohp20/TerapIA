@@ -4,6 +4,7 @@ import com.pe.terapia.domain.model.AtencionPsicologoResumen
 import com.pe.terapia.domain.model.AtencionResumenDashboard
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.CitaAdminResumen
+import com.pe.terapia.domain.model.CitaPacienteResumen
 import com.pe.terapia.domain.model.EtapaPsicologoResumen
 import com.pe.terapia.domain.model.PagoAdminResumen
 import com.pe.terapia.domain.model.PsicologoAdminResumen
@@ -16,7 +17,7 @@ interface DashboardRepository {
 
     // Métodos para el Paciente
     suspend fun obtenerAtencionesPaciente(pacienteId: String): Result<List<AtencionResumenDashboard>>
-    suspend fun obtenerCitasPorPaciente(pacienteId: String): Result<List<Cita>>
+    suspend fun obtenerCitasPorPaciente(pacienteId: String): Result<List<CitaPacienteResumen>>
 
     // Métodos para el Administrador
     suspend fun obtenerCitasAdmin(desdeEpochMillis: Long, hastaEpochMillis: Long): Result<List<CitaAdminResumen>>

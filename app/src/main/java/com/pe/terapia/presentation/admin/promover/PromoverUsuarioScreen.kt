@@ -12,8 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.pe.terapia.domain.model.Usuario
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,10 +26,6 @@ fun PromoverUsuarioScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var pacienteSeleccionado by remember { mutableStateOf<Usuario?>(null) }
-    var descripcion by remember { mutableStateOf("") }
-    var especialidadesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
-    var sedesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
     var expandedPacientes by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.promocionExitosa) {
@@ -72,7 +68,7 @@ fun PromoverUsuarioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Selector de Paciente
+            // Selector de Paciente con filtro
             Text("Seleccionar Paciente", style = MaterialTheme.typography.titleMedium)
             ExposedDropdownMenuBox(
                 expanded = expandedPacientes,
@@ -80,24 +76,34 @@ fun PromoverUsuarioScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
                 OutlinedTextField(
-                    value = pacienteSeleccionado?.let { "${it.nombres} ${it.apellidos}" } ?: "Elija un paciente",
-                    onValueChange = {},
-                    readOnly = true,
+                    value = uiState.queryBusqueda,
+                    onValueChange = {
+                        viewModel.onQueryBusquedaChange(it)
+                        expandedPacientes = true
+                    },
+                    placeholder = { Text("Buscar por nombre o DNI...") },
+                    singleLine = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPacientes) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
-                ExposedDropdownMenu(
+                DropdownMenu(
                     expanded = expandedPacientes,
-                    onDismissRequest = { expandedPacientes = false }
+                    onDismissRequest = { expandedPacientes = false },
+                    properties = PopupProperties(focusable = false),
+                    modifier = Modifier.exposedDropdownSize()
                 ) {
-                    if (uiState.pacientes.isEmpty()) {
-                        DropdownMenuItem(text = { Text("No hay pacientes disponibles") }, onClick = {})
+                    val filtrados = uiState.pacientesFiltrados
+                    if (filtrados.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("No se encontraron pacientes") },
+                            onClick = { expandedPacientes = false }
+                        )
                     } else {
-                        uiState.pacientes.forEach { paciente ->
+                        filtrados.forEach { paciente ->
                             DropdownMenuItem(
                                 text = { Text("${paciente.nombres} ${paciente.apellidos} - ${paciente.dni ?: "Sin DNI"}") },
                                 onClick = {
-                                    pacienteSeleccionado = paciente
+                                    viewModel.seleccionarPaciente(paciente)
                                     expandedPacientes = false
                                 }
                             )
@@ -111,8 +117,8 @@ fun PromoverUsuarioScreen(
             // Descripción Profesional
             Text("Descripción Profesional", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
-                value = descripcion,
-                onValueChange = { descripcion = it },
+                value = uiState.formDescripcion,
+                onValueChange = viewModel::onDescripcionChange,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(100.dp),
                 placeholder = { Text("Ej. Especialista con 10 años de experiencia...") },
                 maxLines = 4
@@ -125,12 +131,8 @@ fun PromoverUsuarioScreen(
             uiState.especialidades.forEach { especialidad ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
-                        checked = especialidadesSeleccionadas.contains(especialidad.id),
-                        onCheckedChange = { checked ->
-                            val nuevas = especialidadesSeleccionadas.toMutableSet()
-                            if (checked) nuevas.add(especialidad.id) else nuevas.remove(especialidad.id)
-                            especialidadesSeleccionadas = nuevas
-                        }
+                        checked = uiState.formEspecialidades.contains(especialidad.id),
+                        onCheckedChange = { viewModel.toggleEspecialidad(especialidad.id) }
                     )
                     Text(text = especialidad.nombre)
                 }
@@ -143,12 +145,8 @@ fun PromoverUsuarioScreen(
             uiState.sedes.forEach { sede ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
-                        checked = sedesSeleccionadas.contains(sede.id),
-                        onCheckedChange = { checked ->
-                            val nuevas = sedesSeleccionadas.toMutableSet()
-                            if (checked) nuevas.add(sede.id) else nuevas.remove(sede.id)
-                            sedesSeleccionadas = nuevas
-                        }
+                        checked = uiState.formSedes.contains(sede.id),
+                        onCheckedChange = { viewModel.toggleSede(sede.id) }
                     )
                     Text(text = sede.nombre)
                 }
@@ -158,20 +156,9 @@ fun PromoverUsuarioScreen(
 
             // Guardar
             Button(
-                onClick = {
-                    if (pacienteSeleccionado != null) {
-                        viewModel.promover(
-                            usuario = pacienteSeleccionado!!,
-                            descripcionProfesional = descripcion,
-                            especialidadIds = especialidadesSeleccionadas.toList(),
-                            sedeIds = sedesSeleccionadas.toList()
-                        )
-                    } else {
-                        Toast.makeText(context, "Debe seleccionar un paciente", Toast.LENGTH_SHORT).show()
-                    }
-                },
+                onClick = viewModel::promover,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = !uiState.guardando && pacienteSeleccionado != null
+                enabled = !uiState.guardando && uiState.pacienteSeleccionado != null
             ) {
                 if (uiState.guardando) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)

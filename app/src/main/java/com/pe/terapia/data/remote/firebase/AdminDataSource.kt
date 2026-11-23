@@ -2,7 +2,6 @@ package com.pe.terapia.data.remote.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-import com.pe.terapia.data.remote.firebase.UsuarioFirestoreMapper
 import com.pe.terapia.domain.model.Especialidad
 import com.pe.terapia.domain.model.Psicologo
 import com.pe.terapia.domain.model.Sede
@@ -19,30 +18,34 @@ class AdminDataSource(
 
         return snapshot.documents.mapNotNull { doc ->
             runCatching {
-                UsuarioFirestoreMapper.fromFirestore(doc.id, doc.data, doc.getString("correo"))
+                UsuarioFirestoreMapper.fromFirestore(
+                    doc.id,
+                    doc.data,
+                    doc.getString("correo")
+                )
             }.getOrNull()
         }
     }
 
     suspend fun obtenerPsicologos(): List<Psicologo> {
         val snapshot = firestore.collection("psicologos")
-            // Las reglas de Firestore solo permiten listar perfiles activos.
-            // La consulta debe incluir el mismo filtro; las reglas no filtran resultados.
             .whereEqualTo("activo", true)
             .get()
             .await()
 
         return snapshot.documents.mapNotNull { doc ->
-            Psicologo(
-                id = doc.id,
-                usuarioId = doc.getString("usuarioId") ?: "",
-                nombres = doc.getString("nombres") ?: "",
-                apellidos = doc.getString("apellidos") ?: "",
-                descripcionProfesional = doc.getString("descripcionProfesional") ?: "",
-                especialidadIds = (doc.get("especialidadIds") as? List<String>) ?: emptyList(),
-                sedeIds = (doc.get("sedeIds") as? List<String>) ?: emptyList(),
-                activo = true
-            )
+            runCatching {
+                Psicologo(
+                    id = doc.id,
+                    usuarioId = doc.getString("usuarioId") ?: "",
+                    nombres = doc.getString("nombres") ?: "",
+                    apellidos = doc.getString("apellidos") ?: "",
+                    descripcionProfesional = doc.getString("descripcionProfesional") ?: "",
+                    especialidadIds = (doc.get("especialidadIds") as? List<String>) ?: emptyList(),
+                    sedeIds = (doc.get("sedeIds") as? List<String>) ?: emptyList(),
+                    activo = true
+                )
+            }.getOrNull()
         }
     }
 
@@ -53,17 +56,19 @@ class AdminDataSource(
             .await()
 
         return snapshot.documents.mapNotNull { doc ->
-            Sede(
-                id = doc.id,
-                nombre = doc.getString("nombre") ?: return@mapNotNull null,
-                direccion = doc.getString("direccion").orEmpty(),
-                distrito = doc.getString("distrito").orEmpty(),
-                ciudad = doc.getString("ciudad").orEmpty(),
-                latitud = doc.getDouble("latitud") ?: 0.0,
-                longitud = doc.getDouble("longitud") ?: 0.0,
-                telefono = doc.getString("telefono").orEmpty(),
-                activa = true
-            )
+            runCatching {
+                Sede(
+                    id = doc.id,
+                    nombre = doc.getString("nombre") ?: return@runCatching null,
+                    direccion = doc.getString("direccion").orEmpty(),
+                    distrito = doc.getString("distrito").orEmpty(),
+                    ciudad = doc.getString("ciudad").orEmpty(),
+                    latitud = doc.getDouble("latitud") ?: 0.0,
+                    longitud = doc.getDouble("longitud") ?: 0.0,
+                    telefono = doc.getString("telefono").orEmpty(),
+                    activa = true
+                )
+            }.getOrNull()
         }
     }
 
@@ -74,13 +79,15 @@ class AdminDataSource(
             .await()
 
         return snapshot.documents.mapNotNull { doc ->
-            Especialidad(
-                id = doc.id,
-                nombre = doc.getString("nombre") ?: return@mapNotNull null,
-                descripcion = doc.getString("descripcion").orEmpty(),
-                activa = true,
-                costo_cita = doc.getDouble("costo_cita")?: return@mapNotNull null
-            )
+            runCatching {
+                Especialidad(
+                    id = doc.id,
+                    nombre = doc.getString("nombre") ?: return@runCatching null,
+                    descripcion = doc.getString("descripcion").orEmpty(),
+                    activa = true,
+                    costo_cita = doc.getDouble("costo_cita") ?: return@runCatching null
+                )
+            }.getOrNull()
         }
     }
     suspend fun promoverPacienteAPsicologo(
@@ -123,7 +130,7 @@ class AdminDataSource(
         diaSemana: Int,
         inicioMinuto: Int,
         finMinuto: Int
-    ) {
+    ): Result<Unit> = runCatching {
         val horarioId = "${psicologoId}~${sedeId}"
         val horarioRef = firestore.collection("horariosLaborales").document(horarioId)
 

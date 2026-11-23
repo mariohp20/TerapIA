@@ -18,15 +18,12 @@ data class GestionarPsicologoUiState(
     val error: String? = null,
     val exito: Boolean = false,
 
-    // Datos globales
     val psicologos: List<Psicologo> = emptyList(),
     val especialidades: List<Especialidad> = emptyList(),
     val sedes: List<Sede> = emptyList(),
 
-    // Estado de la UI
     val psicologoSeleccionado: Psicologo? = null,
 
-    // Formulario de edicion
     val formDescripcion: String = "",
     val formEspecialidades: Set<String> = emptySet(),
     val formSedes: Set<String> = emptySet()

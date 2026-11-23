@@ -4,11 +4,10 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pe.terapia.domain.model.AtencionPsicologoResumen
 import com.pe.terapia.domain.model.AtencionResumenDashboard
-import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.EstadoCita
-import com.pe.terapia.domain.model.DURACION_CITA_MINUTOS
 import com.pe.terapia.domain.model.EstadoEtapa
 import com.pe.terapia.domain.model.CitaAdminResumen
+import com.pe.terapia.domain.model.CitaPacienteResumen
 import com.pe.terapia.domain.model.PagoAdminResumen
 import com.pe.terapia.domain.model.PsicologoAdminResumen
 import com.pe.terapia.domain.model.EstadoProceso
@@ -20,7 +19,6 @@ class DashboardDataSource(
 ) {
 
     // 1. PSICOLOGO
-
     // 1.1 ColumnChar: Volumen de Atenciones
     suspend fun obtenerAtencionesPorPsicologo(psicologoId: String): List<AtencionPsicologoResumen> {
         val snapshot = firestore.collection("atenciones")
@@ -90,8 +88,6 @@ class DashboardDataSource(
 
     suspend fun obtenerAtencionesPorPaciente(pacienteId: String): List<AtencionResumenDashboard> {
         require(pacienteId.isNotBlank()) { "No se pudo identificar al paciente." }
-        // Las atenciones existentes pueden preceder al nuevo cambio que marca Cita.COMPLETADA.
-        // Se leen solo los datos mínimos para el dashboard y siempre se filtra por el paciente autenticado.
         val snapshot = firestore.collection("atenciones")
             .whereEqualTo("pacienteId", pacienteId)
             .get()
@@ -106,7 +102,7 @@ class DashboardDataSource(
         }
     }
 
-    suspend fun obtenerCitasPorPaciente(pacienteId: String): List<Cita> {
+    suspend fun obtenerCitasPorPaciente(pacienteId: String): List<CitaPacienteResumen> {
         require(pacienteId.isNotBlank()) { "No se pudo identificar al paciente." }
         val snapshot = firestore.collection("citas")
             .whereEqualTo("pacienteId", pacienteId)
@@ -114,20 +110,14 @@ class DashboardDataSource(
             .await()
 
         return snapshot.documents.mapNotNull { doc ->
-            val data = doc.data ?: return@mapNotNull null
-            Cita(
+            val inicioEpochMillis = doc.getLong("inicioEpochMillis") ?: return@mapNotNull null
+            val estado = runCatching { EstadoCita.valueOf(doc.getString("estado").orEmpty()) }
+                .getOrDefault(EstadoCita.PROGRAMADA)
+
+            CitaPacienteResumen(
                 id = doc.id,
-                reservaId = data["reservaId"] as? String ?: "",
-                pacienteId = data["pacienteId"] as? String ?: pacienteId,
-                psicologoId = data["psicologoId"] as? String ?: "",
-                sedeId = data["sedeId"] as? String ?: "",
-                especialidadId = data["especialidadId"] as? String ?: "",
-                fecha = data["fecha"] as? String ?: "",
-                hora = data["hora"] as? String ?: "",
-                inicioEpochMillis = (data["inicioEpochMillis"] as? Number)?.toLong() ?: 0L,
-                duracionMinutos = (data["duracionMinutos"] as? Number)?.toInt() ?: DURACION_CITA_MINUTOS,
-                estado = runCatching { EstadoCita.valueOf(data["estado"] as? String ?: "") }
-                    .getOrDefault(EstadoCita.PROGRAMADA)
+                inicioEpochMillis = inicioEpochMillis,
+                estado = estado
             )
         }
     }

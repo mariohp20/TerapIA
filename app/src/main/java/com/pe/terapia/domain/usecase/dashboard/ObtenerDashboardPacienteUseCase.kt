@@ -2,13 +2,14 @@ package com.pe.terapia.domain.usecase.dashboard
 
 import com.pe.terapia.domain.model.Cita
 import com.pe.terapia.domain.model.AtencionResumenDashboard
+import com.pe.terapia.domain.model.CitaPacienteResumen
 import com.pe.terapia.domain.repository.DashboardRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 data class DatosDashboardPaciente(
     val atenciones: List<AtencionResumenDashboard>,
-    val citas: List<Cita>
+    val citas: List<CitaPacienteResumen>
 )
 
 class ObtenerDashboardPacienteUseCase(

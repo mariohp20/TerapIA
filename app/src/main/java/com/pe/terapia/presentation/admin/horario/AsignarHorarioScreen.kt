@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.pe.terapia.domain.model.Psicologo // <-- Importamos Psicologo
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,11 +25,6 @@ fun AsignarHorarioScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
 
-    var psicologoSeleccionado by remember { mutableStateOf<Psicologo?>(null) } // <-- Cambiado a Psicologo
-    var sedesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
-    var diaSeleccionado by remember { mutableStateOf(1) } // 1 = Lunes
-    var horaInicioSeleccionada by remember { mutableStateOf(8) }
-    var horaFinSeleccionada by remember { mutableStateOf(9) }
 
     var expandedPsicologos by remember { mutableStateOf(false) }
     var expandedDias by remember { mutableStateOf(false) }
@@ -76,7 +70,7 @@ fun AsignarHorarioScreen(
             uiState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Selector de Psicólogo
+            // Selector de Psicologo
             Text("Psicólogo", style = MaterialTheme.typography.titleMedium)
             ExposedDropdownMenuBox(
                 expanded = expandedPsicologos,
@@ -84,7 +78,7 @@ fun AsignarHorarioScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
                 OutlinedTextField(
-                    value = psicologoSeleccionado?.let { "${it.nombres} ${it.apellidos}" } ?: "Elija un psicólogo",
+                    value = uiState.psicologoSeleccionado?.let { "${it.nombres} ${it.apellidos}" } ?: "Elija un psicólogo",
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPsicologos) },
@@ -94,15 +88,11 @@ fun AsignarHorarioScreen(
                     expanded = expandedPsicologos,
                     onDismissRequest = { expandedPsicologos = false }
                 ) {
-                    uiState.psicologos.filter { it.activo }.forEach { psicologo -> // Filtramos por activos
+                    uiState.psicologosActivos.forEach { psicologo ->
                         DropdownMenuItem(
                             text = { Text("${psicologo.nombres} ${psicologo.apellidos}") },
                             onClick = {
-                                // Limpiamos las sedes si se cambia de doctor para evitar errores
-                                if (psicologoSeleccionado?.id != psicologo.id) {
-                                    sedesSeleccionadas = emptySet()
-                                }
-                                psicologoSeleccionado = psicologo
+                                viewModel.seleccionarPsicologo(psicologo)
                                 expandedPsicologos = false
                             }
                         )
@@ -112,13 +102,13 @@ fun AsignarHorarioScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Selección de Sedes
+            // Seleccion de Sedes
             Text("Sedes Disponibles", style = MaterialTheme.typography.titleMedium)
 
-            if (psicologoSeleccionado == null) {
+            if (uiState.psicologoSeleccionado == null) {
                 Text("Seleccione un psicólogo primero", color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
             } else {
-                val sedesDelPsicologo = uiState.sedes.filter { psicologoSeleccionado!!.sedeIds.contains(it.id) }
+                val sedesDelPsicologo = uiState.sedesDelPsicologo
 
                 if (sedesDelPsicologo.isEmpty()) {
                     Text("Este psicólogo no tiene sedes asignadas", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
@@ -126,12 +116,8 @@ fun AsignarHorarioScreen(
                     sedesDelPsicologo.forEach { sede ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
-                                checked = sedesSeleccionadas.contains(sede.id),
-                                onCheckedChange = { checked ->
-                                    val nuevas = sedesSeleccionadas.toMutableSet()
-                                    if (checked) nuevas.add(sede.id) else nuevas.remove(sede.id)
-                                    sedesSeleccionadas = nuevas
-                                }
+                                checked = uiState.sedesSeleccionadas.contains(sede.id),
+                                onCheckedChange = { viewModel.toggleSede(sede.id) }
                             )
                             Text(text = sede.nombre)
                         }
@@ -141,7 +127,7 @@ fun AsignarHorarioScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Selector de Día de la Semana
+            // Selector de Dia
             Text("Día de la semana", style = MaterialTheme.typography.titleMedium)
             ExposedDropdownMenuBox(
                 expanded = expandedDias,
@@ -149,7 +135,7 @@ fun AsignarHorarioScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
                 OutlinedTextField(
-                    value = diasSemana[diaSeleccionado - 1],
+                    value = diasSemana[uiState.diaSeleccionado - 1],
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDias) },
@@ -160,7 +146,7 @@ fun AsignarHorarioScreen(
                         DropdownMenuItem(
                             text = { Text(dia) },
                             onClick = {
-                                diaSeleccionado = index + 1
+                                viewModel.seleccionarDia(index + 1)
                                 expandedDias = false
                             }
                         )
@@ -180,7 +166,7 @@ fun AsignarHorarioScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = "$horaInicioSeleccionada:00",
+                        value = "${uiState.horaInicioSeleccionada}:00",
                         onValueChange = {},
                         label = { Text("Inicio") },
                         readOnly = true,
@@ -192,8 +178,7 @@ fun AsignarHorarioScreen(
                             DropdownMenuItem(
                                 text = { Text("$hora:00") },
                                 onClick = {
-                                    horaInicioSeleccionada = hora
-                                    if (horaFinSeleccionada <= hora) horaFinSeleccionada = hora + 1
+                                    viewModel.seleccionarHoraInicio(hora)
                                     expandedHoraInicio = false
                                 }
                             )
@@ -207,7 +192,7 @@ fun AsignarHorarioScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = "$horaFinSeleccionada:00",
+                        value = "${uiState.horaFinSeleccionada}:00",
                         onValueChange = {},
                         label = { Text("Fin") },
                         readOnly = true,
@@ -215,11 +200,11 @@ fun AsignarHorarioScreen(
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
                     ExposedDropdownMenu(expanded = expandedHoraFin, onDismissRequest = { expandedHoraFin = false }) {
-                        horasDisponibles.filter { it > horaInicioSeleccionada }.forEach { hora ->
+                        horasDisponibles.filter { it > uiState.horaInicioSeleccionada }.forEach { hora ->
                             DropdownMenuItem(
                                 text = { Text("$hora:00") },
                                 onClick = {
-                                    horaFinSeleccionada = hora
+                                    viewModel.seleccionarHoraFin(hora)
                                     expandedHoraFin = false
                                 }
                             )
@@ -232,19 +217,9 @@ fun AsignarHorarioScreen(
 
             // Guardar
             Button(
-                onClick = {
-                    if (psicologoSeleccionado != null) {
-                        viewModel.guardarHorario(
-                            psicologoId = psicologoSeleccionado!!.id,
-                            sedesIds = sedesSeleccionadas,
-                            diaSemana = diaSeleccionado,
-                            horaInicio = horaInicioSeleccionada,
-                            horaFin = horaFinSeleccionada
-                        )
-                    }
-                },
+                onClick = viewModel::guardarHorario,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = !uiState.guardando && psicologoSeleccionado != null && sedesSeleccionadas.isNotEmpty()
+                enabled = !uiState.guardando && uiState.psicologoSeleccionado != null && uiState.sedesSeleccionadas.isNotEmpty()
             ) {
                 if (uiState.guardando) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)

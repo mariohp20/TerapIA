@@ -26,11 +26,11 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun HomeAdminScreen(
-    onPromoverUsuario: () -> Unit,
     onCerrarSesion: () -> Unit,
+    onPromoverUsuario: () -> Unit,
     onAsignarHorario: () -> Unit,
-    onDashboard: () -> Unit,
     onGestionarPsicologo: () -> Unit,
+    onDashboard: () -> Unit,
     onVerSolicitudesCita: () -> Unit,
     onVerNotificaciones: () -> Unit,
     mensajeError: String? = null,
@@ -123,14 +123,14 @@ private fun HomeAdminContent(
                 )
 
                 AdminHerramientaButton(
-                    titulo = "Solicitudes de cancelación y reprogramación",
-                    icono = Icons.Outlined.CalendarMonth,
+                    titulo = "Dashboard de la clínica",
+                    icono = Icons.Outlined.BarChart,
                     onClick = onVerSolicitudesCita
                 )
 
                 AdminHerramientaButton(
-                    titulo = "Dashboard de la clínica",
-                    icono = Icons.Outlined.BarChart,
+                    titulo = "Solicitudes de cancelación y reprogramación",
+                    icono = Icons.Outlined.CalendarMonth,
                     onClick = onDashboard
                 )
 

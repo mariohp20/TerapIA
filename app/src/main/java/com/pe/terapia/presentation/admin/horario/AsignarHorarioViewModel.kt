@@ -17,8 +17,23 @@ data class AsignarHorarioUiState(
     val exito: Boolean = false,
     val error: String? = null,
     val psicologos: List<Psicologo> = emptyList(),
-    val sedes: List<Sede> = emptyList()
-)
+    val sedes: List<Sede> = emptyList(),
+
+    val psicologoSeleccionado: Psicologo? = null,
+    val sedesSeleccionadas: Set<String> = emptySet(),
+    val diaSeleccionado: Int = 1, // 1 = Lunes
+    val horaInicioSeleccionada: Int = 8,
+    val horaFinSeleccionada: Int = 9
+) {
+    val psicologosActivos: List<Psicologo>
+        get() = psicologos.filter { it.activo }
+
+    val sedesDelPsicologo: List<Sede>
+        get() {
+            val psicologo = psicologoSeleccionado ?: return emptyList()
+            return sedes.filter { psicologo.sedeIds.contains(it.id) }
+        }
+}
 
 class AsignarHorarioViewModel(
     private val asignarHorarioPsicologoUseCase: AsignarHorarioPsicologoUseCase,
@@ -54,37 +69,76 @@ class AsignarHorarioViewModel(
         }
     }
 
-    fun guardarHorario(
-        psicologoId: String,
-        sedesIds: Set<String>,
-        diaSemana: Int,
-        horaInicio: Int,
-        horaFin: Int
-    ) {
+    fun seleccionarPsicologo(psicologo: Psicologo) {
+        val actual = _uiState.value
+        val nuevasSedes = if (actual.psicologoSeleccionado?.id != psicologo.id) {
+            emptySet()
+        } else {
+            actual.sedesSeleccionadas
+        }
+
+        _uiState.value = actual.copy(
+            psicologoSeleccionado = psicologo,
+            sedesSeleccionadas = nuevasSedes,
+            error = null
+        )
+    }
+
+    fun toggleSede(sedeId: String) {
+        val actuales = _uiState.value.sedesSeleccionadas.toMutableSet()
+        if (actuales.contains(sedeId)) actuales.remove(sedeId) else actuales.add(sedeId)
+        _uiState.value = _uiState.value.copy(sedesSeleccionadas = actuales, error = null)
+    }
+
+    fun seleccionarDia(dia: Int) {
+        _uiState.value = _uiState.value.copy(diaSeleccionado = dia, error = null)
+    }
+
+    fun seleccionarHoraInicio(hora: Int) {
+        val actual = _uiState.value
+        val nuevaHoraFin = if (actual.horaFinSeleccionada <= hora) hora + 1 else actual.horaFinSeleccionada
+        _uiState.value = actual.copy(
+            horaInicioSeleccionada = hora,
+            horaFinSeleccionada = nuevaHoraFin,
+            error = null
+        )
+    }
+
+    fun seleccionarHoraFin(hora: Int) {
+        _uiState.value = _uiState.value.copy(horaFinSeleccionada = hora, error = null)
+    }
+
+    fun guardarHorario() {
+        val actual = _uiState.value
+        val psicologo = actual.psicologoSeleccionado ?: run {
+            _uiState.value = actual.copy(error = "Debe seleccionar un psicólogo")
+            return
+        }
+
         viewModelScope.launch {
-            if (sedesIds.isEmpty()) {
-                _uiState.value = _uiState.value.copy(error = "Debe seleccionar al menos una sede")
+            if (actual.sedesSeleccionadas.isEmpty()) {
+                _uiState.value = actual.copy(error = "Debe seleccionar al menos una sede")
                 return@launch
             }
-            if (horaInicio >= horaFin) {
-                _uiState.value = _uiState.value.copy(error = "La hora de fin debe ser mayor a la de inicio")
+            if (actual.horaInicioSeleccionada >= actual.horaFinSeleccionada) {
+                _uiState.value = actual.copy(error = "La hora de fin debe ser mayor a la de inicio")
                 return@launch
             }
 
-            _uiState.value = _uiState.value.copy(guardando = true, error = null)
+            _uiState.value = actual.copy(guardando = true, error = null)
 
             try {
-                val inicioMinuto = horaInicio * 60
-                val finMinuto = horaFin * 60
+                val inicioMinuto = actual.horaInicioSeleccionada * 60
+                val finMinuto = actual.horaFinSeleccionada * 60
 
                 var huboError = false
                 var ultimoErrorMsg: String? = null
 
-                for (sedeId in sedesIds) {
+                for (sedeId in actual.sedesSeleccionadas) {
                     val result = asignarHorarioPsicologoUseCase(
-                        psicologoId = psicologoId,
+                        psicologoId = psicologo.id,
                         sedeId = sedeId,
-                        diaSemana = diaSemana,
+                        diaSemana = actual.diaSeleccionado,
                         inicioMinuto = inicioMinuto,
                         finMinuto = finMinuto
                     )
@@ -97,12 +151,18 @@ class AsignarHorarioViewModel(
                 }
 
                 if (huboError) {
-                    _uiState.value = _uiState.value.copy(guardando = false, error = ultimoErrorMsg ?: "Error al asignar horario")
+                    _uiState.value = _uiState.value.copy(
+                        guardando = false,
+                        error = ultimoErrorMsg ?: "Error al asignar horario"
+                    )
                 } else {
                     _uiState.value = _uiState.value.copy(guardando = false, exito = true)
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(guardando = false, error = "Error al procesar el horario")
+                _uiState.value = _uiState.value.copy(
+                    guardando = false,
+                    error = "Error al procesar el horario"
+                )
             }
         }
     }
